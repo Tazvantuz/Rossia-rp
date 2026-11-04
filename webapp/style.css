@@ -541,3 +541,27 @@ input[type=number]{-moz-appearance:textfield}
 }
 .bet-actions .btn-play:active { transform: scale(0.97) !important; }
 .bet-actions .btn-x:active { transform: scale(0.95) !important; }
+
+/* ═══════════ РЕФЕРАЛЫ ═══════════ */
+.ref-hero { background: linear-gradient(135deg, #2b1055, #7597de); border-radius: 16px; padding: 20px; text-align: center; margin-bottom: 20px; box-shadow: 0 10px 20px rgba(0,0,0,0.3); }
+.ref-hero-title { font-size: 20px; font-weight: 900; color: #fff; text-shadow: 0 2px 4px rgba(0,0,0,0.5); }
+.ref-hero-sub { font-size: 13px; color: rgba(255,255,255,0.8); margin: 8px 0 16px; }
+.ref-link-box { display: flex; gap: 8px; background: rgba(0,0,0,0.3); padding: 6px; border-radius: 10px; }
+.ref-link-box input { flex: 1; background: transparent; border: none; color: #fff; font-size: 13px; outline: none; padding: 8px; }
+.ref-link-box button { background: #f39c12; color: #111; border: none; border-radius: 8px; padding: 0 16px; font-weight: bold; cursor: pointer; }
+
+.ref-stats { display: flex; gap: 12px; margin-bottom: 24px; }
+.ref-stat-card { flex: 1; background: var(--bg-2); padding: 16px; border-radius: 16px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+.ref-stat-value { font-size: 28px; font-weight: 900; color: #f39c12; margin-bottom: 4px; }
+.ref-stat-label { font-size: 12px; color: var(--hint); text-transform: uppercase; letter-spacing: 1px; }
+
+.ref-milestones { display: flex; flex-direction: column; gap: 12px; }
+.ref-mile-card { display: flex; align-items: center; background: var(--bg-2); padding: 16px; border-radius: 16px; border-left: 4px solid #3498db; position: relative; overflow: hidden; }
+.ref-mile-card.claimed { border-left-color: #2ecc71; opacity: 0.7; }
+.ref-mile-icon { font-size: 32px; margin-right: 16px; }
+.ref-mile-info { flex: 1; }
+.ref-mile-title { font-weight: 900; font-size: 16px; color: #fff; }
+.ref-mile-desc { font-size: 12px; color: var(--hint); margin-top: 4px; }
+.ref-mile-reward { font-size: 18px; font-weight: 900; color: #f1c40f; }
+.ref-mile-btn { background: #f39c12; color: #111; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 8px; width: 100%; }
+.ref-mile-btn:disabled { background: #555; color: #888; cursor: not-allowed; }

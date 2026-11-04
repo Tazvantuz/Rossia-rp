@@ -165,10 +165,26 @@ async def api_register(request):
     nick = (body.get("nickname") or "").strip()
     if not (2 <= len(nick) <= 20):
         return web.json_response({"error":"Ник 2-20 символов"}, status=400)
+    referrer_id = body.get("referrer_id")
+    if referrer_id:
+        try: referrer_id = int(referrer_id)
+        except: referrer_id = None
+        if referrer_id == uid:
+            referrer_id = None
+        else:
+            # Проверяем, существует ли пригласивший
+            ref_p = await db.fetchone("SELECT user_id FROM players WHERE user_id=?", (referrer_id,))
+            if not ref_p:
+                referrer_id = None
+
     await db.execute(
-        """INSERT INTO players (user_id,nickname,balance,level,xp,location_id)
-        VALUES (?,?,?,?,?,?)""",
-        (uid, nick, START_BALANCE, 1, 0, START_LOCATION))
+        """INSERT INTO players (user_id,nickname,balance,level,xp,location_id,referrer_id)
+        VALUES (?,?,?,?,?,?,?)""",
+        (uid, nick, START_BALANCE, 1, 0, START_LOCATION, referrer_id))
+        
+    if referrer_id:
+        # Начисляем бонус пригласившему
+        await db.execute("UPDATE players SET balance=balance+5000 WHERE user_id=?", (referrer_id,))
     # Стартовый шмот в инвентарь (но не надет — голый!)
     for iid in ["h_cig","b_alco","l_family"]:
         await _add_inv(uid, iid, 1)
@@ -1526,6 +1542,64 @@ async def api_territory_capture_resolve(request):
 # ══════════════════════════════════════════════════════════════
 #  ЕЖЕЧАСНЫЙ ДОХОД С ТЕРРИТОРИЙ (фоновая задача)
 
+
+async def api_referral_info(request):
+    ud = await _user(request); uid = ud["id"]
+    p = await _player(uid)
+    
+    # Считаем количество рефералов
+    row = await db.fetchone("SELECT COUNT(*) as c FROM players WHERE referrer_id=?", (uid,))
+    count = row["c"] if row else 0
+    
+    # Получаем забранные бонусы
+    import json
+    try: claims = json.loads(p.get("ref_claims") or "[]")
+    except: claims = []
+    
+    # Сумма заработанного (5000 за каждого)
+    earned = count * 5000
+    
+    return web.json_response({
+        "count": count,
+        "earned": earned,
+        "claims": claims,
+        "link": f"https://t.me/newerarpgbot?startapp={uid}"
+    })
+
+async def api_referral_claim(request):
+    ud = await _user(request); uid = ud["id"]
+    p = await _player(uid)
+    body = await request.json()
+    milestone = int(body.get("milestone", 0))
+    
+    # Считаем рефералов
+    row = await db.fetchone("SELECT COUNT(*) as c FROM players WHERE referrer_id=?", (uid,))
+    count = row["c"] if row else 0
+    
+    import json
+    try: claims = json.loads(p.get("ref_claims") or "[]")
+    except: claims = []
+    
+    if milestone in claims:
+        return web.json_response({"error": "Бонус уже получен"}, status=400)
+    
+    rewards = {3: 15000, 5: 30000, 10: 100000}
+    if milestone not in rewards:
+        return web.json_response({"error": "Неверная награда"}, status=400)
+        
+    if count < milestone:
+        return web.json_response({"error": f"Нужно {milestone} рефералов"}, status=400)
+        
+    # Выдаем награду
+    reward = rewards[milestone]
+    claims.append(milestone)
+    claims_json = json.dumps(claims)
+    
+    await db.execute("UPDATE players SET balance=balance+?, ref_claims=? WHERE user_id=?", (reward, claims_json, uid))
+    
+    return web.json_response({"ok": True, "reward": reward})
+
+
 def setup_routes(app):
     R = app.router
     R.add_post("/api/me", api_me)
@@ -1553,6 +1627,8 @@ def setup_routes(app):
     R.add_post("/api/pvp/respond", api_pvp_respond)
     R.add_post("/api/pvp/state", api_pvp_state)
     R.add_post("/api/pvp/action", api_pvp_action)
+    R.add_post("/api/referral/info", api_referral_info)
+    R.add_post("/api/referral/claim", api_referral_claim)
     R.add_post("/api/gang/info", api_gang_info)
     R.add_post("/api/gang/create", api_gang_create)
     R.add_post("/api/gang/join", api_gang_join)

@@ -139,6 +139,34 @@
       <div id="trades-outgoing"></div>
     </section>
 
+    
+    <section class="tab-content" data-tab="referral">
+      <h2 class="section-title">👥 Реферальная система</h2>
+      
+      <div class="ref-hero">
+        <div class="ref-hero-title">Приглашай друзей и зарабатывай!</div>
+        <div class="ref-hero-sub">За каждого друга ты получаешь <b>5 000₽</b> на баланс.</div>
+        <div class="ref-link-box">
+          <input type="text" id="ref-link-input" readonly value="Загрузка...">
+          <button onclick="copyRefLink()">Копировать</button>
+        </div>
+      </div>
+
+      <div class="ref-stats">
+        <div class="ref-stat-card">
+          <div class="ref-stat-value" id="ref-count">0</div>
+          <div class="ref-stat-label">Приглашено</div>
+        </div>
+        <div class="ref-stat-card">
+          <div class="ref-stat-value" id="ref-earned">0₽</div>
+          <div class="ref-stat-label">Заработано</div>
+        </div>
+      </div>
+
+      <h3 class="section-subtitle">🏆 Бонусы за достижения</h3>
+      <div id="ref-milestones" class="ref-milestones"></div>
+    </section>
+
     <section class="tab-content" data-tab="cases">
       <h2 class="section-title">🎁 Кейсы</h2>
       <p style="color:var(--hint);margin-bottom:12px;font-size:13px">Только уникальные предметы!</p>
@@ -178,6 +206,7 @@
       <button class="nav-btn" data-nav="work">💼<span>Работа</span></button>
       <button class="nav-btn" data-nav="casino">🎰<span>Казино</span></button>
       <button class="nav-btn" data-nav="people">👥<span>Люди</span></button>
+      <button class="nav-btn" data-nav="referral">👥<span>Рефералы</span></button>
       <button class="nav-btn" data-nav="cases">🎁<span>Кейсы</span></button>
       <button class="nav-btn" data-nav="gang">🚬<span>Банда</span></button>
       <button class="nav-btn" data-nav="ghetto">🗺️<span>Гетто</span></button>

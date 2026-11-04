@@ -142,3 +142,14 @@ class Database:
         if self.conn: await self.conn.close()
 
 db = Database()
+
+
+async def migrate_referrals():
+    try:
+        await db.execute("ALTER TABLE players ADD COLUMN referrer_id INTEGER DEFAULT NULL")
+    except Exception:
+        pass
+    try:
+        await db.execute("ALTER TABLE players ADD COLUMN ref_claims TEXT DEFAULT '[]'")
+    except Exception:
+        pass

@@ -243,6 +243,7 @@ function showTab(tab) {
   if (tab==="people") loadPeople();
   if (tab==="ghetto" && typeof renderGhetto === "function") renderGhetto();
   if (tab==="ghetto" && typeof renderGhetto === "function") renderGhetto();
+  if (tab==="referral") renderReferral();
   if (tab==="chat") startChatPolling();
   if (tab==="more") updateMoreBadges();
   window.scrollTo(0,0);
@@ -297,7 +298,8 @@ function setupRegister() {
   btn.addEventListener("click", async () => {
     btn.disabled = true;
     try {
-      const d = await api("register", {nickname: nick.value.trim()});
+      const startParam = tg?.initDataUnsafe?.start_param;
+      const d = await api("register", {nickname: nick.value.trim(), referrer_id: startParam});
       state.player = d.player;
       renderPlayer(); renderCharacterInto("#character-view");
       show("main"); showTab("home");
@@ -2073,5 +2075,72 @@ async function renderGhetto() {
   } catch(e) {
     console.error("Ghetto error:", e);
     container.innerHTML = `<div style="color:#e74c3c;text-align:center;grid-column:1/-1;padding:20px;font-size:14px;word-break:break-word;">Ошибка загрузки: ${e.message || 'Сервер недоступен'}</div>`;
+  }
+}
+
+
+// ═══════════ РЕФЕРАЛЫ ═══════════
+async function renderReferral() {
+  try {
+    const d = await api("referral/info", {});
+    document.getElementById("ref-count").textContent = d.count;
+    document.getElementById("ref-earned").textContent = d.earned + "₽";
+    document.getElementById("ref-link-input").value = d.link;
+
+    const milestones = [
+      { count: 3, reward: 15000, icon: "🎁" },
+      { count: 5, reward: 30000, icon: "💰" },
+      { count: 10, reward: 100000, icon: "👑" }
+    ];
+
+    const container = document.getElementById("ref-milestones");
+    container.innerHTML = "";
+
+    milestones.forEach(m => {
+      const isClaimed = d.claims.includes(m.count);
+      const isReady = d.count >= m.count;
+      
+      let btnHtml = "";
+      if (isClaimed) {
+        btnHtml = `<button class="ref-mile-btn" disabled>✅ Получено</button>`;
+      } else if (isReady) {
+        btnHtml = `<button class="ref-mile-btn" onclick="claimRefReward(${m.count})">🎁 Забрать ${m.reward}₽</button>`;
+      } else {
+        btnHtml = `<button class="ref-mile-btn" disabled>Нужно еще ${m.count - d.count} чел.</button>`;
+      }
+
+      container.innerHTML += `
+        <div class="ref-mile-card ${isClaimed ? 'claimed' : ''}">
+          <div class="ref-mile-icon">${m.icon}</div>
+          <div class="ref-mile-info">
+            <div class="ref-mile-title">Пригласи ${m.count} друзей</div>
+            <div class="ref-mile-desc">Награда: <span class="ref-mile-reward">${m.reward}₽</span></div>
+            ${btnHtml}
+          </div>
+        </div>
+      `;
+    });
+  } catch(e) {
+    console.error("Referral error:", e);
+  }
+}
+
+function copyRefLink() {
+  const inp = document.getElementById("ref-link-input");
+  inp.select();
+  inp.setSelectionRange(0, 99999);
+  document.execCommand("copy");
+  toast("Ссылка скопирована!", "success");
+}
+
+async function claimRefReward(milestone) {
+  try {
+    const d = await api("referral/claim", { milestone });
+    toast(`🎉 Получено ${d.reward}₽!`, "success");
+    state.player.balance += d.reward;
+    document.getElementById("money").textContent = fmtMoney(state.player.balance);
+    renderReferral();
+  } catch(e) {
+    toast(e.message, "error");
   }
 }
