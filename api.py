@@ -368,41 +368,81 @@ async def api_collect_business(request):
 async def api_casino_play(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
-    game = body.get("game"); bet = int(body.get("bet",0))
+    game = body.get("game")
+    bet = int(body.get("bet", 0))
     if game not in CASINO_GAMES:
-        return web.json_response({"error":"Игра"}, status=400)
-    if bet <= 0: return web.json_response({"error":"Ставка"}, status=400)
+        return web.json_response({"error": "Игра"}, status=400)
+    if bet <= 0:
+        return web.json_response({"error": "Ставка"}, status=400)
     p = await _player(uid)
     if p["balance"] < bet:
-        return web.json_response({"error":"Не хватает"}, status=400)
+        return web.json_response({"error": "Не хватает"}, status=400)
     now_cd = int(time.time())
     if now_cd - p.get("last_casino", 0) < 5:
-        return web.json_response({"error": f"Кд {5 - (now_cd-p.get('last_casino',0))}с"}, status=400)
-    g = CASINO_GAMES[game]
-    win_amount = 0; result_text = ""
-    if game == "slots":
-        symbols = ["🍒","🍋","🍊","🔔","⭐"]
-        a,b,c = random.choices(symbols, k=3)
-        result_text = f"{a}{b}{c}"
-        if a==b==c:
-            win_amount = int(bet * 5); result_text += " — 🎉 x5!"
-        elif a==b or b==c or a==c:
-            win_amount = int(bet * 1.5); result_text += " — x1.5"
-        else:
-            result_text += " — проигрыш"
+        return web.json_response({"error": f"Кд {5 - (now_cd - p.get('last_casino', 0))}с"}, status=400)
+
+    win_amount = 0
+    result_text = ""
+
+    if game == "coin":
+        side = random.choice(["Орёл", "Решка"])
+        result_text = f"Монетка: {side}"
+        win_amount = int(bet * 2)
+
     elif game == "dice":
-        roll = random.randint(1,6)
-        result_text = f"🎲 {roll}"
+        roll = random.randint(1, 6)
+        result_text = f"Кости: выпало {roll}"
         if roll > 3:
-            win_amount = int(bet * 1.8); result_text += " — ПОБЕДА!"
+            win_amount = int(bet * 1.8)
         else:
             result_text += " — проигрыш"
-    else:
-        if random.random() < g["chance"]:
-            win_amount = int(bet * g["payout"])
-            result_text = "🎉 Победа!"
+
+    elif game == "roulette":
+        choice = body.get("choice", "red")
+        number = body.get("number")  # если ставка на число
+        n = random.randint(0, 36)
+        color = roulette_color(n)
+        result_text = f"Выпало {n} ({color})"
+        if choice == "red" and color == "red":
+            win_amount = bet * 2
+        elif choice == "black" and color == "black":
+            win_amount = bet * 2
+        elif choice == "even" and n != 0 and n % 2 == 0:
+            win_amount = bet * 2
+        elif choice == "odd" and n % 2 == 1:
+            win_amount = bet * 2
+        elif choice == "low" and 1 <= n <= 18:
+            win_amount = bet * 2
+        elif choice == "high" and 19 <= n <= 36:
+            win_amount = bet * 2
+        elif choice == "dozen1" and 1 <= n <= 12:
+            win_amount = bet * 3
+        elif choice == "dozen2" and 13 <= n <= 24:
+            win_amount = bet * 3
+        elif choice == "dozen3" and 25 <= n <= 36:
+            win_amount = bet * 3
+        elif choice == "number" and number is not None:
+            if int(number) == n:
+                win_amount = bet * 36
+        if win_amount == 0:
+            result_text += " — проигрыш"
+
+    elif game == "slots":
+        symbols = ["🍒", "🍋", "🍊", "🔔", "⭐", "💎"]
+        a, b, c = random.choices(symbols, k=3)
+        result_text = f"{a}{b}{c}"
+        if a == b == c == "💎":
+            win_amount = int(bet * 50)
+            result_text += " — ДЖЕКПОТ!"
+        elif a == b == c:
+            win_amount = int(bet * 5)
+            result_text += " — x5!"
+        elif a == b or b == c or a == c:
+            win_amount = int(bet * 1.5)
+            result_text += " — x1.5"
         else:
-            result_text = "😢 Проигрыш"
+            result_text += " — проигрыш"
+
     net = win_amount - bet
     now_upd = int(time.time())
     await db.execute("UPDATE players SET balance=balance+?, casino_plays=casino_plays+1, last_casino=? WHERE user_id=?",
@@ -413,9 +453,8 @@ async def api_casino_play(request):
     if win_amount >= 100000 and "big_winner" not in _json_ach(p):
         await _save_ach(uid, _json_ach(p) + ["big_winner"])
         ach.append("big_winner")
-    return web.json_response({"player": _player_json(p), "win": win_amount,
-                              "net": net, "result": result_text,
-                              "new_achievements": ach})
+    return web.json_response({"player": _player_json(p), "win": win_amount, "net": net,
+                              "result": result_text, "new_achievements": ach})
 
 async def api_daily(request):
     ud = await _user(request); uid = ud["id"]

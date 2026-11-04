@@ -98,26 +98,34 @@
     </section>
 
     <section class="tab-content" data-tab="casino">
-      <h2 class="section-title">🎰 Казино</h2>
-      <div class="casino-tabs" id="casino-tabs"></div>
-      <div class="casino-stage">
-        <div class="casino-display" id="casino-display">🪙</div>
+      <h2 class="section-title">🎰 Казино "У Ашота"</h2>
+
+      <div class="casino-menu" id="casino-menu">
+        <div class="casino-menu-item" data-game="coin" onclick="switchCasinoGame('coin')"><span>🪙</span>Монетка</div>
+        <div class="casino-menu-item" data-game="dice" onclick="switchCasinoGame('dice')"><span>🎲</span>Кости</div>
+        <div class="casino-menu-item" data-game="roulette" onclick="switchCasinoGame('roulette')"><span>🎡</span>Рулетка</div>
+        <div class="casino-menu-item" data-game="slots" onclick="switchCasinoGame('slots')"><span>🎰</span>Автомат</div>
       </div>
-      <div id="casino-result"></div>
-      <div class="bet-row" style="margin-top:16px">
-        <input id="bet-input" type="number" placeholder="Ставка ₽" min="1">
-        <div class="bet-quick">
-          <button onclick="setBet(100)">100</button>
-          <button onclick="setBet(1000)">1К</button>
-          <button onclick="setBet(10000)">10К</button>
-          <button onclick="setBet('max')">MAX</button>
+
+      <div class="casino-stage" id="casino-stage"></div>
+      <div id="casino-result" style="text-align:center;margin:15px 0;font-weight:bold;font-size:18px;min-height:24px;"></div>
+
+      <div class="bet-panel">
+        <div class="bet-row">
+          <input id="bet-input" type="number" placeholder="Ставка ₽" min="1">
+          <div class="bet-quick">
+            <button onclick="setBet(100)">100</button>
+            <button onclick="setBet(1000)">1К</button>
+            <button onclick="setBet(10000)">10К</button>
+            <button onclick="setBet('max')">MAX</button>
+          </div>
         </div>
-        <div class="bet-x-row">
-          <button onclick="halveBet()" class="bet-x-btn">➗ ÷2</button>
-          <button onclick="doubleBet()" class="bet-x-btn">✖️ x2</button>
+        <div class="bet-actions">
+          <button onclick="halveBet()" class="btn-x">➗ ÷2</button>
+          <button onclick="playCasino()" class="btn-play" id="btn-play-casino">🎲 ИГРАТЬ</button>
+          <button onclick="doubleBet()" class="btn-x">✖️ x2</button>
         </div>
       </div>
-      <button class="btn btn-primary" onclick="playCasino()" style="margin-top:12px">🎰 Играть</button>
     </section>
 
     <section class="tab-content" data-tab="people">
@@ -181,5 +189,6 @@
 
 <div id="toast" class="toast hidden"></div>
 <script src="app.js?v=2"></script>
+<script src="casino.js"></script>
 </body>
 </html>

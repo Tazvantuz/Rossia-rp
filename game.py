@@ -121,14 +121,19 @@ BUSINESSES = {
 }
 
 CASINO_GAMES = {
-    "coin":{"name":"Монетка","emoji":"🪙","desc":"Орёл/решка — x2","chance":0.5,"payout":2.0},
-    "dice":{"name":"Кости","emoji":"🎲","desc":"Больше 3 — x1.8","chance":0.5,"payout":1.8},
-    "red":{"name":"Рулетка: красное","emoji":"🔴","desc":"Красное — x2","chance":18/37,"payout":2.0},
-    "black":{"name":"Рулетка: чёрное","emoji":"⚫","desc":"Чёрное — x2","chance":18/37,"payout":2.0},
-    "zero":{"name":"Рулетка: зеро","emoji":"🟢","desc":"Зеро — x35","chance":1/37,"payout":35.0},
-    "jackpot":{"name":"Джекпот","emoji":"💎","desc":"8% шанс — x10","chance":0.08,"payout":10.0},
-    "slots":{"name":"Слоты","emoji":"🎰","desc":"3 в ряд — x5, 2 — x1.5","chance":None,"payout":None},
+    "coin":     {"name":"Монетка","emoji":"🪙","desc":"Орёл/решка — x2","chance":0.5,"payout":2.0},
+    "dice":     {"name":"Кости","emoji":"🎲","desc":"Больше 3 — x1.8","chance":0.5,"payout":1.8},
+    "roulette": {"name":"Рулетка","emoji":"🎡","desc":"36 чисел + зеро","chance":None,"payout":None},
+    "slots":    {"name":"Автомат","emoji":"🎰","desc":"3 в ряд — x5, 3 💎 — x50","chance":None,"payout":None},
 }
+
+ROULETTE_NUMBERS = list(range(37))  # 0-36
+ROULETTE_RED = {1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36}
+
+def roulette_color(n):
+    if n == 0: return "green"
+    return "red" if n in ROULETTE_RED else "black"
+
 
 ACHIEVEMENTS = {
     "first_job":{"name":"Работяга","emoji":"💼","desc":"Выполни первую работу"},
