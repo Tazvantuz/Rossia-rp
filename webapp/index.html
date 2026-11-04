@@ -38,6 +38,10 @@
         <div class="subtitle" id="subtitle">...</div>
       </div>
       <div class="money-box">💰 <span id="money">0</span>₽</div>
+          <div class="bell-btn" onclick="showNotifications()">
+            <span class="bell-icon">🔔</span>
+            <span class="bell-badge hidden" id="bell-badge">0</span>
+          </div>
     </header>
 
     <div id="credit-banner" class="credit-banner hidden" onclick="showCredit()">
@@ -193,8 +197,23 @@
       </div>
     </section>
 
-    <section class="tab-content" data-tab="chat">
+    <section class="tab-content" data-tab="friends">
+      <h2 class="section-title">🤝 Друзья</h2>
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <input id="friend-search-input" type="text" placeholder="Ник игрока..." style="flex:1; padding:10px; border-radius:8px; border:none; background:var(--bg-2); color:#fff;">
+        <button class="btn btn-primary" onclick="searchFriends()" style="width:auto; margin:0; padding:10px 16px;">Найти</button>
+      </div>
+      <div id="friend-search-results" style="margin-bottom:16px;"></div>
+      <div id="friend-requests-box"></div>
+      <h3 class="section-subtitle">Мои друзья</h3>
+      <div id="friend-list"></div>
+    </section>
+
+<section class="tab-content" data-tab="chat">
       <h2 class="section-title">💬 Чат</h2>
+      <div class="chat-tabs" id="chat-tabs">
+        <button class="chat-tab active" onclick="switchChat('global')">🌐 Общий</button>
+      </div>
       <div id="chat-messages" class="chat-messages"></div>
       <div class="chat-input-row">
         <input id="chat-input" type="text" maxlength="200" placeholder="Напиши что-нибудь...">
@@ -218,6 +237,7 @@
       <button class="nav-btn" data-nav="business">🏢<span>Бизнес</span></button>
       <button class="nav-btn" data-nav="casino">🎰<span>Казино</span></button>
       <button class="nav-btn" data-nav="people">👥<span>Люди</span></button>
+      <button class="nav-btn" data-nav="friends">🤝<span>Друзья</span></button>
       <button class="nav-btn" data-nav="referral">👥<span>Рефералы</span></button>
       <button class="nav-btn" data-nav="cases">🎁<span>Кейсы</span></button>
       <button class="nav-btn" data-nav="gang">🚬<span>Банда</span></button>

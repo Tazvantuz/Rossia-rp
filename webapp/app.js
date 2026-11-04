@@ -2272,3 +2272,219 @@ async function setDeputy(uid, action) {
     loadGang();
   } catch(e) { toast(e.message, "error"); }
 }
+
+// ═══ УВЕДОМЛЕНИЯ ═══
+async function loadNotifications() {
+  try {
+    const d = await api("notifications/get");
+    const badge = document.getElementById("bell-badge");
+    if (badge) {
+      if (d.unread > 0) { badge.textContent = d.unread; badge.classList.remove("hidden"); }
+      else { badge.classList.add("hidden"); }
+    }
+  } catch(e) {}
+}
+function showNotifications() {
+  api("notifications/get").then(d => {
+    let html = '<h2>🔔 Уведомления</h2>';
+    if (d.notifications.length === 0) html += '<p style="color:var(--hint);text-align:center;">Пусто</p>';
+    else html += d.notifications.map(n => `<div style="padding:8px; background:var(--bg-3); border-radius:8px; margin-bottom:6px; font-size:13px; ${n.is_read ? 'opacity:0.6' : ''}">${n.text}</div>`).join("");
+    openModal(html);
+    api("notifications/read");
+    const badge = document.getElementById("bell-badge");
+    if (badge) badge.classList.add("hidden");
+  });
+}
+
+// ═══ ДРУЗЬЯ ═══
+async function searchFriends() {
+  const q = document.getElementById("friend-search-input").value.trim();
+  if (q.length < 2) return toast("Минимум 2 символа", "error");
+  try {
+    const d = await api("friend/search", { query: q });
+    const el = document.getElementById("friend-search-results");
+    if (d.results.length === 0) el.innerHTML = '<p style="color:var(--hint)">Никого не найдено</p>';
+    else {
+      el.innerHTML = d.results.map(u => `
+        <div class="player-card">
+          <div class="player-avatar">👤</div>
+          <div class="player-info"><div class="player-name">${u.nickname}</div><div class="player-meta">Ур. ${u.level}</div></div>
+          <button class="btn btn-primary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="sendFriendRequest(${u.user_id})">Добавить</button>
+        </div>
+      `).join("");
+    }
+  } catch(e) { toast(e.message, "error"); }
+}
+async function sendFriendRequest(uid) {
+  try {
+    await api("friend/request", { target_id: uid });
+    toast("Запрос отправлен", "success");
+  } catch(e) { toast(e.message, "error"); }
+}
+async function loadFriends() {
+  try {
+    const d = await api("friend/list");
+    const reqBox = document.getElementById("friend-requests-box");
+    if (d.requests.length > 0) {
+      reqBox.innerHTML = `<h3 class="section-subtitle" style="color:#f39c12">Запросы (${d.requests.length})</h3>` + d.requests.map(r => `
+        <div class="player-card">
+          <div class="player-info"><div class="player-name">${r.nickname}</div></div>
+          <button class="btn btn-primary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="respondFriend(${r.user_id}, true)">✅</button>
+          <button class="btn btn-secondary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;margin-left:4px;" onclick="respondFriend(${r.user_id}, false)">❌</button>
+        </div>
+      `).join("");
+    } else reqBox.innerHTML = "";
+    
+    const list = document.getElementById("friend-list");
+    if (d.friends.length === 0) list.innerHTML = '<p style="color:var(--hint);text-align:center;">Пока нет друзей</p>';
+    else {
+      list.innerHTML = d.friends.map(f => `
+        <div class="player-card" onclick="viewPlayer(${f.user_id})">
+          <div class="player-avatar">👤</div>
+          <div class="player-info"><div class="player-name">${f.nickname}</div><div class="player-meta">Ур. ${f.level}</div></div>
+          <button class="btn btn-secondary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="event.stopPropagation(); openPM(${f.user_id}, '${f.nickname}')">✉️ ЛС</button>
+        </div>
+      `).join("");
+    }
+  } catch(e) { toast(e.message, "error"); }
+}
+async function respondFriend(uid, accept) {
+  try {
+    await api("friend/respond", { target_id: uid, accept });
+    loadFriends();
+  } catch(e) { toast(e.message, "error"); }
+}
+
+// ═══ ЛС ЧАТ ═══
+state.chatWith = 'global';
+function switchChat(mode) {
+  state.chatWith = mode === 'global' ? 'global' : state.chatWith;
+  document.querySelectorAll('.chat-tab').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll(`.chat-tab[data-chat="${mode}"]`).forEach(b => b.classList.add('active'));
+  if (mode === 'global') loadChat();
+  else loadPM();
+}
+function openPM(uid, name) {
+  state.chatWith = uid;
+  showTab("chat");
+  const tabs = document.getElementById("chat-tabs");
+  if (!tabs.querySelector(`[data-chat="${uid}"]`)) {
+    tabs.innerHTML += `<button class="chat-tab" data-chat="${uid}" onclick="switchChat('pm')">👤 ${name}</button>`;
+  }
+  switchChat('pm');
+}
+async function loadPM() {
+  if (!state.chatWith || state.chatWith === 'global') return;
+  try {
+    const d = await api("chat/pm/get", { with_id: state.chatWith });
+    const el = document.getElementById("chat-messages");
+    el.innerHTML = d.messages.map(m => `
+      <div class="chat-msg ${m.from_id === state.player.user_id ? 'my-msg' : ''}">
+        <div>${escapeHtml(m.message)}</div>
+      </div>
+    `).join("");
+    el.scrollTop = el.scrollHeight;
+  } catch(e) {}
+}
+async function sendChat() {
+  const inp = document.getElementById("chat-input");
+  if (!inp) return;
+  const msg = inp.value.trim();
+  if (!msg) return;
+  try {
+    if (state.chatWith === 'global') {
+      await api("chat/send", { message: msg });
+      loadChat();
+    } else {
+      await api("chat/pm/send", { to_id: state.chatWith, message: msg });
+      loadPM();
+    }
+    inp.value = "";
+    if (tg) tg.HapticFeedback?.impactOccurred("light");
+  } catch(e) { toast(e.message, "error"); }
+}
+
+// ═══ ПЕРЕОПРЕДЕЛЕНИЕ showTab ═══
+const _oldShowTab3 = showTab;
+showTab = function(tab) {
+  _oldShowTab3(tab);
+  if (tab === "friends") loadFriends();
+  if (tab === "chat") {
+    const tabs = document.getElementById("chat-tabs");
+    tabs.innerHTML = '<button class="chat-tab active" onclick="switchChat(\'global\')">🌐 Общий</button>';
+    state.chatWith = 'global';
+    loadChat();
+  }
+  if (tab === "home") loadNotifications();
+};
+
+// ═══ НОВЫЙ PVP UI ═══
+async function loadPvPState(bid, silent = false) {
+  try {
+    const d = await api("pvp/state", {battle_id: bid});
+    if (d.status === "finished") {
+      if (pvpTimerInterval) { clearInterval(pvpTimerInterval); pvpTimerInterval = null; }
+      pvpCurrentBattle = null;
+      closeModal();
+      toast(d.timeout ? "⏰ Время вышло! Бой окончен." : "⚔️ Бой окончен!", d.timeout ? "error" : "success");
+      refreshPlayer();
+      return;
+    }
+    if (d.status === "pending") {
+      if (!silent) toast("Ждём ответа соперника...");
+      return;
+    }
+    const isMyTurn = d.turn === state.player.user_id;
+    const mustAttack = isMyTurn && !d.pending_attack_part;
+    const mustDefend = isMyTurn && d.pending_attack_part;
+    
+    const logHtml = (d.log || []).slice(-5).map(l => {
+      if (l.type === "hit") return `💥 ${l.attacker} → ${l.part}: -${l.damage}`;
+      if (l.type === "block") return `🛡 ${l.attacker}: блок ${l.part}`;
+      if (l.type === "defend") return `🛡 ${l.player}: защита ${l.part}`;
+      return "";
+    }).join("<br>");
+    const myPart = d.is_attacker ? "attacker" : "defender";
+    const enemyPart = d.is_attacker ? "defender" : "attacker";
+    const me = d[myPart]; const enemy = d[enemyPart];
+    openModal(`
+      <h2 style="text-align:center;margin-bottom:12px">⚔️ Гоп-стоп</h2>
+      <div class="pvp-card">
+        <div class="pvp-hp-row"><span>${enemy.nickname}</span><span>${enemy.hp}/${enemy.max_hp}</span></div>
+        <div class="pvp-hp-bar"><div class="pvp-hp-fill" style="width:${enemy.hp/enemy.max_hp*100}%"></div></div>
+        <div class="pvp-hp-row" style="margin-top:12px"><span>${me.nickname} (ты)</span><span>${me.hp}/${me.max_hp}</span></div>
+        <div class="pvp-hp-bar"><div class="pvp-hp-fill" style="width:${me.hp/me.max_hp*100}%"></div></div>
+      </div>
+      ${logHtml ? `<div class="pvp-log">${logHtml}</div>` : ''}
+      ${isMyTurn ? `
+        <p style="font-weight:700;margin:16px 0 8px">${mustAttack ? 'Твой ход — куда бьём?' : 'Твой ход — что защищаем?'}</p>
+        <button class="pvp-part-btn" onclick="pvpDoAction('${mustAttack ? 'attack' : 'defend'}', 'head')">🎯 Голова</button>
+        <button class="pvp-part-btn" onclick="pvpDoAction('${mustAttack ? 'attack' : 'defend'}', 'torso')">🎯 Торс</button>
+        <button class="pvp-part-btn" onclick="pvpDoAction('${mustAttack ? 'attack' : 'defend'}', 'legs')">🎯 Ноги</button>
+      ` : `<p style="text-align:center;padding:20px;color:var(--hint)">⏳ Ход противника...</p>`}
+    `);
+  } catch(e) {
+    if (!silent) toast(e.message, "error");
+  }
+}
+
+async function pvpDoAction(action, part) {
+  try {
+    const d = await api("pvp/action", {battle_id: pvpCurrentBattle, action, part});
+    if (d.finished) {
+      openModal(`
+        <div style="text-align:center;padding:20px 0">
+          <div style="font-size:80px">${d.winner_id === state.player.user_id ? '🏆' : '💀'}</div>
+          <h2 style="margin-top:16px">${d.winner_id === state.player.user_id ? 'ПОБЕДА!' : 'Поражение'}</h2>
+          <p style="margin-top:12px">${d.winner_id === state.player.user_id ? `Ты отжал ${fmtMoney(d.steal)}₽` : `У тебя отжали ${fmtMoney(d.steal)}₽`}</p>
+          <button class="btn btn-primary" onclick="closeModal();refreshPlayer()" style="margin-top:16px">OK</button>
+        </div>`);
+      refreshPlayer();
+      return;
+    }
+    loadPvPState(pvpCurrentBattle);
+  } catch(e) { toast(e.message, "error"); }
+}
+
+// Автообновление уведомлений раз в 15 секунд
+setInterval(loadNotifications, 15000);

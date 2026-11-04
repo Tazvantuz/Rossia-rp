@@ -605,3 +605,12 @@ input[type=number]{-moz-appearance:textfield}
 .char-stats .s-dmg { color: #e74c3c; }
 
 .char-stats:empty { display: none; }
+
+/* ═══ УВЕДОМЛЕНИЯ ═══ */
+.bell-btn { position: relative; padding: 8px; cursor: pointer; font-size: 20px; margin-left: 8px; }
+.bell-badge { position: absolute; top: 0; right: 0; background: #e74c3c; color: #fff; font-size: 10px; font-weight: bold; padding: 2px 5px; border-radius: 10px; border: 2px solid var(--bg); }
+/* ═══ ЧАТ ═══ */
+.chat-tabs { display: flex; overflow-x: auto; gap: 8px; padding: 8px 0; margin-bottom: 8px; }
+.chat-tab { background: var(--bg-2); border: none; color: var(--hint); padding: 6px 12px; border-radius: 16px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+.chat-tab.active { background: var(--button); color: #fff; }
+.my-msg { background: rgba(82, 136, 193, 0.2) !important; align-self: flex-end; border: 1px solid var(--button); }
