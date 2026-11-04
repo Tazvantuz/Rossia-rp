@@ -274,7 +274,7 @@ async function boot() {
     else {
       state.player = d.player;
       state.classInfo = d.class || { name: d.player.class_name, emoji: d.player.class_emoji };
-      show("main"); renderPlayer(); showCharacter();
+      show("main"); renderPlayer();
       showTab("home");
       if (d.new_achievements?.length) notifyAchievements(d.new_achievements);
       if (d.credit_paid) setTimeout(() => toast(`💸 Банк списал ${fmtMoney(d.credit_paid)}₽`, "error"), 800);
