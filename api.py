@@ -1111,7 +1111,8 @@ async def api_gang_set_deputy(request):
     return web.json_response({"ok": True})
 
 async def api_gang_captures(request):
-    await _process_territories()
+    try: await _process_territories()
+    except Exception as _e: print(f"⚠️ _process_territories: {_e}")
     rows = await db.fetchall("""
         SELECT tc.*, g.name as gang_name, g.emoji as gang_emoji
         FROM territory_captures tc
@@ -1183,7 +1184,8 @@ async def api_gang_invite_decline(request):
     return web.json_response({"ok": True})
 
 async def api_gang_get(request):
-    await _process_territories()
+    try: await _process_territories()
+    except Exception as _e: print(f"⚠️ _process_territories: {_e}")
     ud = await _user(request); uid = ud["id"]
     member = await db.fetchone("SELECT * FROM gang_members WHERE user_id=?", (uid,))
     if not member:
@@ -1289,26 +1291,40 @@ async def api_gang_withdraw(request):
 async def api_gang_capture(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
-    tid = int(body.get("territory_id",0))
+    tid = int(body.get("territory_id", 0))
     member = await db.fetchone("SELECT * FROM gang_members WHERE user_id=?", (uid,))
-    if not member or member["role"] not in ("leader","deputy"):
-        return web.json_response({"error":"Только лидер/зам"}, status=400)
+    if not member or member["role"] not in ("leader", "deputy"):
+        return web.json_response({"error": "Только лидер/зам"}, status=400)
     now = int(time.time())
-    last = await db.fetchone("SELECT * FROM territory_captures WHERE gang_id=? ORDER BY started_at DESC LIMIT 1", (member["gang_id"],))
-    if last and now - last["started_at"] < 1800:
-        return web.json_response({"error":"КД 30 минут на захват"}, status=400)
-    existing = await db.fetchone("SELECT * FROM gang_territories WHERE capturing_gang_id=?", (member["gang_id"],))
-    if existing and (existing.get("capture_end") or 0) > now:
-        return web.json_response({"error":"Уже захватываете территорию"}, status=400)
-    row = await db.fetchone("SELECT * FROM gang_territories WHERE territory_id=?", (tid,))
-    end = now + CAPTURE_HOURS * 3600
-    if row:
-        await db.execute("UPDATE gang_territories SET capturing_gang_id=?, capture_end=? WHERE territory_id=?",
-                         (member["gang_id"], end, tid))
-    else:
-        await db.execute("INSERT INTO gang_territories (territory_id, capturing_gang_id, capture_end) VALUES (?,?,?)",
-                         (tid, member["gang_id"], end))
-    return web.json_response({"ok":True,"ends_at":end})
+    try: await _process_territories()
+    except Exception as _e: print(f"⚠️ _process_territories: {_e}")
+    # У МОЕЙ банды уже есть активный захват?
+    my_active = await db.fetchone(
+        "SELECT capture_id, territory_id FROM territory_captures "
+        "WHERE gang_id=? AND status='active'", (member["gang_id"],))
+    if my_active:
+        terr_other = next((t for t in GANG_TERRITORIES if t["id"] == my_active["territory_id"]), None)
+        tname = terr_other["name"] if terr_other else f"#{my_active['territory_id']}"
+        return web.json_response({"error": f"У банды уже идёт захват: {tname}"}, status=400)
+    # Глобальное КД по банде
+    last_any = await db.fetchone(
+        "SELECT started_at FROM territory_captures WHERE gang_id=? "
+        "ORDER BY started_at DESC LIMIT 1", (member["gang_id"],))
+    if last_any and now - last_any["started_at"] < 1800:
+        left = 1800 - (now - last_any["started_at"])
+        return web.json_response({"error": f"КД захвата: {left//60}м {left%60}с"}, status=400)
+    # Эта территория уже кем-то захватывается?
+    other = await db.fetchone(
+        "SELECT * FROM territory_captures WHERE territory_id=? AND status='active'", (tid,))
+    if other:
+        return web.json_response({"error": "Территория уже захватывается"}, status=400)
+    # Создаём запись
+    total_dmg = await _gang_total_damage(member["gang_id"])
+    cap_id = await db.execute(
+        "INSERT INTO territory_captures (territory_id, gang_id, status, started_at, total_damage) "
+        "VALUES (?,?, 'active', ?, ?)",
+        (tid, member["gang_id"], now, total_dmg))
+    return web.json_response({"ok": True, "capture_id": cap_id, "ends_at": now + CAPTURE_HOURS * 3600})
 
 
 async def api_notifications_get(request):
@@ -1891,17 +1907,33 @@ async def api_territory_capture_start(request):
     territory = next((t for t in GANG_TERRITORIES if t["id"] == tid), None)
     if not territory:
         return web.json_response({"error": "Территория не найдена"}, status=404)
-    # Проверка: нет ли уже активного захвата этой территории
+    # Сначала завершаем все протухшие захваты
+    try: await _process_territories()
+    except Exception as _e: print(f"⚠️ _process_territories: {_e}")
+    # Проверка 1: у МОЕЙ банды уже есть активный захват
+    my_active = await db.fetchone(
+        "SELECT capture_id, territory_id FROM territory_captures "
+        "WHERE gang_id=? AND status='active'", (gid,))
+    if my_active:
+        terr_other = next((t for t in GANG_TERRITORIES if t["id"] == my_active["territory_id"]), None)
+        tname = terr_other["name"] if terr_other else f"#{my_active['territory_id']}"
+        return web.json_response({
+            "error": f"У банды уже идёт захват: {tname}. Дождись завершения."
+        }, status=400)
+    # Проверка 2: эту территорию уже кто-то захватывает
     active = await db.fetchone(
         "SELECT * FROM territory_captures WHERE territory_id=? AND status='active'", (tid,))
     if active:
         return web.json_response({"error": "Территория уже захватывается"}, status=400)
-    # Проверка КД на атаку (30 минут)
-    last = await db.fetchone(
-        "SELECT * FROM territory_captures WHERE territory_id=? AND gang_id=? "
-        "ORDER BY started_at DESC LIMIT 1", (tid, gid))
-    if last and int(time.time()) - last["started_at"] < 1800:
-        return web.json_response({"error": "КД 30 минут"}, status=400)
+    # Глобальное КД 30 минут по банде (не по территории)
+    last_any = await db.fetchone(
+        "SELECT started_at FROM territory_captures WHERE gang_id=? "
+        "ORDER BY started_at DESC LIMIT 1", (gid,))
+    if last_any and int(time.time()) - last_any["started_at"] < 1800:
+        left = 1800 - (int(time.time()) - last_any["started_at"])
+        return web.json_response({
+            "error": f"КД захвата: {left//60}м {left%60}с"
+        }, status=400)
     # Считаем суммарный урон банды
     total_dmg = await _gang_total_damage(gid)
     # Создаём запись о захвате
