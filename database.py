@@ -128,6 +128,7 @@ class Database:
             "achievements TEXT DEFAULT '[]'","casino_plays INTEGER DEFAULT 0",
             "crimes_won INTEGER DEFAULT 0","trades_done INTEGER DEFAULT 0",
             "owned_items_count INTEGER DEFAULT 0",
+        "last_seen INTEGER DEFAULT 0",
             "credit_due INTEGER DEFAULT 0","last_casino INTEGER DEFAULT 0",
         ]
         for m in migrations:

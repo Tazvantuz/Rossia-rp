@@ -21,6 +21,7 @@ except ImportError:
     PVP_TURN_TIMEOUT = 30
 
 USER_LAST_CHAT = {}
+_last_seen_cache = {}
 CHAT_COOLDOWN = 3
 
 BOT_TOKEN = None
@@ -45,6 +46,14 @@ def validate_init_data(init_data):
 async def _user(request):
     ud = validate_init_data(request.headers.get("X-Init-Data",""))
     if not ud: raise web.HTTPUnauthorized(text="bad init")
+    uid = ud.get("id")
+    if uid:
+        now = int(time.time())
+        if now - _last_seen_cache.get(uid, 0) >= 30:
+            _last_seen_cache[uid] = now
+            try:
+                await db.execute("UPDATE players SET last_seen=? WHERE user_id=?", (now, uid))
+            except: pass
     return ud
 
 async def _player(uid):
@@ -664,8 +673,11 @@ async def api_location(request):
     if loc_id < 0 or loc_id >= len(LOCATIONS):
         return web.json_response({"error":"Локация"}, status=400)
     others = await db.fetchall(
-        "SELECT user_id,nickname,level,balance FROM players WHERE location_id=? AND user_id!=?",
+        "SELECT user_id,nickname,level,balance,last_seen FROM players WHERE location_id=? AND user_id!=?",
         (loc_id, uid))
+    now_ts = int(time.time())
+    for _o in others:
+        _o["is_online"] = (_o.get("last_seen") or 0) > now_ts - 120
     return web.json_response({
         "location": LOCATIONS[loc_id],
         "locations": LOCATIONS,
@@ -703,6 +715,7 @@ async def api_player_view(request):
         "friend_pending": friend_pending,
         "target_in_gang": bool(target_gang),
         "my_role": my_gang["role"] if my_gang else None,
+        "is_online": (t.get("last_seen") or 0) > int(time.time()) - 120,
     })
 
 
@@ -1373,6 +1386,12 @@ async def api_gang_capture(request):
     return web.json_response({"ok": True, "capture_id": cap_id, "ends_at": now + CAPTURE_HOURS * 3600})
 
 
+async def api_online_count(request):
+    await _user(request)
+    now = int(time.time())
+    row = await db.fetchone("SELECT COUNT(*) as c FROM players WHERE last_seen > ?", (now - 120,))
+    return web.json_response({"count": row["c"] if row else 0})
+
 async def api_notifications_get(request):
     ud = await _user(request); uid = ud["id"]
     await _cleanup_stale_pvp()
@@ -1467,9 +1486,21 @@ async def api_friend_remove(request):
 
 async def api_friend_list(request):
     ud = await _user(request); uid = ud["id"]
-    friends = await db.fetchall("SELECT f.friend_id as user_id, p.nickname, p.level FROM friends f JOIN players p ON p.user_id=f.friend_id WHERE f.user_id=? AND f.status='accepted'", (uid,))
-    reqs = await db.fetchall("SELECT f.user_id, p.nickname, p.level FROM friends f JOIN players p ON p.user_id=f.user_id WHERE f.friend_id=? AND f.status='pending'", (uid,))
+    now = int(time.time())
+    friends = await db.fetchall(
+        "SELECT f.friend_id as user_id, p.nickname, p.level, p.last_seen "
+        "FROM friends f JOIN players p ON p.user_id=f.friend_id "
+        "WHERE f.user_id=? AND f.status='accepted'", (uid,))
+    for f in friends:
+        f["is_online"] = (f.get("last_seen") or 0) > now - 120
+    reqs = await db.fetchall(
+        "SELECT f.user_id, p.nickname, p.level, p.last_seen "
+        "FROM friends f JOIN players p ON p.user_id=f.user_id "
+        "WHERE f.friend_id=? AND f.status='pending'", (uid,))
+    for r in reqs:
+        r["is_online"] = (r.get("last_seen") or 0) > now - 120
     return web.json_response({"friends": friends, "requests": reqs})
+
 
 async def api_chat_pm_send(request):
     ud = await _user(request); uid = ud["id"]
@@ -2302,6 +2333,7 @@ def setup_routes(app):
     R.add_post("/api/gang/invite/decline", api_gang_invite_decline)
     R.add_post("/api/chat/send", api_chat_send)
     R.add_post("/api/notifications/get", api_notifications_get)
+    R.add_post("/api/online_count", api_online_count)
     R.add_post("/api/notifications/read", api_notifications_read)
     R.add_post("/api/notifications/delete", api_notifications_delete)
     R.add_post("/api/friend/search", api_friend_search)

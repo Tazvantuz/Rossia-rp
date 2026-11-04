@@ -262,6 +262,20 @@ function closeModal() {
 }
 $("#modal-close").addEventListener("click", closeModal);
 $("#modal").addEventListener("click", e=>{if(e.target.id==="modal")closeModal();});
+function _onlineHtml(isOnline) {
+  const cls = isOnline ? 'on' : 'off';
+  const label = isOnline ? 'Онлайн' : 'Оффлайн';
+  return `<span class="online-status ${cls}"><span class="online-dot ${cls}"></span>${label}</span>`;
+}
+
+async function loadOnlineCount() {
+  try {
+    const d = await api("online_count", {});
+    const el = document.getElementById("online-count");
+    if (el) el.textContent = d.count;
+  } catch(_) {}
+}
+
 function fmtMoney(n) {
   if (n >= 1e9) return (n/1e9).toFixed(2)+"B";
   if (n >= 1e6) return (n/1e6).toFixed(2)+"M";
@@ -306,6 +320,7 @@ async function boot() {
       state.classInfo = d.class || { name: d.player.class_name, emoji: d.player.class_emoji };
       show("main"); renderPlayer();
       showTab("home"); checkAdminAccess();
+      loadOnlineCount();
       if (d.new_achievements?.length) notifyAchievements(d.new_achievements);
       if (d.credit_paid) setTimeout(() => toast(`💸 Банк списал ${fmtMoney(d.credit_paid)}₽`, "error"), 800);
     }
@@ -897,7 +912,10 @@ function renderPlayersList(players) {
   $("#players-list").innerHTML = players.map(p=>`
     <div class="player-card" onclick="viewPlayer(${p.user_id})">
       <div class="player-avatar">👤</div>
-      <div class="player-info"><div class="player-name">${p.nickname}</div><div class="player-meta">Ур. ${p.level}</div></div>
+      <div class="player-info">
+        <div class="player-name">${p.nickname}</div>
+        <div class="player-meta">Ур. ${p.level} · ${_onlineHtml(p.is_online)}</div>
+      </div>
       <div class="player-money">${fmtMoney(p.balance)}₽</div>
     </div>`).join("");
 }
@@ -913,7 +931,8 @@ async function viewPlayer(uid) {
     const stats = d.combat_stats || {hp: 100, damage: 5};
     openModal(`
       <div class="shop-preview">${renderCharacterSVG(d.outfit, {width: 170, height: 340})}</div>
-      <h2 style="text-align:center;margin-bottom:8px">${d.nickname}</h2>
+      <h2 style="text-align:center;margin-bottom:4px">${d.nickname}</h2>
+      <div style="text-align:center;margin-bottom:8px;">${_onlineHtml(d.is_online)}</div>
       <div style="text-align:center;margin:12px 0">
         <div style="font-size:16px;font-weight:700">Ур. ${d.level}</div>
         <div style="color:var(--money);font-weight:700;margin-top:4px">💰 ${fmtMoney(d.balance)}₽</div>
@@ -2123,7 +2142,10 @@ async function loadFriends() {
     if (d.requests.length > 0) {
       reqBox.innerHTML = `<h3 class="section-subtitle" style="color:#f39c12">Запросы (${d.requests.length})</h3>` + d.requests.map(r => `
         <div class="player-card">
-          <div class="player-info"><div class="player-name">${r.nickname}</div></div>
+          <div class="player-info">
+            <div class="player-name">${r.nickname}</div>
+            <div class="player-meta">${_onlineHtml(r.is_online)}</div>
+          </div>
           <button class="btn btn-primary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="respondFriend(${r.user_id}, true)">✅</button>
           <button class="btn btn-secondary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;margin-left:4px;" onclick="respondFriend(${r.user_id}, false)">❌</button>
         </div>
@@ -2136,7 +2158,10 @@ async function loadFriends() {
       list.innerHTML = d.friends.map(f => `
         <div class="player-card" onclick="viewPlayer(${f.user_id})">
           <div class="player-avatar">👤</div>
-          <div class="player-info"><div class="player-name">${f.nickname}</div><div class="player-meta">Ур. ${f.level}</div></div>
+          <div class="player-info">
+            <div class="player-name">${f.nickname}</div>
+            <div class="player-meta">Ур. ${f.level} · ${_onlineHtml(f.is_online)}</div>
+          </div>
           <button class="btn btn-secondary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="event.stopPropagation(); openPM(${f.user_id}, '${f.nickname}')">✉️ ЛС</button>
           <button class="btn btn-secondary" style="width:auto;padding:6px 8px;margin:0 0 0 4px;font-size:12px;color:var(--danger);" onclick="event.stopPropagation(); removeFriend(${f.user_id}, '${f.nickname}')">✕</button>
         </div>
@@ -2302,3 +2327,4 @@ async function pvpDoAction(action, part) {
 
 // Автообновление уведомлений раз в 15 секунд
 setInterval(loadNotifications, 15000);
+setInterval(loadOnlineCount, 30000);

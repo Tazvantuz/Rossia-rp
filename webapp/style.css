@@ -614,3 +614,12 @@ input[type=number]{-moz-appearance:textfield}
 .chat-tab { background: var(--bg-2); border: none; color: var(--hint); padding: 6px 12px; border-radius: 16px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .chat-tab.active { background: var(--button); color: #fff; }
 .my-msg { background: rgba(82, 136, 193, 0.2) !important; align-self: flex-end; border: 1px solid var(--button); }
+
+/* ═══ ONLINE STATUS ═══ */
+.online-badge { display: inline-flex; align-items: center; gap: 5px; background: var(--bg-2); padding: 6px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; color: var(--text); }
+.online-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+.online-dot.on { background: #2ecc71; box-shadow: 0 0 6px rgba(46,204,113,.7); }
+.online-dot.off { background: #7f8c8d; }
+.online-status { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; }
+.online-status.on { color: #2ecc71; }
+.online-status.off { color: #8494a5; }
