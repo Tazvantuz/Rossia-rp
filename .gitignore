@@ -1,0 +1,20 @@
+# Секреты
+.env
+
+# База данных
+*.db
+*.db-journal
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# Логи
+*.log
+
+# Системные
+.DS_Store
+Thumbs.db

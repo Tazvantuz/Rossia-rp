@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>РП Россия</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+  <div id="loading" class="screen active">
+    <div class="loader-wrap">
+      <div class="loader-logo">🇷🇺</div>
+      <div class="loader-text">РП Россия</div>
+      <div class="loader-spinner"></div>
+    </div>
+  </div>
+
+  <div id="register" class="screen">
+    <div class="reg-header">
+      <div class="logo">🇷🇺</div>
+      <h1>РП Россия</h1>
+      <p class="hint">Начни свой путь бомжа</p>
+    </div>
+    <div style="padding:24px 20px">
+      <label class="field-label">Твоё имя</label>
+      <input id="nickname" type="text" maxlength="20" placeholder="2-20 символов" autocomplete="off">
+      <button id="btn-register" class="btn btn-primary" disabled style="margin-top:24px">Начать жизнь</button>
+    </div>
+  </div>
+
+  <div id="main" class="screen">
+    <header class="topbar">
+      <div class="avatar" id="avatar">👤</div>
+      <div class="topbar-info">
+        <div class="nick" id="nick">...</div>
+        <div class="subtitle" id="subtitle">...</div>
+      </div>
+      <div class="money-box">💰 <span id="money">0</span>₽</div>
+    </header>
+
+    <section class="tab-content active" data-tab="home">
+      <div class="character-card">
+        <div class="character-view" id="character-view"></div>
+        <div class="character-info">
+          <div class="char-name" id="char-name">...</div>
+          <div class="char-level">Ур. <span id="char-level">1</span></div>
+          <div class="xp-bar"><div class="xp-fill" id="xp-fill"></div></div>
+          <div class="xp-text" id="xp-text">0/100 XP</div>
+        </div>
+      </div>
+
+      <div class="quick-grid">
+        <div class="quick-card" onclick="showTab('appearance')">
+          <div class="quick-icon">👕</div><div class="quick-label">Шмот</div>
+        </div>
+        <div class="quick-card" onclick="showTab('work')">
+          <div class="quick-icon">💼</div><div class="quick-label">Работа</div>
+        </div>
+        <div class="quick-card" onclick="showTab('casino')">
+          <div class="quick-icon">🎰</div><div class="quick-label">Казино</div>
+        </div>
+        <div class="quick-card" onclick="showTab('people')">
+          <div class="quick-icon">👥</div><div class="quick-label">Люди</div>
+        </div>
+      </div>
+
+      <h3 class="section-subtitle">⚡ Быстрые действия</h3>
+      <button class="btn btn-secondary" onclick="claimDaily()">🎁 Ежедневный бонус <span id="daily-badge" class="badge hidden">!</span></button>
+      <button class="btn btn-secondary" onclick="claimRoulette()">🎡 Рулетка дня (6ч)</button>
+      <button class="btn btn-secondary" onclick="doCrime()">🕶 Криминал (5м)</button>
+    </section>
+
+    <section class="tab-content" data-tab="appearance">
+      <h2 class="section-title">👕 Магазин одежды</h2>
+      <div class="filter-row" id="appearance-filter"></div>
+      <div id="appearance-list"></div>
+      <h3 class="section-subtitle">Твой инвентарь</h3>
+      <div id="inventory-list"></div>
+    </section>
+
+    <section class="tab-content" data-tab="work">
+      <h2 class="section-title">💼 Работа</h2>
+      <div id="job-current-box"></div>
+      <h3 class="section-subtitle">Профессии</h3>
+      <div id="jobs-list"></div>
+      <h3 class="section-subtitle">Бизнесы</h3>
+      <button class="btn btn-primary" onclick="collectBusiness()">💰 Собрать доход <span id="pending-badge"></span></button>
+      <div id="businesses-list"></div>
+    </section>
+
+    <section class="tab-content" data-tab="casino">
+      <h2 class="section-title">🎰 Казино</h2>
+      <div class="bet-row">
+        <input id="bet-input" type="number" placeholder="Ставка ₽" min="1">
+        <div class="bet-quick">
+          <button onclick="setBet(100)">100</button>
+          <button onclick="setBet(1000)">1К</button>
+          <button onclick="setBet(10000)">10К</button>
+          <button onclick="setBet('max')">MAX</button>
+        </div>
+      </div>
+      <div id="casino-games"></div>
+      <div id="casino-result"></div>
+    </section>
+
+    <section class="tab-content" data-tab="people">
+      <h2 class="section-title">👥 Люди</h2>
+      <div class="location-tabs" id="location-tabs"></div>
+      <div class="location-info" id="location-info"></div>
+      <h3 class="section-subtitle">Игроки здесь</h3>
+      <div id="players-list"></div>
+      <h3 class="section-subtitle">📬 Трейды</h3>
+      <div id="trades-incoming"></div>
+      <div id="trades-outgoing"></div>
+    </section>
+
+    <section class="tab-content" data-tab="more">
+      <h2 class="section-title">⚙️ Ещё</h2>
+      <button class="btn btn-secondary" onclick="showCrypto()">🪙 Крипто-биржа <span id="crypto-price-badge"></span></button>
+      <button class="btn btn-secondary" onclick="showCredit()">💸 Кредит <span id="credit-badge"></span></button>
+      <button class="btn btn-secondary" onclick="showAchievements()">🏆 Достижения</button>
+      <button class="btn btn-secondary" onclick="showLeaderboard()">📊 Лидерборд</button>
+    </section>
+
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-nav="home">🏠<span>Дом</span></button>
+      <button class="nav-btn" data-nav="appearance">👕<span>Шмот</span></button>
+      <button class="nav-btn" data-nav="work">💼<span>Работа</span></button>
+      <button class="nav-btn" data-nav="casino">🎰<span>Казино</span></button>
+      <button class="nav-btn" data-nav="people">👥<span>Люди</span></button>
+      <button class="nav-btn" data-nav="more">⚙️<span>Ещё</span></button>
+    </nav>
+  </div>
+</div>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-close" id="modal-close">✕</div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast hidden"></div>
+<script src="app.js"></script>
+</body>
+</html>
