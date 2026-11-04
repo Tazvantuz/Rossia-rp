@@ -1,0 +1,178 @@
+=== 1. GAME.PY: БИЗНЕСЫ (конфиг) ===
+110:BUSINESSES = {
+111-    "shawarma":{"name":"Шаурмечная Ашота","emoji":"🌯","price":5000,"income":100,"xp":50,"desc":"Самая сочная шаурма в городе"},
+112-    "drones":{"name":"Завод дронов","emoji":"🛸","price":25000,"income":300,"xp":100,"desc":"Производим беспилотники"},
+113-    "pelmeni":{"name":"Пельменная","emoji":"🥟","price":50000,"income":600,"xp":150,"desc":"Пельмени как у бабушки"},
+114-    "crypto_farm":{"name":"Крипто-ферма","emoji":"⛏","price":100000,"income":1500,"xp":250,"desc":"Майним битки"},
+115-    "beauty":{"name":"Салон 'Барби'","emoji":"💅","price":250000,"income":3000,"xp":400,"desc":"Красота — страшная сила"},
+116-    "pawnshop":{"name":"Ломбард 'Золотой'","emoji":"💰","price":500000,"income":6000,"xp":600,"desc":"Скупаем всё"},
+117-    "restaurant":{"name":"Ресторан 'Пушкин'","emoji":"🍽","price":1000000,"income":12000,"xp":1000,"desc":"Дорого-богато"},
+118-    "bentley":{"name":"Завод Бентли","emoji":"🚗","price":2500000,"income":25000,"xp":1500,"desc":"Роскошные тачки"},
+119-    "oil":{"name":"Нефтяная вышка","emoji":"🛢","price":5000000,"income":50000,"xp":2500,"desc":"Чёрное золото"},
+120-    "gazprom":{"name":"Газпром","emoji":"🏭","price":10000000,"income":100000,"xp":5000,"desc":"Национальное достояние"},
+121-}
+122-
+123-CASINO_GAMES = {
+124-    "coin":     {"name":"Монетка","emoji":"🪙","desc":"Орёл/решка — x2","chance":0.5,"payout":2.0},
+125-    "dice":     {"name":"Кости","emoji":"🎲","desc":"Больше 3 — x1.8","chance":0.5,"payout":1.8},
+126-    "roulette": {"name":"Рулетка","emoji":"🎡","desc":"36 чисел + зеро","chance":None,"payout":None},
+127-    "slots":    {"name":"Автомат","emoji":"🎰","desc":"3 в ряд — x5, 3 💎 — x50","chance":None,"payout":None},
+128-}
+129-
+130-ROULETTE_NUMBERS = list(range(37))  # 0-36
+=== 2. DATABASE.PY: ТАБЛИЦА БИЗНЕСОВ ===
+=== 3. API.PY: РАБОТА И БИЗНЕС ===
+288:async def api_jobs(request):
+289-    ud = await _user(request); uid = ud["id"]
+290-    p = await _player(uid)
+291-    jobs = []
+292-    for jid, j in JOBS.items():
+293-        jobs.append({**j, "id":jid, "unlocked":p["level"]>=j["level"]})
+294-    return web.json_response({"jobs": jobs, "current": p.get("current_job"),
+295-                              "last_work": p.get("last_work",0), "now": int(time.time())})
+296-
+297-async def api_set_job(request):
+298-    ud = await _user(request); uid = ud["id"]
+299-    body = await request.json()
+300-    jid = body.get("job_id")
+301-    if jid not in JOBS: return web.json_response({"error":"Нет такой"}, status=400)
+302-    p = await _player(uid)
+303-    if p["level"] < JOBS[jid]["level"]:
+304-        return web.json_response({"error":"Низкий уровень"}, status=400)
+305-    await db.execute("UPDATE players SET current_job=? WHERE user_id=?", (jid, uid))
+306-    return web.json_response({"ok": True})
+307-
+308-async def api_work(request):
+309-    ud = await _user(request); uid = ud["id"]
+310-    p = await _player(uid)
+311-    jid = p.get("current_job")
+312-    if not jid: return web.json_response({"error":"Выбери работу"}, status=400)
+313-    job = JOBS[jid]
+314-    now = int(time.time())
+315-    cd = job["cooldown"] - (now - p.get("last_work",0))
+316-    if cd > 0:
+317-        return web.json_response({"error":f"Подожди {cd} сек"}, status=400)
+318-    await db.execute("UPDATE players SET balance=balance+?, xp=xp+?, last_work=? WHERE user_id=?",
+319-                     (job["salary"], job["xp"], now, uid))
+320-    credit_paid = await _forced_credit_collect(uid)
+321-    p = await _player(uid)
+322-    levels = await _check_levelup(uid, p)
+323-    p = await _player(uid)
+--
+332:async def api_businesses(request):
+333-    ud = await _user(request); uid = ud["id"]
+334-    p = await _player(uid)
+335-    owned = {b["id"]: b for b in _json_biz(p)}
+336-    now = int(time.time())
+337-    result = []
+338-    total_pending = 0
+339-    for bid, b in BUSINESSES.items():
+340-        info = {**b, "id":bid, "owned":bid in owned}
+341-        if bid in owned:
+342-            info["last_collect"] = owned[bid].get("last_collect", now)
+343-            elapsed = min(86400, now - info["last_collect"])
+344-            info["pending"] = int(b["income"] * elapsed / 3600)
+345-            total_pending += info["pending"]
+346-        result.append(info)
+347-    return web.json_response({"businesses": result, "pending": total_pending})
+348-
+349:async def api_buy_business(request):
+350-    ud = await _user(request); uid = ud["id"]
+351-    body = await request.json()
+352-    bid = body.get("business_id")
+353-    b = BUSINESSES.get(bid)
+354-    if not b: return web.json_response({"error":"Нет"}, status=400)
+355-    p = await _player(uid)
+356-    if bid in [x["id"] for x in _json_biz(p)]:
+357-        return web.json_response({"error":"Уже есть"}, status=400)
+358-    if p["balance"] < b["price"]:
+359-        return web.json_response({"error":"Не хватает"}, status=400)
+360-    now = int(time.time())
+361-    biz = _json_biz(p)
+362-    biz.append({"id":bid, "last_collect":now})
+363-    await _save_biz(uid, biz)
+364-    await db.execute("UPDATE players SET balance=balance-?, xp=xp+? WHERE user_id=?",
+365-                     (b["price"], b["xp"], uid))
+366-    p = await _player(uid)
+367-    levels = await _check_levelup(uid, p)
+368-    p = await _player(uid)
+369-    ach = await _check_achievements(uid, p)
+370-    if "first_business" not in _json_ach(p):
+371-        await _save_ach(uid, _json_ach(p) + ["first_business"])
+372-        ach.append("first_business")
+373-    return web.json_response({"player": _player_json(p), "levels":levels,
+374-                              "new_achievements": ach})
+375-
+376-async def api_collect_business(request):
+377-    ud = await _user(request); uid = ud["id"]
+378-    p = await _player(uid)
+379-    now = int(time.time())
+380-    biz = _json_biz(p)
+381-    total = 0
+382-    for b in biz:
+383-        info = BUSINESSES.get(b["id"])
+384-        if not info: continue
+=== 4. APP.JS: ОТРИСОВКА РАБОТЫ И БИЗНЕСА ===
+631:function renderJobs(data) {
+632-  const cur = data.current; const now = Math.floor(Date.now()/1000);
+633-  const box = $("#job-current-box");
+634-  if (cur && JOBS_DATA[cur]) {
+635-    const j = JOBS_DATA[cur];
+636-    const cd = Math.max(0, j.cooldown - (now - (data.last_work||0)));
+637-    box.innerHTML = `<div class="current-job-box">
+638-      <div class="label">Текущая работа</div>
+639-      <div class="name">${j.emoji} ${j.name}</div>
+640-      <div style="font-size:13px;opacity:.9;margin-top:6px">${j.salary}₽ · ${j.xp} XP</div>
+641-      ${cd>0 ? `<button class="btn" disabled>⏳ ${cd}с</button>` : `<button class="btn" onclick="doWork()">💼 Работать (+${j.salary}₽)</button>`}
+642-    </div>`;
+643-  } else box.innerHTML = `<div class="current-job-box"><div class="name">💼 Выбери работу</div></div>`;
+644-  $("#jobs-list").innerHTML = data.jobs.map(j=>`
+645-    <div class="job-card ${cur===j.id?'selected':''} ${j.unlocked?'':'locked'}" onclick="selectJob('${j.id}', ${j.unlocked})">
+646-      <div class="job-icon">${j.emoji}</div>
+647-      <div class="job-info"><div class="job-name">${j.name}</div><div class="job-desc">${j.desc} · ур.${j.level}</div></div>
+648-      <div class="job-salary">${j.salary}₽</div>
+649-    </div>`).join("");
+650-}
+651-async function selectJob(jid, unlocked) {
+652-  if (!unlocked) { toast("Низкий уровень", "error"); return; }
+653-  try { await api("set_job", {job_id: jid}); loadWork(); toast(`💼 ${JOBS_DATA[jid].name}`); }
+654-  catch(e) { toast(e.message, "error"); }
+655-}
+656-async function doWork() {
+657-  try {
+658-    const d = await api("work");
+659-    state.player = d.player; renderPlayer(); loadWork();
+660-    checkCreditPaid(d);
+661-    toast(`💼 +${d.earned}₽ · +${d.xp} XP`, "success");
+--
+667:function renderBusinesses(data) {
+668-  const list = document.getElementById("businesses-list");
+669-  if (!list) return;
+670-  
+671-  const arr = Array.isArray(data) ? data : (data.businesses || []);
+672-  let totalPending = 0;
+673-  list.innerHTML = "";
+674-  
+675-  if (arr.length === 0) {
+676-    list.innerHTML = '<div style="color:var(--hint);text-align:center;padding:20px;">У тебя нет бизнесов</div>';
+677-    const totalEl = document.getElementById("business-total-pending");
+678-    if (totalEl) totalEl.textContent = "0₽";
+679-    return;
+680-  }
+681-
+682-  arr.forEach(b => {
+683-    const pending = b.pending || b.pending_income || b.accrued || 0;
+684-    totalPending += pending;
+685-    const income = b.income || 0;
+686-    const name = b.name || 'Бизнес';
+687-    const emoji = b.emoji || '🏢';
+688-    const level = b.level || 1;
+689-
+690-    list.innerHTML += `
+691-      <div class="business-card" style="background:var(--bg-2);border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid rgba(255,255,255,0.05);box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+692-         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+693-            <div style="font-weight:900;font-size:16px;color:#fff;">${emoji} ${name}</div>
+694-            <div style="background:rgba(243,156,18,0.15);color:#f39c12;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:bold;">Ур. ${level}</div>
+695-         </div>
+696-         <div style="font-size:12px;color:var(--hint);margin-top:4px;">Доход: ${fmtMoney(income)}₽/ч</div>
+697-         <div style="margin-top:12px;background:#111;padding:12px;border-radius:10px;display:flex;justify-content:space-between;align-items:center;border:1px solid #222;">

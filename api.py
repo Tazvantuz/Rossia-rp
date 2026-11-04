@@ -339,13 +339,21 @@ async def api_businesses(request):
     for bid, b in BUSINESSES.items():
         info = {**b, "id":bid, "owned":bid in owned}
         if bid in owned:
+            lvl = owned[bid].get("level", 1)
+            info["level"] = lvl
+            mult = 1.0
+            if lvl == 2: mult = 1.75
+            elif lvl >= 3: mult = 3.0
+            real_income = int(b["income"] * mult)
+            info["income"] = real_income
             info["last_collect"] = owned[bid].get("last_collect", now)
             elapsed = min(86400, now - info["last_collect"])
-            info["pending"] = int(b["income"] * elapsed / 3600)
+            info["pending"] = int(real_income * elapsed / 3600)
             total_pending += info["pending"]
+        else:
+            info["level"] = 0
         result.append(info)
     return web.json_response({"businesses": result, "pending": total_pending})
-
 async def api_buy_business(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
@@ -382,20 +390,21 @@ async def api_collect_business(request):
     for b in biz:
         info = BUSINESSES.get(b["id"])
         if not info: continue
-        elapsed = min(86400, now - b.get("last_collect", now))
-        earn = int(info["income"] * elapsed / 3600)
-        total += earn
+        lvl = b.get("level", 1)
+        mult = 1.0
+        if lvl == 2: mult = 1.75
+        elif lvl >= 3: mult = 3.0
+        real_income = int(info["income"] * mult)
+        last = b.get("last_collect", now)
+        elapsed = min(86400, now - last)
+        earned = int(real_income * elapsed / 3600)
+        total += earned
         b["last_collect"] = now
-    if total <= 0:
-        return web.json_response({"error":"Нечего собирать"}, status=400)
-    await _save_biz(uid, biz)
-    await db.execute("UPDATE players SET balance=balance+? WHERE user_id=?", (total, uid))
-    credit_paid = await _forced_credit_collect(uid)
+    if total > 0:
+        await _save_biz(uid, biz)
+        await db.execute("UPDATE players SET balance=balance+? WHERE user_id=?", (total, uid))
     p = await _player(uid)
-    ach = await _check_achievements(uid, p)
-    return web.json_response({"player": _player_json(p), "earned": total,
-                              "new_achievements": ach, "credit_paid": credit_paid})
-
+    return web.json_response({"player": _player_json(p), "collected": total})
 async def api_casino_play(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
@@ -1620,6 +1629,33 @@ async def api_referral_claim(request):
     return web.json_response({"ok": True, "reward": reward})
 
 
+
+async def api_upgrade_business(request):
+    ud = await _user(request); uid = ud["id"]
+    body = await request.json()
+    bid = body.get("business_id")
+    b = BUSINESSES.get(bid)
+    if not b: return web.json_response({"error":"Бизнес не найден"}, status=400)
+    p = await _player(uid)
+    biz = _json_biz(p)
+    
+    target = next((x for x in biz if x["id"] == bid), None)
+    if not target: return web.json_response({"error":"У тебя нет этого бизнеса"}, status=400)
+    
+    lvl = target.get("level", 1)
+    if lvl >= 3: return web.json_response({"error":"Максимальный уровень"}, status=400)
+    
+    cost = int(b["price"] * (1.3 if lvl == 1 else 1.7))
+    if p["balance"] < cost: return web.json_response({"error":"Не хватает денег"}, status=400)
+    
+    target["level"] = lvl + 1
+    await _save_biz(uid, biz)
+    await db.execute("UPDATE players SET balance=balance-? WHERE user_id=?", (cost, uid))
+    
+    p = await _player(uid)
+    return web.json_response({"player": _player_json(p), "success": True})
+
+
 def setup_routes(app):
     R = app.router
     R.add_post("/api/me", api_me)
@@ -1636,6 +1672,7 @@ def setup_routes(app):
     R.add_post("/api/work", api_work)
     R.add_post("/api/businesses", api_businesses)
     R.add_post("/api/buy_business", api_buy_business)
+    R.add_post("/api/upgrade_business", api_upgrade_business)
     R.add_post("/api/collect_business", api_collect_business)
     R.add_post("/api/casino_play", api_casino_play)
     R.add_post("/api/daily", api_daily)

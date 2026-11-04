@@ -609,8 +609,16 @@ async function sellItem(iid) {
 async function loadWork() {
   try {
     const d = await api("jobs", {});
-    state.jobsCache = d.jobs || d;
-    renderJobs(state.jobsCache);
+    state.jobsCache = d;
+    renderJobs(d);
+  } catch(e) { toast(e.message, "error"); }
+}
+
+async function loadBusinesses() {
+  try {
+    const d = await api("businesses", {});
+    state.businessesCache = d;
+    renderBusinesses(d);
   } catch(e) { toast(e.message, "error"); }
 }
 
@@ -673,39 +681,81 @@ function renderBusinesses(data) {
   list.innerHTML = "";
   
   if (arr.length === 0) {
-    list.innerHTML = '<div style="color:var(--hint);text-align:center;padding:20px;">У тебя нет бизнесов</div>';
+    list.innerHTML = '<div style="color:var(--hint);text-align:center;padding:20px;">Нет доступных бизнесов</div>';
     const totalEl = document.getElementById("business-total-pending");
     if (totalEl) totalEl.textContent = "0₽";
     return;
   }
 
   arr.forEach(b => {
-    const pending = b.pending || b.pending_income || b.accrued || 0;
+    const pending = b.pending || 0;
     totalPending += pending;
     const income = b.income || 0;
     const name = b.name || 'Бизнес';
     const emoji = b.emoji || '🏢';
     const level = b.level || 1;
+    
+    let actionHtml = "";
+    if (!b.owned) {
+      actionHtml = `<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="buyBusiness('${b.id}')">Купить за ${fmtMoney(b.price)}₽</button>`;
+    } else {
+      let upgradeHtml = "";
+      if (level < 3) {
+        const cost = Math.floor(b.price * (level === 1 ? 1.3 : 1.7));
+        upgradeHtml = `<button class="btn btn-secondary" style="flex:1;margin-right:8px;font-size:12px;padding:8px;" onclick="upgradeBusiness('${b.id}')">⭐ Улучшить (${fmtMoney(cost)}₽)</button>`;
+      } else {
+        upgradeHtml = `<button class="btn btn-secondary" style="flex:1;margin-right:8px;font-size:12px;padding:8px;" disabled>⭐ Макс. уровень</button>`;
+      }
+      
+      actionHtml = `
+        <div style="display:flex;margin-top:10px;">
+          ${upgradeHtml}
+          <button class="btn btn-primary" style="flex:1;font-size:12px;padding:8px;" onclick="collectBusiness()">💰 Забрать</button>
+        </div>
+      `;
+    }
 
     list.innerHTML += `
       <div class="business-card" style="background:var(--bg-2);border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid rgba(255,255,255,0.05);box-shadow:0 4px 6px rgba(0,0,0,0.1);">
          <div style="display:flex;justify-content:space-between;align-items:flex-start;">
             <div style="font-weight:900;font-size:16px;color:#fff;">${emoji} ${name}</div>
-            <div style="background:rgba(243,156,18,0.15);color:#f39c12;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:bold;">Ур. ${level}</div>
+            ${b.owned ? `<div style="background:rgba(243,156,18,0.15);color:#f39c12;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:bold;">Ур. ${level}</div>` : ''}
          </div>
          <div style="font-size:12px;color:var(--hint);margin-top:4px;">Доход: ${fmtMoney(income)}₽/ч</div>
+         ${b.owned ? `
          <div style="margin-top:12px;background:#111;padding:12px;border-radius:10px;display:flex;justify-content:space-between;align-items:center;border:1px solid #222;">
             <div>
               <div style="font-size:10px;color:var(--hint);text-transform:uppercase;letter-spacing:0.5px;">Накоплено</div>
               <div style="font-size:18px;font-weight:900;color:#2ecc71;">${fmtMoney(pending)}₽</div>
             </div>
-         </div>
+         </div>` : ''}
+         ${actionHtml}
       </div>
     `;
   });
 
   const totalEl = document.getElementById("business-total-pending");
   if (totalEl) totalEl.textContent = fmtMoney(totalPending) + "₽";
+}
+
+async function buyBusiness(id) {
+  try {
+    const d = await api("buy_business", { business_id: id });
+    if (d.error) throw new Error(d.error);
+    toast("🏢 Бизнес куплен!", "success");
+    if (d.player) { state.player = d.player; renderPlayer(); }
+    loadBusinesses();
+  } catch(e) { toast(e.message, "error"); }
+}
+
+async function upgradeBusiness(id) {
+  try {
+    const d = await api("upgrade_business", { business_id: id });
+    if (d.error) throw new Error(d.error);
+    toast("⭐ Бизнес улучшен!", "success");
+    if (d.player) { state.player = d.player; renderPlayer(); }
+    loadBusinesses();
+  } catch(e) { toast(e.message, "error"); }
 }
 async function buyBusiness(bid, canAfford) {
   if (!canAfford) { toast("Не хватает денег", "error"); return; }
