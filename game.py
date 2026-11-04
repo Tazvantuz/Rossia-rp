@@ -254,3 +254,110 @@ CREDIT_TERMS = [
     {"hours": 24, "pct": 25, "label": "1 день"},
     {"hours": 48, "pct": 35, "label": "2 дня"},
 ]
+
+# ═══════ БИЗНЕС ВКУСНО И ТОЧКА ═══════
+BUSINESSES["vtope"] = {"name":"Вкусно и Точка","emoji":"🍔","price":500000,"income":6000,"xp":700,"desc":"Макдональдс по-русски"}
+
+# ═══════ HP НА ОДЕЖДУ ═══════
+BODY_HP = {
+  "b_alco":10,"b_aura":15,"b_iambog":20,"b_cage":25,"b_supreme":30,
+  "b_armani":35,"b_nf":50,"b_leather":60,"b_wedding":80,"b_vest":150,
+  "b_tuxedo":120,"b_santa":200,"b_tank_usa":12,"b_hoodie":22,"b_hawaii":18,
+  "b_armor":250,"b_bomber":70,"b_poncho":90,"b_kimono":110,"b_jersey":100,
+  "b_dress_red":130,"b_shirt_tie":300,
+}
+for iid, hp in BODY_HP.items():
+    if iid in ITEMS: ITEMS[iid]["hp"] = hp
+
+# ═══════ УРОН НА РУКИ ═══════
+HAND_DAMAGE = {
+  "rh_cig":1,"rh_beer":3,"rh_baltica":4,"rh_shaverma":2,"rh_rose":1,"rh_rod":5,
+  "rh_bat":15,"rh_nerf":8,"rh_flag_rus":6,"rh_case":12,"rh_knife":12,"rh_book":5,
+  "rh_donut":1,"rh_icecream":1,"rh_glove":18,"rh_bag":6,"rh_brass":20,
+  "rh_watermelon":8,"rh_fish":4,"rh_burger":2,
+  "lh_phone":3,"lh_wallet":2,"lh_cola":2,"lh_ext":14,"lh_guitar":10,"lh_shield":8,
+  "lh_sword":25,"lh_flag_ussr":5,"lh_briefcase":15,"lh_cat":3,"lh_coffee":2,
+  "lh_hammer":18,"lh_book2":4,"lh_ball":3,"lh_umbrella":6,"lh_laptop":10,
+  "lh_champagne":7,"lh_sushi":2,"lh_pizza":2,"lh_teddy":1,
+}
+for iid, dmg in HAND_DAMAGE.items():
+    if iid in ITEMS: ITEMS[iid]["damage"] = dmg
+
+# ═══════ УНИКАЛЬНЫЕ ПРЕДМЕТЫ ИЗ КЕЙСОВ ═══════
+CASE_ITEMS = {
+  "h_case_bandit":    {"name":"Бандитская шапка","emoji":"🧢","slot":"head","price":3000,"rarity":"rare","desc":"Только из кейса!","hp":10},
+  "b_case_tracksuit": {"name":"Спортивка Adidas (настоящая)","emoji":"👕","slot":"body","price":8000,"rarity":"epic","desc":"Только из кейса!","hp":60},
+  "h_case_rooster":   {"name":"Золотая маска петуха","emoji":"🐔","slot":"head","price":15000,"rarity":"epic","desc":"Только из кейса!","hp":30},
+  "b_case_chains":    {"name":"Футболка с цепями","emoji":"👕","slot":"body","price":12000,"rarity":"epic","desc":"Только из кейса!","hp":80},
+  "h_case_gold_uzi":  {"name":"Золотой УЗИ","emoji":"👑","slot":"head","price":50000,"rarity":"legendary","desc":"Только из кейса!","hp":100},
+  "h_case_crypto":    {"name":"Маска биткоина","emoji":"₿","slot":"head","price":30000,"rarity":"epic","desc":"Только из кейса!","hp":50},
+  "b_case_armani_real":{"name":"Пиджак Armani (оригинал)","emoji":"🤵","slot":"body","price":100000,"rarity":"legendary","desc":"Только из кейса!","hp":200},
+  "h_case_helmet_alpha":{"name":"Шлем Альфа","emoji":"🪖","slot":"head","price":80000,"rarity":"legendary","desc":"Только из кейса!","hp":150},
+  "rh_case_uzi_gold": {"name":"Золотой УЗИ (оружие)","emoji":"🔫","slot":"right_hand","price":150000,"rarity":"legendary","desc":"Только из кейса!","damage":80},
+  "lh_case_brilliant":{"name":"Бриллиантовый кейс","emoji":"💼","slot":"left_hand","price":300000,"rarity":"legendary","desc":"Только из кейса!","damage":50},
+}
+ITEMS.update(CASE_ITEMS)
+
+# ═══════ КЕЙСЫ ═══════
+CASES = {
+  "basic": {"name":"Кейс новичка","emoji":"📦","price":1000,
+    "items":[
+      {"iid":"h_cig","chance":40},
+      {"iid":"b_alco","chance":30},
+      {"iid":"l_family","chance":15},
+      {"iid":"rh_cig","chance":10},
+      {"iid":"h_case_bandit","chance":4},
+      {"iid":"b_case_tracksuit","chance":1},
+    ]},
+  "rare": {"name":"Кейс гопника","emoji":"🎁","price":5000,
+    "items":[
+      {"iid":"h_balaclava","chance":35},
+      {"iid":"b_cage","chance":30},
+      {"iid":"h_crown","chance":20},
+      {"iid":"h_case_rooster","chance":10},
+      {"iid":"b_case_chains","chance":4},
+      {"iid":"h_case_gold_uzi","chance":1},
+    ]},
+  "legendary": {"name":"Кейс олигарха","emoji":"💎","price":25000,
+    "items":[
+      {"iid":"h_gold_crown","chance":40},
+      {"iid":"b_tuxedo","chance":25},
+      {"iid":"h_case_crypto","chance":15},
+      {"iid":"b_case_armani_real","chance":10},
+      {"iid":"h_case_helmet_alpha","chance":7},
+      {"iid":"rh_case_uzi_gold","chance":2.5},
+      {"iid":"lh_case_brilliant","chance":0.5},
+    ]},
+}
+
+# ═══════ БАНДЫ ═══════
+GANG_MAX_MEMBERS = 10
+GANG_CREATE_COST = 50000
+GANG_TERRITORIES = [
+  {"id":0,"name":"Гаражи","emoji":"🏚","income":500,"x":1,"y":1},
+  {"id":1,"name":"Ларёк у метро","emoji":"🏪","income":1000,"x":2,"y":1},
+  {"id":2,"name":"Промзона","emoji":"🏭","income":2000,"x":3,"y":1},
+  {"id":3,"name":"Спальный район","emoji":"🏢","income":1500,"x":1,"y":2},
+  {"id":4,"name":"Рынок","emoji":"🛒","income":2500,"x":2,"y":2},
+  {"id":5,"name":"Клуб Ночка","emoji":"🎭","income":3000,"x":3,"y":2},
+  {"id":6,"name":"Порт","emoji":"⚓","income":4000,"x":1,"y":3},
+  {"id":7,"name":"Центр города","emoji":"🏛","income":6000,"x":2,"y":3},
+  {"id":8,"name":"Элитный квартал","emoji":"🏰","income":10000,"x":3,"y":3},
+]
+CAPTURE_HOURS = 1
+
+# ═══════ PVP ═══════
+PVP_PARTS = ["head","torso","legs"]
+PVP_PARTS_NAMES = {"head":"Голова","torso":"Торс","legs":"Ноги"}
+PVP_BASE_HP = 100
+
+def get_combat_stats(player):
+    """HP и урон с учётом одежды."""
+    hp = PVP_BASE_HP
+    dmg = 5
+    for slot in ("weapon_id","armor_id","shield_id","head_id","body_id","legs_id","right_hand_id","left_hand_id"):
+        iid = player.get(slot)
+        if iid and iid in ITEMS:
+            hp += ITEMS[iid].get("hp", 0)
+            dmg += ITEMS[iid].get("damage", 0)
+    return {"hp": hp, "damage": dmg}

@@ -107,6 +107,10 @@
           <button onclick="setBet(10000)">10К</button>
           <button onclick="setBet('max')">MAX</button>
         </div>
+        <div class="bet-x-row">
+          <button onclick="halfBet()" class="bet-x-btn">➗ ÷2</button>
+          <button onclick="doubleBet()" class="bet-x-btn">✖️ x2</button>
+        </div>
       </div>
       <div id="casino-games"></div>
       <div id="casino-result"></div>
@@ -121,6 +125,16 @@
       <h3 class="section-subtitle">📬 Трейды</h3>
       <div id="trades-incoming"></div>
       <div id="trades-outgoing"></div>
+    </section>
+
+    <section class="tab-content" data-tab="cases">
+      <h2 class="section-title">🎁 Кейсы</h2>
+      <p style="color:var(--hint);margin-bottom:12px;font-size:13px">Открывай кейсы — может выпасть уникальный предмет, которого нет в магазине!</p>
+      <div id="cases-list"></div>
+    </section>
+
+    <section class="tab-content" data-tab="gang">
+      <div id="gang-content"></div>
     </section>
 
     <section class="tab-content" data-tab="chat">
@@ -146,6 +160,8 @@
       <button class="nav-btn" data-nav="work">💼<span>Работа</span></button>
       <button class="nav-btn" data-nav="casino">🎰<span>Казино</span></button>
       <button class="nav-btn" data-nav="people">👥<span>Люди</span></button>
+      <button class="nav-btn" data-nav="cases">🎁<span>Кейсы</span></button>
+      <button class="nav-btn" data-nav="gang">🚬<span>Банда</span></button>
       <button class="nav-btn" data-nav="chat">💬<span>Чат</span></button>
       <button class="nav-btn" data-nav="more">⚙️<span>Ещё</span></button>
     </nav>

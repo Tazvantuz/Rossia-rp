@@ -56,6 +56,43 @@ CREATE TABLE IF NOT EXISTS chat_messages (
     message TEXT NOT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS pvp_battles (
+    battle_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    attacker_id INTEGER NOT NULL,
+    defender_id INTEGER NOT NULL,
+    attacker_hp INTEGER NOT NULL,
+    defender_hp INTEGER NOT NULL,
+    attacker_max_hp INTEGER NOT NULL,
+    defender_max_hp INTEGER NOT NULL,
+    attacker_damage INTEGER NOT NULL,
+    defender_damage INTEGER NOT NULL,
+    turn TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    log TEXT DEFAULT '[]',
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS gangs (
+    gang_id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    emoji TEXT NOT NULL,
+    leader_id INTEGER NOT NULL UNIQUE,
+    treasury INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS gang_members (
+    gang_id INTEGER NOT NULL,
+    user_id INTEGER NOT NULL UNIQUE,
+    role TEXT DEFAULT 'member',
+    joined_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(gang_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS gang_territories (
+    territory_id INTEGER PRIMARY KEY,
+    gang_id INTEGER,
+    capturing_gang_id INTEGER,
+    capture_end INTEGER,
+    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 """
 
 class Database:
