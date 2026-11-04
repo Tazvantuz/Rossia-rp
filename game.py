@@ -344,15 +344,15 @@ CASES = {
 GANG_MAX_MEMBERS = 10
 GANG_CREATE_COST = 50000
 GANG_TERRITORIES = [
-  {"id":0,"name":"Гаражи","emoji":"🏚","income":500,"x":1,"y":1},
+  {"id":0,"name":"Гаражи","emoji":"🏚","income":1000,"x":1,"y":1},
   {"id":1,"name":"Ларёк у метро","emoji":"🏪","income":1000,"x":2,"y":1},
-  {"id":2,"name":"Промзона","emoji":"🏭","income":2000,"x":3,"y":1},
-  {"id":3,"name":"Спальный район","emoji":"🏢","income":1500,"x":1,"y":2},
-  {"id":4,"name":"Рынок","emoji":"🛒","income":2500,"x":2,"y":2},
-  {"id":5,"name":"Клуб Ночка","emoji":"🎭","income":3000,"x":3,"y":2},
-  {"id":6,"name":"Порт","emoji":"⚓","income":4000,"x":1,"y":3},
-  {"id":7,"name":"Центр города","emoji":"🏛","income":6000,"x":2,"y":3},
-  {"id":8,"name":"Элитный квартал","emoji":"🏰","income":10000,"x":3,"y":3},
+  {"id":2,"name":"Промзона","emoji":"🏭","income":1000,"x":3,"y":1},
+  {"id":3,"name":"Спальный район","emoji":"🏢","income":1000,"x":1,"y":2},
+  {"id":4,"name":"Рынок","emoji":"🛒","income":1000,"x":2,"y":2},
+  {"id":5,"name":"Клуб Ночка","emoji":"🎭","income":1000,"x":3,"y":2},
+  {"id":6,"name":"Порт","emoji":"⚓","income":1000,"x":1,"y":3},
+  {"id":7,"name":"Центр города","emoji":"🏛","income":1000,"x":2,"y":3},
+  {"id":8,"name":"Элитный квартал","emoji":"🏰","income":1000,"x":3,"y":3},
 ]
 CAPTURE_HOURS = 1
 
