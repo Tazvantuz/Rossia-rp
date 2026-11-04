@@ -678,6 +678,38 @@ async def api_leaderboard(request):
         })
     return web.json_response({"leaders": result})
 
+CHAT_COOLDOWN = 3
+USER_LAST_CHAT = {}
+
+async def api_chat_send(request):
+    ud = await _user(request); uid = ud["id"]
+    p = await _player(uid)
+    if not p: return web.json_response({"error":"no player"}, status=400)
+    body = await request.json()
+    msg = (body.get("message") or "").strip()
+    if not msg: return web.json_response({"error":"Пустое сообщение"}, status=400)
+    if len(msg) > 200: msg = msg[:200]
+    now = int(time.time())
+    last = USER_LAST_CHAT.get(uid, 0)
+    if now - last < CHAT_COOLDOWN:
+        return web.json_response({"error": f"Кд {CHAT_COOLDOWN-(now-last)}с"}, status=400)
+    USER_LAST_CHAT[uid] = now
+    await db.execute(
+        "INSERT INTO chat_messages (user_id, nickname, level, message) VALUES (?,?,?,?)",
+        (uid, p["nickname"], p["level"], msg))
+    await db.execute(
+        "DELETE FROM chat_messages WHERE id NOT IN "
+        "(SELECT id FROM chat_messages ORDER BY id DESC LIMIT 500)")
+    return web.json_response({"ok": True})
+
+async def api_chat_get(request):
+    await _user(request)
+    rows = await db.fetchall(
+        "SELECT user_id, nickname, level, message, created_at FROM chat_messages "
+        "ORDER BY id DESC LIMIT 50")
+    rows.reverse()
+    return web.json_response({"messages": rows})
+
 def setup_routes(app):
     R = app.router
     R.add_post("/api/me", api_me)
@@ -711,3 +743,5 @@ def setup_routes(app):
     R.add_post("/api/trade/accept", api_trade_accept)
     R.add_post("/api/trade/decline", api_trade_decline)
     R.add_post("/api/leaderboard", api_leaderboard)
+    R.add_post("/api/chat/send", api_chat_send)
+    R.add_post("/api/chat/get", api_chat_get)

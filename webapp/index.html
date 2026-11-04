@@ -69,7 +69,6 @@
       <h3 class="section-subtitle">⚡ Быстрые действия</h3>
       <button class="btn btn-secondary" onclick="claimDaily()">🎁 Ежедневный бонус <span id="daily-badge" class="badge hidden">!</span></button>
       <button class="btn btn-secondary" onclick="claimRoulette()">🎡 Рулетка дня (6ч)</button>
-      <button class="btn btn-secondary" onclick="doCrime()">🕶 Криминал (5м)</button>
     </section>
 
     <section class="tab-content" data-tab="appearance">
@@ -116,6 +115,15 @@
       <div id="trades-outgoing"></div>
     </section>
 
+    <section class="tab-content" data-tab="chat">
+      <h2 class="section-title">💬 Чат</h2>
+      <div id="chat-messages" class="chat-messages"></div>
+      <div class="chat-input-row">
+        <input id="chat-input" type="text" maxlength="200" placeholder="Напиши что-нибудь...">
+        <button onclick="sendChat()">➤</button>
+      </div>
+    </section>
+
     <section class="tab-content" data-tab="more">
       <h2 class="section-title">⚙️ Ещё</h2>
       <button class="btn btn-secondary" onclick="showCrypto()">🪙 Крипто-биржа <span id="crypto-price-badge"></span></button>
@@ -130,6 +138,7 @@
       <button class="nav-btn" data-nav="work">💼<span>Работа</span></button>
       <button class="nav-btn" data-nav="casino">🎰<span>Казино</span></button>
       <button class="nav-btn" data-nav="people">👥<span>Люди</span></button>
+      <button class="nav-btn" data-nav="chat">💬<span>Чат</span></button>
       <button class="nav-btn" data-nav="more">⚙️<span>Ещё</span></button>
     </nav>
   </div>

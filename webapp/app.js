@@ -200,10 +200,12 @@ function showTab(tab) {
   $$(".tab-content").forEach(c=>c.classList.remove("active"));
   $(`.tab-content[data-tab="${tab}"]`).classList.add("active");
   $$(".nav-btn").forEach(b=>b.classList.toggle("active", b.dataset.nav===tab));
+  if (typeof stopChatPolling === "function") stopChatPolling();
   if (tab==="appearance") loadAppearance();
   if (tab==="work") loadWork();
   if (tab==="casino") renderCasino();
   if (tab==="people") loadPeople();
+  if (tab==="chat") startChatPolling();
   if (tab==="more") updateMoreBadges();
   window.scrollTo(0,0);
 }
@@ -835,5 +837,63 @@ async function showLeaderboard() {
 $$(".nav-btn").forEach(btn=>{
   btn.addEventListener("click", ()=>{ showTab(btn.dataset.nav); if (tg) tg.HapticFeedback?.selectionChanged(); });
 });
+
+// ══════════════════════════════════════════════════════════════
+//  ЧАТ
+// ══════════════════════════════════════════════════════════════
+let chatInterval = null;
+function startChatPolling() {
+  if (chatInterval) clearInterval(chatInterval);
+  loadChat();
+  chatInterval = setInterval(loadChat, 3000);
+}
+function stopChatPolling() {
+  if (chatInterval) { clearInterval(chatInterval); chatInterval = null; }
+}
+async function loadChat() {
+  try {
+    const d = await api("chat/get");
+    const el = $("#chat-messages");
+    if (!el) return;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
+    if (!d.messages || d.messages.length === 0) {
+      el.innerHTML = '<p style="color:var(--hint);text-align:center;padding:40px">Пока нет сообщений. Напиши первым!</p>';
+    } else {
+      el.innerHTML = d.messages.map(m => {
+        let time = "";
+        try {
+          const iso = m.created_at.replace(" ", "T") + "Z";
+          time = new Date(iso).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+        } catch(e) {}
+        return `<div class="chat-msg">
+          <div class="chat-msg-head">
+            <span class="chat-nick" onclick="viewPlayer(${m.user_id})">${escapeHtml(m.nickname)}</span>
+            <span class="chat-lvl">Ур. ${m.level}</span>
+            <span class="chat-time">${time}</span>
+          </div>
+          <div>${escapeHtml(m.message)}</div>
+        </div>`;
+      }).join("");
+    }
+    if (atBottom) el.scrollTop = el.scrollHeight;
+  } catch(e) {}
+}
+function escapeHtml(text) {
+  const div = document.createElement("div");
+  div.textContent = text == null ? "" : text;
+  return div.innerHTML;
+}
+async function sendChat() {
+  const inp = $("#chat-input");
+  if (!inp) return;
+  const msg = inp.value.trim();
+  if (!msg) return;
+  try {
+    await api("chat/send", {message: msg});
+    inp.value = "";
+    loadChat();
+    if (tg) tg.HapticFeedback?.impactOccurred("light");
+  } catch(e) { toast(e.message, "error"); }
+}
 
 boot();
