@@ -541,3 +541,7 @@ input[type=number]{-moz-appearance:textfield}
 }
 .bet-actions .btn-play:active { transform: scale(0.97) !important; }
 .bet-actions .btn-x:active { transform: scale(0.95) !important; }
+
+/* Фикс высоты для вкладки Гетто */
+.tab-content[data-tab="ghetto"] { min-height: 300px; }
+#ghetto-map-container { align-content: start; }

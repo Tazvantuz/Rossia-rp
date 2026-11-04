@@ -11,6 +11,7 @@ from aiogram.types import (
 )
 from database import db
 import api
+import gang_api
 
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -52,6 +53,7 @@ async def _serve_index(request):
 def make_app():
     app = web.Application(client_max_size=1*1024*1024)
     api.setup_routes(app)
+gang_api.setup_routes(app)
     app.router.add_get("/", _serve_index)
     app.router.add_static("/", WEB_DIR, show_index=False)
     return app
