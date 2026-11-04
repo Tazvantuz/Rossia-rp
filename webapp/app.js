@@ -4,7 +4,7 @@ const initData = tg?.initData || "";
 let state = {
   player: null, location: null, shopItems: [], invItems: [],
   shopFilter: "head", appearanceMode: "shop", casinoGame: "coin",
-  casinoLocked: false, casinoLockTime: 0,
+  casinoLocked: false, casinoLockTime: 0, openPMs: [],
 };
 
 // ══════════════════════════════════════════════════════════════
@@ -2190,20 +2190,39 @@ async function respondFriend(uid, accept) {
 // ═══ ЛС ЧАТ ═══
 state.chatWith = 'global';
 function switchChat(mode) {
-  state.chatWith = mode === 'global' ? 'global' : state.chatWith;
-  document.querySelectorAll('.chat-tab').forEach(b => b.classList.remove('active'));
-  document.querySelectorAll(`.chat-tab[data-chat="${mode}"]`).forEach(b => b.classList.add('active'));
-  if (mode === 'global') loadChat();
-  else loadPM();
-}
-function openPM(uid, name) {
-  state.chatWith = uid;
-  showTab("chat");
-  const tabs = document.getElementById("chat-tabs");
-  if (!tabs.querySelector(`[data-chat="${uid}"]`)) {
-    tabs.innerHTML += `<button class="chat-tab" data-chat="${uid}" onclick="switchChat('pm')">👤 ${name}</button>`;
+  if (mode === 'global' || mode === undefined || mode === null) {
+    state.chatWith = 'global';
+    loadChat();
+  } else {
+    state.chatWith = Number(mode);
+    loadPM();
   }
-  switchChat('pm');
+  renderChatTabs();
+}
+
+function openPM(uid, name) {
+  uid = Number(uid);
+  if (!state.openPMs) state.openPMs = [];
+  if (!state.openPMs.find(x => Number(x.uid) === uid)) {
+    state.openPMs.push({uid: uid, name: name});
+  }
+  state.chatWith = uid;
+  closeModal();
+  showTab("chat");
+}
+
+function renderChatTabs() {
+  const tabs = document.getElementById("chat-tabs");
+  if (!tabs) return;
+  const isGlobal = !state.chatWith || state.chatWith === 'global';
+  let html = `<button class="chat-tab ${isGlobal ? 'active' : ''}" data-chat="global" onclick="switchChat('global')">🌐 Общий</button>`;
+  if (Array.isArray(state.openPMs)) {
+    for (const p of state.openPMs) {
+      const isActive = Number(state.chatWith) === Number(p.uid);
+      html += `<button class="chat-tab ${isActive ? 'active' : ''}" data-chat="${p.uid}" onclick="switchChat(${p.uid})">👤 ${escapeHtml(p.name)}</button>`;
+    }
+  }
+  tabs.innerHTML = html;
 }
 async function loadPM() {
   if (!state.chatWith || state.chatWith === 'global') return;
@@ -2242,10 +2261,13 @@ showTab = function(tab) {
   _oldShowTab3(tab);
   if (tab === "friends") loadFriends();
   if (tab === "chat") {
-    const tabs = document.getElementById("chat-tabs");
-    tabs.innerHTML = '<button class="chat-tab active" onclick="switchChat(\'global\')">🌐 Общий</button>';
-    state.chatWith = 'global';
-    loadChat();
+    if (!state.chatWith || state.chatWith === 'global') {
+      state.chatWith = 'global';
+      loadChat();
+    } else {
+      loadPM();
+    }
+    renderChatTabs();
   }
   if (tab === "home") loadNotifications();
 };
