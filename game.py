@@ -288,6 +288,27 @@ HAND_DAMAGE = {
 for iid, dmg in HAND_DAMAGE.items():
     if iid in ITEMS: ITEMS[iid]["damage"] = dmg
 
+# ═══════ HP НА ГОЛОВУ ═══════
+HEAD_HP = {
+    "h_cig":5,"h_cap":8,"h_ushanka":10,"h_balaclava":15,"h_rooster":18,
+    "h_bandana":20,"h_wig":22,"h_crown":35,"h_guy":45,"h_horns":70,
+    "h_moto":90,"h_gold_crown":180,
+    "h_cheburashka":8,"h_bandit":16,"h_pirate":22,"h_fedora":28,"h_beret":32,
+    "h_vr":55,"h_halo":95,"h_cap_red":40,"h_flower":45,"h_mask_money":100,
+}
+for iid, hp in HEAD_HP.items():
+    if iid in ITEMS: ITEMS[iid]["hp"] = hp
+
+# ═══════ HP НА НОГИ ═══════
+LEGS_HP = {
+    "l_family":5,"l_adidas":8,"l_ripped":12,"l_shorts":15,"l_levis":20,
+    "l_lampasy":25,"l_camo":35,"l_classic":50,"l_leather":80,"l_gold":180,
+    "l_joggers":10,"l_chinos":15,"l_skinny":18,"l_baggy":22,"l_overalls":32,
+    "l_kilt":42,"l_harem":55,"l_track":72,"l_cargo":100,"l_chains":160,
+}
+for iid, hp in LEGS_HP.items():
+    if iid in ITEMS: ITEMS[iid]["hp"] = hp
+
 
 # ═══════ УНИКАЛЬНЫЕ ПРЕДМЕТЫ ИЗ КЕЙСОВ (15, только кейсы) ═══════
 CASE_ITEMS = {
