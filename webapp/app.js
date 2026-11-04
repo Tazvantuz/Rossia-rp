@@ -239,6 +239,7 @@ function showTab(tab) {
   if (typeof stopChatPolling === "function") stopChatPolling();
   if (tab==="appearance") loadAppearance();
   if (tab==="work") loadWork();
+  if (tab==="business") loadBusinesses();
   if (tab==="casino") renderCasino();
   if (tab==="people") loadPeople();
   if (tab==="ghetto" && typeof renderGhetto === "function") renderGhetto();
@@ -333,6 +334,9 @@ function startTimers() {
 }
 
 function updateTimers() {
+  if (state.jobsCache && document.querySelector('.tab-content[data-tab="work"]') && document.querySelector('.tab-content[data-tab="work"]').classList.contains('active')) {
+    renderJobs(state.jobsCache);
+  }
   const p = state.player;
   if (!p) return;
   // Ежедневный бонус
@@ -604,8 +608,17 @@ async function sellItem(iid) {
 // ══════════════════════════════════════════════════════════════
 async function loadWork() {
   try {
-    const [jobs, biz] = await Promise.all([api("jobs"), api("businesses")]);
-    renderJobs(jobs); renderBusinesses(biz);
+    const d = await api("jobs", {});
+    state.jobsCache = d.jobs || d;
+    renderJobs(state.jobsCache);
+  } catch(e) { toast(e.message, "error"); }
+}
+
+async function loadBusinesses() {
+  try {
+    const d = await api("businesses", {});
+    state.businessesCache = d.businesses || d;
+    renderBusinesses(state.businessesCache);
   } catch(e) { toast(e.message, "error"); }
 }
 const JOBS_DATA = {
@@ -652,23 +665,47 @@ async function doWork() {
   } catch(e) { toast(e.message, "error"); loadWork(); }
 }
 function renderBusinesses(data) {
-  const badge = $("#pending-badge");
-  if (data.pending > 0) { badge.textContent = `+${fmtMoney(data.pending)}₽`; badge.classList.remove("hidden"); }
-  else badge.classList.add("hidden");
-  const p = state.player;
-  $("#businesses-list").innerHTML = data.businesses.map(b=>{
-    const canAfford = p.balance >= b.price;
-    if (b.owned) return `<div class="item-card" style="border-left-color:var(--success)">
-      <div class="item-emoji">${b.emoji}</div>
-      <div class="item-info"><div class="item-name">${b.name}</div><div class="item-meta">+${b.income}₽/ч · ${fmtMoney(b.pending)}₽</div></div>
-      <div style="color:var(--success);font-weight:700">✓</div>
-    </div>`;
-    return `<div class="item-card" style="border-left-color:var(--money);${canAfford?'':'opacity:.6'}" onclick="buyBusiness('${b.id}', ${canAfford})">
-      <div class="item-emoji">${b.emoji}</div>
-      <div class="item-info"><div class="item-name">${b.name}</div><div class="item-meta">+${b.income}₽/ч</div></div>
-      <div class="item-price ${canAfford?'':'disabled'}">${fmtMoney(b.price)}₽</div>
-    </div>`;
-  }).join("");
+  const list = document.getElementById("businesses-list");
+  if (!list) return;
+  
+  const arr = Array.isArray(data) ? data : (data.businesses || []);
+  let totalPending = 0;
+  list.innerHTML = "";
+  
+  if (arr.length === 0) {
+    list.innerHTML = '<div style="color:var(--hint);text-align:center;padding:20px;">У тебя нет бизнесов</div>';
+    const totalEl = document.getElementById("business-total-pending");
+    if (totalEl) totalEl.textContent = "0₽";
+    return;
+  }
+
+  arr.forEach(b => {
+    const pending = b.pending || b.pending_income || b.accrued || 0;
+    totalPending += pending;
+    const income = b.income || 0;
+    const name = b.name || 'Бизнес';
+    const emoji = b.emoji || '🏢';
+    const level = b.level || 1;
+
+    list.innerHTML += `
+      <div class="business-card" style="background:var(--bg-2);border-radius:16px;padding:16px;margin-bottom:12px;border:1px solid rgba(255,255,255,0.05);box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+         <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div style="font-weight:900;font-size:16px;color:#fff;">${emoji} ${name}</div>
+            <div style="background:rgba(243,156,18,0.15);color:#f39c12;padding:4px 8px;border-radius:8px;font-size:12px;font-weight:bold;">Ур. ${level}</div>
+         </div>
+         <div style="font-size:12px;color:var(--hint);margin-top:4px;">Доход: ${fmtMoney(income)}₽/ч</div>
+         <div style="margin-top:12px;background:#111;padding:12px;border-radius:10px;display:flex;justify-content:space-between;align-items:center;border:1px solid #222;">
+            <div>
+              <div style="font-size:10px;color:var(--hint);text-transform:uppercase;letter-spacing:0.5px;">Накоплено</div>
+              <div style="font-size:18px;font-weight:900;color:#2ecc71;">${fmtMoney(pending)}₽</div>
+            </div>
+         </div>
+      </div>
+    `;
+  });
+
+  const totalEl = document.getElementById("business-total-pending");
+  if (totalEl) totalEl.textContent = fmtMoney(totalPending) + "₽";
 }
 async function buyBusiness(bid, canAfford) {
   if (!canAfford) { toast("Не хватает денег", "error"); return; }
@@ -681,13 +718,21 @@ async function buyBusiness(bid, canAfford) {
 }
 async function collectBusiness() {
   try {
-    const d = await api("collect_business");
-    state.player = d.player; renderPlayer(); loadWork();
-    checkCreditPaid(d);
-    toast(`💰 +${fmtMoney(d.earned)}₽`, "success");
-    if (d.new_achievements?.length) notifyAchievements(d.new_achievements);
-    if (tg) tg.HapticFeedback?.notificationOccurred("success");
-  } catch(e) { toast(e.message, "error"); }
+    const d = await api("collect_business", {});
+    if (d.error) throw new Error(d.error);
+    
+    const collected = d.collected || d.pending || 0;
+    if (collected > 0) toast(`💰 Собрано: ${fmtMoney(collected)}₽`, "success");
+    else toast("Нечего собирать", "error");
+    
+    if (d.player) {
+      state.player = d.player;
+      document.getElementById("money").textContent = fmtMoney(state.player.balance);
+    }
+    loadBusinesses();
+  } catch(e) {
+    toast(e.message, "error");
+  }
 }
 
 // ══════════════════════════════════════════════════════════════

@@ -92,8 +92,17 @@
       <div id="job-current-box"></div>
       <h3 class="section-subtitle">Профессии</h3>
       <div id="jobs-list"></div>
-      <h3 class="section-subtitle">Бизнесы</h3>
-      <button class="btn btn-primary" onclick="collectBusiness()">💰 Собрать доход <span id="pending-badge"></span></button>
+    </section>
+
+    <section class="tab-content" data-tab="business">
+      <h2 class="section-title">🏢 Бизнесы</h2>
+      <div class="business-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;background:var(--bg-2);padding:16px;border-radius:16px;">
+        <div>
+          <div style="font-size:12px;color:var(--hint);">Накоплено всего</div>
+          <div style="font-size:24px;font-weight:900;color:#f39c12;" id="business-total-pending">0₽</div>
+        </div>
+        <button class="btn btn-primary" onclick="collectBusiness()" style="width:auto;padding:10px 20px;">💰 Забрать всё</button>
+      </div>
       <div id="businesses-list"></div>
     </section>
 
@@ -204,6 +213,7 @@
       <button class="nav-btn active" data-nav="home">🏠<span>Дом</span></button>
       <button class="nav-btn" data-nav="appearance">👕<span>Шмот</span></button>
       <button class="nav-btn" data-nav="work">💼<span>Работа</span></button>
+      <button class="nav-btn" data-nav="business">🏢<span>Бизнес</span></button>
       <button class="nav-btn" data-nav="casino">🎰<span>Казино</span></button>
       <button class="nav-btn" data-nav="people">👥<span>Люди</span></button>
       <button class="nav-btn" data-nav="referral">👥<span>Рефералы</span></button>
