@@ -873,14 +873,16 @@ async def _pvp_state_response(bid, uid):
     now = int(time.time())
     turn_started = b.get("turn_started_at") or now
     secs_left = max(0, PVP_TURN_TIMEOUT - (now - turn_started))
+    try: turn_int = int(b["turn"])
+    except: turn_int = 0
     return {
-        "battle_id": bid, "status": b["status"], "turn": b["turn"],
-        "attacker": {"user_id":att["user_id"],"nickname":att["nickname"],
-                     "hp":b["attacker_hp"],"max_hp":b["attacker_max_hp"]},
-        "defender": {"user_id":dfn["user_id"],"nickname":dfn["nickname"],
-                     "hp":b["defender_hp"],"max_hp":b["defender_max_hp"]},
+        "battle_id": bid, "status": b["status"], "turn": turn_int,
+        "attacker": {"user_id":int(att["user_id"]),"nickname":att["nickname"],
+                     "hp":int(b["attacker_hp"]),"max_hp":int(b["attacker_max_hp"])},
+        "defender": {"user_id":int(dfn["user_id"]),"nickname":dfn["nickname"],
+                     "hp":int(b["defender_hp"]),"max_hp":int(b["defender_max_hp"])},
         "log": _j.loads(b["log"] or "[]"),
-        "is_attacker": uid == b["attacker_id"],
+        "is_attacker": int(uid) == int(b["attacker_id"]),
         "seconds_left": secs_left,
         "timeout": PVP_TURN_TIMEOUT,
     }
@@ -967,8 +969,9 @@ async def api_pvp_state(request):
         now = int(time.time())
         turn_started = b.get("turn_started_at") or now
         if now - turn_started > 30:
-            loser_id = b["turn"]
-            winner_id = b["attacker_id"] if loser_id == b["defender_id"] else b["defender_id"]
+            try: loser_id = int(b["turn"])
+            except: loser_id = int(b["defender_id"])
+            winner_id = int(b["attacker_id"]) if loser_id == int(b["defender_id"]) else int(b["defender_id"])
             loser = await _player(loser_id)
             steal = int(loser["balance"] * 0.1)
             await db.execute("UPDATE players SET balance=balance-? WHERE user_id=?", (steal, loser_id))
@@ -990,7 +993,9 @@ async def api_pvp_action(request):
     
     b = await db.fetchone("SELECT * FROM pvp_battles WHERE battle_id=?", (bid,))
     if not b or b["status"] != "active": return web.json_response({"error": "Бой недоступен"}, status=400)
-    if b["turn"] != uid: return web.json_response({"error": "Не твой ход"}, status=400)
+    try: cur_turn = int(b["turn"])
+    except: cur_turn = 0
+    if cur_turn != int(uid): return web.json_response({"error": "Не твой ход"}, status=400)
         
     now = int(time.time())
     if now - (b["turn_started_at"] or now) > 30: return web.json_response({"error": "Время вышло"}, status=400)
@@ -1545,8 +1550,11 @@ async def _expire_user_battles(uid):
         for b in active:
             cur = await db.fetchone("SELECT status FROM pvp_battles WHERE battle_id=?", (b["battle_id"],))
             if not cur or cur["status"] != "active": continue
-            loser_id = b["turn"] if b["turn"] else b["defender_id"]
-            winner_id = b["defender_id"] if loser_id == b["attacker_id"] else b["attacker_id"]
+            try:
+                loser_id = int(b["turn"]) if b["turn"] else int(b["defender_id"])
+            except:
+                loser_id = int(b["defender_id"])
+            winner_id = int(b["defender_id"]) if loser_id == int(b["attacker_id"]) else int(b["attacker_id"])
             try:
                 loser = await _player(loser_id)
                 if loser:

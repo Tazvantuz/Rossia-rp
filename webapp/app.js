@@ -2248,7 +2248,7 @@ async function loadPvPState(bid, silent = false) {
       if (!silent) toast("Ждём ответа соперника...");
       return;
     }
-    const isMyTurn = d.turn === state.player.user_id;
+    const isMyTurn = Number(d.turn) === Number(state.player.user_id);
     const mustAttack = isMyTurn && !d.pending_attack_part;
     const mustDefend = isMyTurn && d.pending_attack_part;
     
