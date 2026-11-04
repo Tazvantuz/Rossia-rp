@@ -1349,6 +1349,19 @@ async def api_friend_respond(request):
         await db.execute("DELETE FROM friends WHERE user_id=? AND friend_id=?", (target_id, uid))
     return web.json_response({"ok": True})
 
+async def api_friend_remove(request):
+    ud = await _user(request); uid = ud["id"]
+    body = await request.json()
+    target_id = int(body.get("target_id", 0))
+    if not target_id or target_id == uid:
+        return web.json_response({"error": "Неверный ID"}, status=400)
+    f = await db.fetchone("SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status='accepted'", (uid, target_id))
+    if not f:
+        return web.json_response({"error": "Не в друзьях"}, status=400)
+    await db.execute("DELETE FROM friends WHERE (user_id=? AND friend_id=?) OR (user_id=? AND friend_id=?)",
+                     (uid, target_id, target_id, uid))
+    return web.json_response({"ok": True})
+
 async def api_friend_list(request):
     ud = await _user(request); uid = ud["id"]
     friends = await db.fetchall("SELECT f.friend_id as user_id, p.nickname, p.level FROM friends f JOIN players p ON p.user_id=f.friend_id WHERE f.user_id=? AND f.status='accepted'", (uid,))
@@ -2089,6 +2102,7 @@ def setup_routes(app):
     R.add_post("/api/friend/search", api_friend_search)
     R.add_post("/api/friend/request", api_friend_request)
     R.add_post("/api/friend/respond", api_friend_respond)
+    R.add_post("/api/friend/remove", api_friend_remove)
     R.add_post("/api/friend/list", api_friend_list)
     R.add_post("/api/chat/pm/send", api_chat_pm_send)
     R.add_post("/api/chat/pm/get", api_chat_pm_get)

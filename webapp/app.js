@@ -928,6 +928,7 @@ async function viewPlayer(uid) {
       ${!isMe && !d.is_friend && !d.friend_pending ? `<button class="btn btn-secondary" onclick="sendFriendRequest(${uid})">➕ В друзья</button>` : ''}
       ${!isMe && d.friend_pending ? `<button class="btn btn-secondary" disabled>⏳ Заявка отправлена</button>` : ''}
       ${!isMe && d.is_friend ? `<button class="btn btn-secondary" onclick="openPM(${uid}, '${d.nickname}')">✉️ Написать ЛС</button>` : ''}
+      ${!isMe && d.is_friend ? `<button class="btn btn-secondary" style="background:rgba(231,76,60,.15);color:var(--danger);border:1px solid rgba(231,76,60,.3);" onclick="removeFriend(${uid}, '${d.nickname}')">❌ Удалить из друзей</button>` : ''}
       ${!isMe && d.my_role && ['leader','deputy'].includes(d.my_role) && !d.target_in_gang ? `<button class="btn btn-secondary" onclick="inviteToGang(${uid}, '${d.nickname}')">📨 Пригласить в банду</button>` : ''}
     `);
   } catch(e) { toast(e.message, "error"); }
@@ -2013,11 +2014,23 @@ async function loadFriends() {
           <div class="player-avatar">👤</div>
           <div class="player-info"><div class="player-name">${f.nickname}</div><div class="player-meta">Ур. ${f.level}</div></div>
           <button class="btn btn-secondary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="event.stopPropagation(); openPM(${f.user_id}, '${f.nickname}')">✉️ ЛС</button>
+          <button class="btn btn-secondary" style="width:auto;padding:6px 8px;margin:0 0 0 4px;font-size:12px;color:var(--danger);" onclick="event.stopPropagation(); removeFriend(${f.user_id}, '${f.nickname}')">✕</button>
         </div>
       `).join("");
     }
   } catch(e) { toast(e.message, "error"); }
 }
+async function removeFriend(uid, nickname) {
+  if (!confirm(`Удалить ${nickname || 'игрока'} из друзей?`)) return;
+  try {
+    await api("friend/remove", {target_id: uid});
+    toast("❌ Удалён из друзей");
+    closeModal();
+    const ft = document.querySelector('.tab-content[data-tab="friends"]');
+    if (ft && ft.classList.contains('active')) loadFriends();
+  } catch(e) { toast(e.message, "error"); }
+}
+
 async function respondFriend(uid, accept) {
   try {
     await api("friend/respond", { target_id: uid, accept });
