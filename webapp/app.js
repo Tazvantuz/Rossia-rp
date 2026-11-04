@@ -246,7 +246,7 @@ function showTab(tab) {
   if (tab==="ghetto" && typeof renderGhetto === "function") renderGhetto();
   if (tab==="referral") renderReferral();
   if (tab==="chat") startChatPolling();
-  if (tab==="more") updateMoreBadges();
+  if (tab==="more") { updateMoreBadges(); checkAdminAccess(); }
   window.scrollTo(0,0);
 }
 function toast(msg, type="") {
@@ -282,7 +282,7 @@ async function boot() {
       state.player = d.player;
       state.classInfo = d.class || { name: d.player.class_name, emoji: d.player.class_emoji };
       show("main"); renderPlayer();
-      showTab("home");
+      showTab("home"); checkAdminAccess();
       if (d.new_achievements?.length) notifyAchievements(d.new_achievements);
       if (d.credit_paid) setTimeout(() => toast(`💸 Банк списал ${fmtMoney(d.credit_paid)}₽`, "error"), 800);
     }

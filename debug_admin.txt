@@ -1,0 +1,36 @@
+=== HTML: ВКЛАДКА ЕЩЁ ===
+204:    <section class="tab-content" data-tab="more">
+205-      <h2 class="section-title">⚙️ Ещё</h2>
+206-      <button class="btn btn-secondary" onclick="showCrypto()">🪙 Крипто-биржа <span id="crypto-price-badge"></span></button>
+207-      <button class="btn btn-secondary" onclick="showCredit()">💸 Кредит <span id="credit-badge"></span></button>
+208-      <button class="btn btn-secondary" onclick="showAchievements()">🏆 Достижения</button>
+209-      <button class="btn btn-secondary" onclick="showLeaderboard()">📊 Лидерборд</button>
+210-    </section>
+211-
+212-    <nav class="bottom-nav">
+213-      <button class="nav-btn active" data-nav="home">🏠<span>Дом</span></button>
+214-      <button class="nav-btn" data-nav="appearance">👕<span>Шмот</span></button>
+215-      <button class="nav-btn" data-nav="work">💼<span>Работа</span></button>
+216-      <button class="nav-btn" data-nav="business">🏢<span>Бизнес</span></button>
+217-      <button class="nav-btn" data-nav="casino">🎰<span>Казино</span></button>
+218-      <button class="nav-btn" data-nav="people">👥<span>Люди</span></button>
+219-      <button class="nav-btn" data-nav="referral">👥<span>Рефералы</span></button>
+220-      <button class="nav-btn" data-nav="cases">🎁<span>Кейсы</span></button>
+221-      <button class="nav-btn" data-nav="gang">🚬<span>Банда</span></button>
+222-      <button class="nav-btn" data-nav="ghetto">🗺️<span>Гетто</span></button>
+223-      <button class="nav-btn" data-nav="chat">💬<span>Чат</span></button>
+224-      <button class="nav-btn" data-nav="more">⚙️<span>Ещё</span></button>
+=== JS: ПРОВЕРКА АДМИНА ===
+2183:function checkAdminAccess() {
+2184-    const user = tg?.initDataUnsafe?.user;
+2185-    if (user && user.username === "tazvantuzz") {
+2186-        const btn = document.getElementById("btn-admin-panel");
+2187-        if (btn) btn.style.display = "block";
+2188-    }
+2189-}
+2190-
+2191-async function adminSearch() {
+2192-    const q = document.getElementById("admin-search-input").value;
+2193-    if (!q) return;
+=== JS: ВЫЗОВ ПРОВЕРКИ ПРИ СТАРТЕ ===
+2183:function checkAdminAccess() {
