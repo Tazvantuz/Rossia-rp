@@ -269,6 +269,17 @@ function fmtMoney(n) {
   return n.toLocaleString("ru-RU");
 }
 
+function _itemStatsHtml(it, mode) {
+  const hp = (it && it.hp) || 0;
+  const dmg = (it && it.damage) || 0;
+  if (!hp && !dmg) return '';
+  const parts = [];
+  if (hp) parts.push(`<span class="s-hp">❤️ +${hp} HP</span>`);
+  if (dmg) parts.push(`<span class="s-dmg">⚔️ +${dmg} DMG</span>`);
+  const cls = 'item-stats' + (mode && mode !== 'inline' ? ' ' + mode : '');
+  return `<div class="${cls}">${parts.join(' · ')}</div>`;
+}
+
 async function refreshPlayer() {
   try {
     const d = await api("me");
@@ -505,7 +516,7 @@ function renderAppearance() {
         <div class="item-preview-mini">${renderCharacterSVG({...emptyOutfit(), [SLOT_KEY[it.slot]]: {item_id: it.item_id}}, {width: 40, height: 80})}</div>
         <div class="item-info">
           <div class="item-name" style="color:${it.rarity_color}">${it.name}</div>
-          <div class="item-meta">${it.desc}</div>
+          <div class="item-meta">${it.desc}</div>${_itemStatsHtml(it)}
         </div>
         <div class="item-price ${canAfford?'':'disabled'}">${fmtMoney(it.price)}₽</div>
       </div>`;
@@ -535,7 +546,7 @@ function renderAppearance() {
     } else {
       listHtml += inv.map(it=>`<div class="item-card" style="border-left-color:${it.rarity_color}" onclick="showInvItem('${it.item_id}')">
         <div class="item-preview-mini">${renderCharacterSVG({...emptyOutfit(), [SLOT_KEY[it.slot]]: {item_id: it.item_id}}, {width: 40, height: 80})}</div>
-        <div class="item-info"><div class="item-name" style="color:${it.rarity_color}">${it.name}</div><div class="item-meta">${it.desc}</div></div>
+        <div class="item-info"><div class="item-name" style="color:${it.rarity_color}">${it.name}</div><div class="item-meta">${it.desc}</div>${_itemStatsHtml(it)}</div>
         <div class="item-price">×${it.quantity}</div>
       </div>`).join("");
     }
@@ -557,7 +568,7 @@ function showShopItem(iid) {
     <div class="shop-preview">${renderCharacterSVG(preview, {width: 190, height: 380})}</div>
     <h2 style="color:${it.rarity_color};text-align:center;margin-bottom:4px">${it.name}</h2>
     <div style="color:${it.rarity_color};font-size:12px;font-weight:700;text-align:center;margin-bottom:12px">${it.rarity_name} · ${SLOT_FILTERS.find(f=>f.id===it.slot)?.name || ''}</div>
-    <p style="color:var(--hint);text-align:center;margin-bottom:16px">${it.desc}</p>
+    <p style="color:var(--hint);text-align:center;margin-bottom:16px">${it.desc}</p>${_itemStatsHtml(it, 'block')}
     <div style="text-align:center;font-size:20px;font-weight:800;margin-bottom:16px">💰 ${fmtMoney(it.price)}₽</div>
     ${canAfford ? `<button class="btn btn-primary" onclick="buyItem('${iid}')">✅ Купить</button>` : `<button class="btn btn-secondary" disabled>❌ Не хватает денег</button>`}
   `);
@@ -593,7 +604,7 @@ function showInvItem(iid) {
     <div class="shop-preview">${renderCharacterSVG({...emptyOutfit(), [SLOT_KEY[it.slot]]: {item_id: iid}}, {width: 160, height: 320})}</div>
     <h2 style="color:${it.rarity_color};text-align:center">${it.name}</h2>
     <div style="color:${it.rarity_color};font-size:12px;margin:8px 0 16px;font-weight:700;text-align:center">${it.rarity_name} · ×${it.quantity}</div>
-    <p style="color:var(--hint);margin-bottom:16px;text-align:center">${it.desc}</p>
+    <p style="color:var(--hint);margin-bottom:16px;text-align:center">${it.desc}</p>${_itemStatsHtml(it, 'block')}
     <button class="btn btn-primary" onclick="equipItem('${iid}')">⚡ Надеть</button>
     <button class="btn btn-secondary" onclick="sellItem('${iid}')">💰 Продать за ${it.sell_price}₽</button>
   `);
@@ -1514,12 +1525,12 @@ async function showTradeOffer(uid, name) {
     const myItemsHtml = myInv.items.map(i => `
       <div class="trade-item" data-iid="${i.item_id}" onclick="toggleTradeItem(this, 'give')">
         <div class="trade-item-emoji">${i.emoji}</div>
-        <div class="trade-item-name">${i.name}</div>
+        <div class="trade-item-name">${i.name}</div>${_itemStatsHtml(i, 'mini')}
       </div>`).join("");
     const theirItemsHtml = theirInv.items.length > 0 ? theirInv.items.map(i => `
       <div class="trade-item" data-iid="${i.item_id}" onclick="toggleTradeItem(this, 'want')">
         <div class="trade-item-emoji">${i.emoji}</div>
-        <div class="trade-item-name">${i.name}</div>
+        <div class="trade-item-name">${i.name}</div>${_itemStatsHtml(i, 'mini')}
       </div>`).join("") : '<p style="color:var(--hint);padding:20px;text-align:center">У них пусто</p>';
     openModal(`
       <h2 style="text-align:center;margin-bottom:16px">🤝 Трейд с ${name}</h2>
@@ -1580,7 +1591,7 @@ async function showInvItem(iid) {
     <div class="shop-preview">${renderCharacterSVG({...emptyOutfit(), [SLOT_KEY_MAP[it.slot]]: {item_id: iid}}, {width: 160, height: 320})}</div>
     <h2 style="color:${it.rarity_color};text-align:center">${it.name}</h2>
     <div style="color:${it.rarity_color};font-size:12px;margin:8px 0 16px;font-weight:700;text-align:center">${it.rarity_name} · ×${it.quantity}</div>
-    <p style="color:var(--hint);margin-bottom:16px;text-align:center">${it.desc}</p>
+    <p style="color:var(--hint);margin-bottom:16px;text-align:center">${it.desc}</p>${_itemStatsHtml(it, 'block')}
     <button class="btn btn-primary" onclick="equipItem('${iid}')">⚡ Надеть</button>
     <button class="btn btn-secondary" onclick="confirmSellItem('${iid}')">💰 Продать</button>
   `);
@@ -1968,12 +1979,12 @@ async function showTradeOffer(uid, name) {
     const myItemsHtml = myInv.items.map(i => `
       <div class="trade-item" data-iid="${i.item_id}" onclick="toggleTradeItem(this, 'give')">
         <div class="trade-item-emoji">${i.emoji}</div>
-        <div class="trade-item-name">${i.name}</div>
+        <div class="trade-item-name">${i.name}</div>${_itemStatsHtml(i, 'mini')}
       </div>`).join("");
     const theirItemsHtml = theirInv.items.length > 0 ? theirInv.items.map(i => `
       <div class="trade-item" data-iid="${i.item_id}" onclick="toggleTradeItem(this, 'want')">
         <div class="trade-item-emoji">${i.emoji}</div>
-        <div class="trade-item-name">${i.name}</div>
+        <div class="trade-item-name">${i.name}</div>${_itemStatsHtml(i, 'mini')}
       </div>`).join("") : '<p style="color:var(--hint);padding:20px;text-align:center">У них пусто</p>';
     openModal(`
       <h2 style="text-align:center;margin-bottom:16px">🤝 Трейд с ${name}</h2>
@@ -2034,7 +2045,7 @@ async function showInvItem(iid) {
     <div class="shop-preview">${renderCharacterSVG({...emptyOutfit(), [SLOT_KEY_MAP[it.slot]]: {item_id: iid}}, {width: 160, height: 320})}</div>
     <h2 style="color:${it.rarity_color};text-align:center">${it.name}</h2>
     <div style="color:${it.rarity_color};font-size:12px;margin:8px 0 16px;font-weight:700;text-align:center">${it.rarity_name} · ×${it.quantity}</div>
-    <p style="color:var(--hint);margin-bottom:16px;text-align:center">${it.desc}</p>
+    <p style="color:var(--hint);margin-bottom:16px;text-align:center">${it.desc}</p>${_itemStatsHtml(it, 'block')}
     <button class="btn btn-primary" onclick="equipItem('${iid}')">⚡ Надеть</button>
     <button class="btn btn-secondary" onclick="confirmSellItem('${iid}')">💰 Продать</button>
   `);

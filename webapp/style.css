@@ -565,3 +565,28 @@ input[type=number]{-moz-appearance:textfield}
 .ref-mile-reward { font-size: 18px; font-weight: 900; color: #f1c40f; }
 .ref-mile-btn { background: #f39c12; color: #111; border: none; padding: 8px 16px; border-radius: 8px; font-weight: bold; cursor: pointer; margin-top: 8px; width: 100%; }
 .ref-mile-btn:disabled { background: #555; color: #888; cursor: not-allowed; }
+
+/* ═══ Статы предметов (HP/DMG) ═══ */
+.item-stats {
+  font-size: 11px;
+  color: var(--hint);
+  margin-top: 4px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+.item-stats .s-hp { color: #2ecc71; }
+.item-stats .s-dmg { color: #e74c3c; }
+.item-stats.block {
+  text-align: center;
+  font-size: 13px;
+  margin: 8px 0 12px;
+  padding: 8px 12px;
+  background: rgba(0,0,0,.2);
+  border-radius: 8px;
+}
+.item-stats.mini {
+  font-size: 10px;
+  margin-top: 2px;
+  font-weight: 600;
+  line-height: 1.2;
+}
