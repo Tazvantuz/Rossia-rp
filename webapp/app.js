@@ -352,6 +352,14 @@ function renderPlayer() {
   $("#money").textContent = fmtMoney(p.balance);
   $("#char-name").textContent = p.nickname;
   $("#char-level").textContent = p.level;
+  (function(){
+    const cs = p.combat_stats || {};
+    const parts = [];
+    if (cs.hp) parts.push(`<span class="s-hp">\u2764\ufe0f ${cs.hp} HP</span>`);
+    if (cs.damage) parts.push(`<span class="s-dmg">\u2694\ufe0f ${cs.damage} DMG</span>`);
+    const csEl = document.getElementById("char-stats");
+    if (csEl) csEl.innerHTML = parts.join(" \u00b7 ");
+  })();
   const pct = p.xp_next > 0 ? Math.min(100, p.xp/p.xp_next*100) : 0;
   $("#xp-fill").style.width = pct+"%";
   $("#xp-text").textContent = `${p.xp}/${p.xp_next} XP`;
