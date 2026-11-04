@@ -995,7 +995,90 @@ async def api_gang_create(request):
         (gid, uid))
     return web.json_response({"ok":True,"gang_id":gid})
 
+async def _ensure_gang_columns():
+    try: await db.execute("ALTER TABLE gangs ADD COLUMN last_income_at INTEGER DEFAULT 0")
+    except: pass
+
+async def _process_territories():
+    now = int(time.time())
+    active = await db.fetchall("SELECT * FROM territory_captures WHERE status='active'")
+    for cap in active:
+        if now >= cap["started_at"] + CAPTURE_HOURS * 3600:
+            other = await db.fetchone("SELECT * FROM territory_captures WHERE territory_id=? AND status='active' AND capture_id!=?", (cap["territory_id"], cap["capture_id"]))
+            if other:
+                dmg_a = cap["total_damage"]
+                dmg_b = other["total_damage"]
+                total = dmg_a + dmg_b
+                chance_a = dmg_a / total if total > 0 else 0.5
+                import random
+                if random.random() < chance_a: winner, loser = cap, other
+                else: winner, loser = other, cap
+                await db.execute("UPDATE territory_captures SET status='lost' WHERE capture_id=?", (loser["capture_id"],))
+                await db.execute("UPDATE territory_captures SET status='won' WHERE capture_id=?", (winner["capture_id"],))
+                await db.execute("INSERT OR REPLACE INTO gang_territories (territory_id, gang_id, updated_at) VALUES (?,?,?)", (winner["territory_id"], winner["gang_id"], now))
+            else:
+                await db.execute("UPDATE territory_captures SET status='won' WHERE capture_id=?", (cap["capture_id"],))
+                await db.execute("INSERT OR REPLACE INTO gang_territories (territory_id, gang_id, updated_at) VALUES (?,?,?)", (cap["territory_id"], cap["gang_id"], now))
+
+async def _process_gang_income(gid):
+    await _ensure_gang_columns()
+    gang = await db.fetchone("SELECT * FROM gangs WHERE gang_id=?", (gid,))
+    if not gang: return
+    now = int(time.time())
+    last = gang.get("last_income_at") or 0
+    if last == 0:
+        await db.execute("UPDATE gangs SET last_income_at=? WHERE gang_id=?", (now, gid))
+        return
+    hours = (now - last) // 3600
+    if hours > 0:
+        terrs = await db.fetchall("SELECT COUNT(*) as c FROM gang_territories WHERE gang_id=?", (gid,))
+        count = terrs[0]["c"] if terrs else 0
+        income = count * 1000 * hours
+        if income > 0:
+            await db.execute("UPDATE gangs SET treasury=treasury+?, last_income_at=last_income_at+? WHERE gang_id=?", (income, hours*3600, gid))
+        else:
+            await db.execute("UPDATE gangs SET last_income_at=? WHERE gang_id=?", (now, gid))
+
+async def api_gang_set_deputy(request):
+    ud = await _user(request); uid = ud["id"]
+    member = await db.fetchone("SELECT * FROM gang_members WHERE user_id=?", (uid,))
+    if not member or member["role"] != "leader":
+        return web.json_response({"error": "Только лидер может назначать замов"}, status=403)
+    body = await request.json()
+    target_id = int(body.get("user_id", 0))
+    action = body.get("action", "promote")
+    target = await db.fetchone("SELECT * FROM gang_members WHERE user_id=? AND gang_id=?", (target_id, member["gang_id"]))
+    if not target: return web.json_response({"error": "Игрок не в банде"}, status=404)
+    if target["role"] == "leader": return web.json_response({"error": "Нельзя менять роль лидера"}, status=400)
+    new_role = "deputy" if action == "promote" else "member"
+    await db.execute("UPDATE gang_members SET role=? WHERE user_id=?", (new_role, target_id))
+    return web.json_response({"ok": True})
+
+async def api_gang_captures(request):
+    await _process_territories()
+    rows = await db.fetchall("""
+        SELECT tc.*, g.name as gang_name, g.emoji as gang_emoji
+        FROM territory_captures tc
+        JOIN gangs g ON g.gang_id = tc.gang_id
+        WHERE tc.status='active'
+    """)
+    now = int(time.time())
+    result = []
+    for r in rows:
+        terr = next((t for t in GANG_TERRITORIES if t["id"] == r["territory_id"]), None)
+        if not terr: continue
+        result.append({
+            "capture_id": r["capture_id"],
+            "territory_id": r["territory_id"],
+            "territory_name": terr["name"],
+            "gang_name": r["gang_name"],
+            "gang_emoji": r["gang_emoji"],
+            "left": max(0, (r["started_at"] + CAPTURE_HOURS * 3600) - now)
+        })
+    return web.json_response({"captures": result})
+
 async def api_gang_get(request):
+    await _process_territories()
     ud = await _user(request); uid = ud["id"]
     member = await db.fetchone("SELECT * FROM gang_members WHERE user_id=?", (uid,))
     if not member:
@@ -1003,6 +1086,7 @@ async def api_gang_get(request):
             "SELECT g.*, (SELECT COUNT(*) FROM gang_members WHERE gang_id=g.gang_id) as members_count "
             "FROM gangs g ORDER BY g.treasury DESC LIMIT 20")
         return web.json_response({"in_gang":False,"gangs":gangs})
+    await _process_gang_income(member["gang_id"])
     gang = await db.fetchone("SELECT * FROM gangs WHERE gang_id=?", (member["gang_id"],))
     members = await db.fetchall(
         "SELECT gm.user_id, gm.role, p.nickname, p.level FROM gang_members gm "
@@ -1105,6 +1189,9 @@ async def api_gang_capture(request):
     if not member or member["role"] not in ("leader","deputy"):
         return web.json_response({"error":"Только лидер/зам"}, status=400)
     now = int(time.time())
+    last = await db.fetchone("SELECT * FROM territory_captures WHERE gang_id=? ORDER BY started_at DESC LIMIT 1", (member["gang_id"],))
+    if last and now - last["started_at"] < 1800:
+        return web.json_response({"error":"КД 30 минут на захват"}, status=400)
     existing = await db.fetchone("SELECT * FROM gang_territories WHERE capturing_gang_id=?", (member["gang_id"],))
     if existing and (existing.get("capture_end") or 0) > now:
         return web.json_response({"error":"Уже захватываете территорию"}, status=400)
@@ -1284,16 +1371,14 @@ async def _pvp_finish(winner_id, loser_id, bid):
 # ══════════════════════════════════════════════════════════════
 #  PVP (ГОП-СТОП) — базовая реализация
 # ══════════════════════════════════════════════════════════════
-async def api_pvp_incoming(request):
-    """Список входящих вызовов на PvP (для поллинга)."""
+async def _unused_pvp_incoming(request):
     ud = await _user(request); uid = ud["id"]
     rows = await db.fetchall(
         "SELECT battle_id, attacker_id, status, created_at FROM pvp_battles "
         "WHERE defender_id=? AND status='pending'", (uid,))
     return web.json_response({"incoming": [dict(r) for r in rows]})
 
-async def api_pvp_start(request):
-    """Начать PvP-вызов."""
+async def _unused_pvp_start(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     target_id = int(body.get("target_id", 0))
@@ -1315,8 +1400,7 @@ async def api_pvp_start(request):
         (uid, target_id, int(time.time())))
     return web.json_response({"battle_id": battle_id, "status": "pending"})
 
-async def api_pvp_respond(request):
-    """Принять или отклонить вызов."""
+async def _unused_pvp_respond(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     bid = int(body.get("battle_id", 0))
@@ -1334,8 +1418,7 @@ async def api_pvp_respond(request):
         (now, bid))
     return web.json_response({"ok": True, "battle_id": bid, "status": "active"})
 
-async def api_pvp_state(request):
-    """Состояние боя."""
+async def _unused_pvp_state(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     bid = int(body.get("battle_id", 0))
@@ -1344,8 +1427,7 @@ async def api_pvp_state(request):
         return web.json_response({"error": "Нет боя"}, status=404)
     return web.json_response(state)
 
-async def api_pvp_action(request):
-    """Атака/защита в PvP."""
+async def _unused_pvp_action(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     bid = int(body.get("battle_id", 0))
@@ -1417,8 +1499,7 @@ async def api_gang_info(request):
     return web.json_response({"in_gang": True, "gang": dict(gang), "role": role,
                               "members": [dict(m) for m in members]})
 
-async def api_gang_create(request):
-    """Создать банду (только если не в банде)."""
+async def _unused_gang_create(request):
     ud = await _user(request); uid = ud["id"]
     gid, _ = await _gang_role(uid)
     if gid:
@@ -1436,8 +1517,7 @@ async def api_gang_create(request):
     await db.execute("INSERT INTO gang_members (gang_id, user_id, role) VALUES (?,?, 'leader')", (new_id, uid))
     return web.json_response({"ok": True, "gang_id": new_id})
 
-async def api_gang_join(request):
-    """Вступить в банду (по id)."""
+async def _unused_gang_join(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     gid = int(body.get("gang_id", 0))
@@ -1453,8 +1533,7 @@ async def api_gang_join(request):
     await db.execute("INSERT INTO gang_members (gang_id, user_id, role) VALUES (?,?, 'member')", (gid, uid))
     return web.json_response({"ok": True})
 
-async def api_gang_treasury(request):
-    """Внести/вывести деньги из казны (только leader/deputy)."""
+async def _unused_gang_treasury(request):
     ud = await _user(request); uid = ud["id"]
     gid, role = await _gang_role(uid)
     if not gid or role not in ("leader", "deputy"):
@@ -1826,6 +1905,8 @@ def setup_routes(app):
     R.add_post("/api/gang/deposit", api_gang_deposit)
     R.add_post("/api/gang/withdraw", api_gang_withdraw)
     R.add_post("/api/gang/capture", api_gang_capture)
+    R.add_post("/api/gang/set_deputy", api_gang_set_deputy)
+    R.add_post("/api/gang/captures", api_gang_captures)
     R.add_post("/api/chat/send", api_chat_send)
     R.add_post("/api/chat/get", api_chat_get)
     R.add_post("/api/cases/list", api_cases_list)
