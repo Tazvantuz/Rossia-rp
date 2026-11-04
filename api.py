@@ -4,8 +4,7 @@ from urllib.parse import parse_qsl
 from aiohttp import web
 from database import db
 from game import (
-    CLASSES,
-    LOCATIONS, ITEMS, JOBS, BUSINESSES, CASINO_GAMES, ACHIEVEMENTS,
+        LOCATIONS, ITEMS, JOBS, BUSINESSES, CASINO_GAMES, ACHIEVEMENTS,
     DAILY_REWARDS, SLOTS, SLOT_NAMES, SLOT_CATEGORY, SLOT_BY_CATEGORY,
     CATEGORY_NAMES, CATEGORY_EMOJI, RARITIES, MAX_LEVEL, START_LOCATION,
     CREDIT_MAX, CREDIT_TERMS, CASES, GANG_TERRITORIES, GANG_CREATE_COST,
@@ -142,12 +141,8 @@ async def api_me(request):
         p = await _player(uid)
         if not p:
             return web.json_response({"registered": False})
-        # Защита от битой старой записи
-        if p.get("class_id") not in CLASSES:
-            print(f"⚠️ Битый игрок user_id={uid} class_id={p.get('class_id')} — удаляю")
-            await db.execute("DELETE FROM players WHERE user_id=?", (uid,))
-            await db.execute("DELETE FROM inventory WHERE user_id=?", (uid,))
-            return web.json_response({"registered": False})
+        # Проверка что запись не битая (нет class_id — норма для РП)
+
         credit_paid = await _forced_credit_collect(uid)
         if credit_paid:
             p = await _player(uid)
