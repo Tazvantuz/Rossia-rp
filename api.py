@@ -20,6 +20,9 @@ try:
 except ImportError:
     PVP_TURN_TIMEOUT = 30
 
+USER_LAST_CHAT = {}
+CHAT_COOLDOWN = 3
+
 BOT_TOKEN = None
 def set_token(t):
     global BOT_TOKEN
@@ -1422,25 +1425,32 @@ async def api_chat_pm_get(request):
     return web.json_response({"messages": rows})
 
 async def api_chat_send(request):
-    ud = await _user(request); uid = ud["id"]
-    p = await _player(uid)
-    if not p: return web.json_response({"error":"no player"}, status=400)
-    body = await request.json()
-    msg = (body.get("message") or "").strip()
-    if not msg: return web.json_response({"error":"Пустое сообщение"}, status=400)
-    if len(msg) > 200: msg = msg[:200]
-    now = int(time.time())
-    last = USER_LAST_CHAT.get(uid, 0)
-    if now - last < CHAT_COOLDOWN:
-        return web.json_response({"error": f"Кд {CHAT_COOLDOWN-(now-last)}с"}, status=400)
-    USER_LAST_CHAT[uid] = now
-    await db.execute(
-        "INSERT INTO chat_messages (user_id, nickname, level, message) VALUES (?,?,?,?)",
-        (uid, p["nickname"], p["level"], msg))
-    await db.execute(
-        "DELETE FROM chat_messages WHERE id NOT IN "
-        "(SELECT id FROM chat_messages ORDER BY id DESC LIMIT 500)")
-    return web.json_response({"ok": True})
+    try:
+        ud = await _user(request); uid = ud["id"]
+        p = await _player(uid)
+        if not p: return web.json_response({"error":"Нет игрока"}, status=400)
+        body = await request.json()
+        msg = (body.get("message") or "").strip()
+        if not msg: return web.json_response({"error":"Пустое сообщение"}, status=400)
+        if len(msg) > 200: msg = msg[:200]
+        now = int(time.time())
+        last = USER_LAST_CHAT.get(uid, 0)
+        if now - last < CHAT_COOLDOWN:
+            return web.json_response({"error": f"Кд {CHAT_COOLDOWN-(now-last)}с"}, status=400)
+        USER_LAST_CHAT[uid] = now
+        await db.execute(
+            "INSERT INTO chat_messages (user_id, nickname, level, message) VALUES (?,?,?,?)",
+            (uid, p["nickname"], p["level"], msg))
+        await db.execute(
+            "DELETE FROM chat_messages WHERE id NOT IN "
+            "(SELECT id FROM chat_messages ORDER BY id DESC LIMIT 500)")
+        return web.json_response({"ok": True})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return web.json_response({"error": f"Ошибка: {e}"}, status=500)
+
+
 async def api_chat_get(request):
     await _user(request)
     rows = await db.fetchall(
@@ -1499,21 +1509,40 @@ async def _cleanup_stale_pvp():
         print(f"⚠️ _cleanup_stale_pvp: {e}")
 
 async def _expire_user_battles(uid):
-    """Точечная чистка зависших боёв конкретного игрока."""
+    """Чистит pending > 30 сек, резолвит active с таймаутом > 30 сек."""
+    now = int(time.time())
     try:
         await db.execute(
             "UPDATE pvp_battles SET status='expired' "
             "WHERE (attacker_id=? OR defender_id=?) AND status='pending' "
             "AND (strftime('%s','now') - strftime('%s', created_at)) > 30",
             (uid, uid))
-        await db.execute(
-            "UPDATE pvp_battles SET status='expired' "
-            "WHERE (attacker_id=? OR defender_id=?) AND status='active' "
-            "AND (turn_started_at IS NULL OR turn_started_at = 0 "
-            "OR (strftime('%s','now') - turn_started_at) > 300)",
-            (uid, uid))
     except Exception as e:
-        print(f"⚠️ _expire_user_battles: {e}")
+        print(f"⚠️ pending cleanup: {e}")
+    try:
+        active = await db.fetchall(
+            "SELECT * FROM pvp_battles WHERE (attacker_id=? OR defender_id=?) "
+            "AND status='active' AND ("
+            "turn_started_at IS NULL OR turn_started_at = 0 "
+            "OR (? - turn_started_at) > 30)",
+            (uid, uid, now))
+        for b in active:
+            cur = await db.fetchone("SELECT status FROM pvp_battles WHERE battle_id=?", (b["battle_id"],))
+            if not cur or cur["status"] != "active": continue
+            loser_id = b["turn"] if b["turn"] else b["defender_id"]
+            winner_id = b["defender_id"] if loser_id == b["attacker_id"] else b["attacker_id"]
+            try:
+                loser = await _player(loser_id)
+                if loser:
+                    steal = int(loser["balance"] * 0.1)
+                    await db.execute("UPDATE players SET balance=balance-? WHERE user_id=?", (steal, loser_id))
+                    await db.execute("UPDATE players SET balance=balance+? WHERE user_id=?", (steal, winner_id))
+                await db.execute("UPDATE pvp_battles SET status='finished' WHERE battle_id=?", (b["battle_id"],))
+            except Exception as e:
+                print(f"⚠️ timeout resolve: {e}")
+                await db.execute("UPDATE pvp_battles SET status='expired' WHERE battle_id=?", (b["battle_id"],))
+    except Exception as e:
+        print(f"⚠️ active cleanup: {e}")
 
 
 async def api_pvp_force_cancel(request):
@@ -1565,7 +1594,12 @@ async def api_pvp_incoming(request):
         "SELECT b.*, p.nickname as attacker_name FROM pvp_battles b "
         "JOIN players p ON b.attacker_id = p.user_id "
         "WHERE b.defender_id=? AND b.status='pending'", (uid,))
-    return web.json_response({"challenges": rows})
+    active = await db.fetchall(
+        "SELECT battle_id, attacker_id, defender_id FROM pvp_battles "
+        "WHERE (attacker_id=? OR defender_id=?) AND status='active'", (uid, uid))
+    return web.json_response({"challenges": rows, "active": active})
+
+
 async def api_pvp_respond(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()

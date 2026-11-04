@@ -1253,17 +1253,19 @@ boot();
 async function challengePvP(uid, name) {
   if (!confirm(`Вызвать ${name} на гоп-стоп?`)) return;
   try {
-    await api("pvp/challenge", {user_id: uid});
+    const res = await api("pvp/challenge", {user_id: uid});
     closeModal();
     toast(`⚔️ Вызов отправлен ${name}`, "success");
+    if (res && res.battle_id) startPvPUI(res.battle_id);
   } catch(e) {
     if (e.message && (e.message.includes("Уже есть бой") || e.message.includes("Уже в бою"))) {
       if (confirm("У тебя зависший бой. Сбросить и вызвать снова?")) {
         try {
           await api("pvp/force_cancel", {});
-          await api("pvp/challenge", {user_id: uid});
+          const res = await api("pvp/challenge", {user_id: uid});
           closeModal();
           toast(`⚔️ Вызов отправлен ${name}`, "success");
+          if (res && res.battle_id) startPvPUI(res.battle_id);
         } catch(e2) { toast(e2.message, "error"); }
       }
     } else {
@@ -1275,6 +1277,13 @@ async function challengePvP(uid, name) {
 async function checkPvPChallenges() {
   try {
     const d = await api("pvp/incoming");
+    if (d.active && d.active.length > 0) {
+      const active = d.active[0];
+      if (!pvpCurrentBattle || pvpCurrentBattle !== active.battle_id) {
+        startPvPUI(active.battle_id);
+        return;
+      }
+    }
     if (!d.challenges || d.challenges.length === 0) return;
     const c = d.challenges[0];
     if (window._activePvPChallenge === c.battle_id) return;
