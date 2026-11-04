@@ -1,0 +1,131 @@
+=== 1. HTML: БЫСТРЫЕ ДЕЙСТВИЯ ===
+62:      <div class="quick-grid">
+63-        <div class="quick-card" onclick="showTab('appearance')">
+64-          <div class="quick-icon">👕</div><div class="quick-label">Шмот</div>
+65-        </div>
+66-        <div class="quick-card" onclick="showTab('work')">
+67-          <div class="quick-icon">💼</div><div class="quick-label">Работа</div>
+68-        </div>
+69-        <div class="quick-card" onclick="showTab('casino')">
+70-          <div class="quick-icon">🎰</div><div class="quick-label">Казино</div>
+71-        </div>
+72-        <div class="quick-label">Гетто</div></div>
+73-        <div class="quick-card" onclick="showTab('people')">
+74-          <div class="quick-icon">👥</div><div class="quick-label">Люди</div>
+75-        </div>
+76-      </div>
+77-
+78-      <h3 class="section-subtitle">⚡ Быстрые действия</h3>
+79-      <button class="btn btn-secondary" id="daily-btn" onclick="claimDaily()">🎁 Ежедневный бонус <span id="daily-timer" class="badge"></span></button>
+80-      <button class="btn btn-secondary" id="roulette-btn" onclick="claimRoulette()">🎡 Рулетка дня <span id="roulette-timer" class="badge-timer"></span></button>
+81-    </section>
+82-
+=== 2. HTML: НИЖНЕЕ МЕНЮ ===
+176:    <nav class="bottom-nav">
+177-      <button class="nav-btn active" data-nav="home">🏠<span>Дом</span></button>
+178-      <button class="nav-btn" data-nav="appearance">👕<span>Шмот</span></button>
+179-      <button class="nav-btn" data-nav="work">💼<span>Работа</span></button>
+180-      <button class="nav-btn" data-nav="casino">🎰<span>Казино</span></button>
+181-      <button class="nav-btn" data-nav="people">👥<span>Люди</span></button>
+182-      <button class="nav-btn" data-nav="cases">🎁<span>Кейсы</span></button>
+183-      <button class="nav-btn" data-nav="gang">🚬<span>Банда</span></button>
+184-      <button class="nav-btn" data-nav="ghetto">🗺️<span>Гетто</span></button>
+185-      <button class="nav-btn" data-nav="chat">💬<span>Чат</span></button>
+186-      <button class="nav-btn" data-nav="more">⚙️<span>Ещё</span></button>
+187-    </nav>
+188-  </div>
+189-</div>
+190-
+191-<div id="modal" class="modal hidden">
+=== 3. API: РЕГИСТРАЦИЯ МАРШРУТОВ ===
+1533:def setup_routes(app):
+1534-    R = app.router
+1535:    R.add_post("/api/me", api_me)
+1536:    R.add_post("/api/register", api_register)
+1537:    R.add_post("/api/reset", api_reset)
+1538:    R.add_post("/api/shop", api_shop)
+1539:    R.add_post("/api/inventory", api_inventory)
+1540:    R.add_post("/api/buy", api_buy)
+1541:    R.add_post("/api/sell", api_sell)
+1542:    R.add_post("/api/equip", api_equip)
+1543:    R.add_post("/api/unequip", api_unequip)
+1544:    R.add_post("/api/jobs", api_jobs)
+1545:    R.add_post("/api/set_job", api_set_job)
+1546:    R.add_post("/api/work", api_work)
+1547:    R.add_post("/api/businesses", api_businesses)
+1548:    R.add_post("/api/buy_business", api_buy_business)
+1549:    R.add_post("/api/collect_business", api_collect_business)
+1550:    R.add_post("/api/casino_play", api_casino_play)
+1551:    R.add_post("/api/daily", api_daily)
+1552:    R.add_post("/api/roulette", api_roulette)
+1553:    R.add_post("/api/crime", api_crime)
+1554:    R.add_post("/api/credit/take", api_credit_take)
+1555:    R.add_post("/api/pvp/incoming", api_pvp_incoming)
+1556:    R.add_post("/api/pvp/start", api_pvp_start)
+1557:    R.add_post("/api/pvp/respond", api_pvp_respond)
+1558:    R.add_post("/api/pvp/state", api_pvp_state)
+1559:    R.add_post("/api/pvp/action", api_pvp_action)
+1560:    R.add_post("/api/gang/info", api_gang_info)
+1561:    R.add_post("/api/gang/create", api_gang_create)
+1562:    R.add_post("/api/gang/join", api_gang_join)
+1563:    R.add_post("/api/gang/treasury", api_gang_treasury)
+1564:    R.add_post("/api/gang/territories", api_gang_territories)
+1565:    R.add_post("/api/territory/capture/start", api_territory_capture_start)
+1566:    R.add_post("/api/territory/capture/resolve", api_territory_capture_resolve)
+1567:    R.add_post("/api/credit/pay", api_credit_pay)
+1568:    R.add_post("/api/crypto/buy", api_crypto_buy)
+1569:    R.add_post("/api/crypto/sell", api_crypto_sell)
+1570:    R.add_post("/api/location", api_location)
+1571:    R.add_post("/api/move", api_move)
+1572:    R.add_post("/api/player_view", api_player_view)
+1573:    R.add_post("/api/player_items", api_player_items)
+1574:    R.add_post("/api/trade/send", api_trade_send)
+1575:    R.add_post("/api/trade/list", api_trades_list)
+1576:    R.add_post("/api/trade/accept", api_trade_accept)
+1577:    R.add_post("/api/trade/decline", api_trade_decline)
+1578:    R.add_post("/api/leaderboard", api_leaderboard)
+1579:    R.add_post("/api/gang/create", api_gang_create)
+1580:    R.add_post("/api/gang/get", api_gang_get)
+1581:    R.add_post("/api/gang/join", api_gang_join)
+1582:    R.add_post("/api/gang/leave", api_gang_leave)
+1583:    R.add_post("/api/gang/deposit", api_gang_deposit)
+1584:    R.add_post("/api/gang/withdraw", api_gang_withdraw)
+1585:    R.add_post("/api/gang/capture", api_gang_capture)
+1586:    R.add_post("/api/chat/send", api_chat_send)
+1587:    R.add_post("/api/chat/get", api_chat_get)
+1588:    R.add_post("/api/cases/list", api_cases_list)
+1589:    R.add_post("/api/cases/open", api_cases_open)
+1590:    R.add_post("/api/pvp/challenge", api_pvp_challenge)
+1591:    R.add_post("/api/pvp/incoming", api_pvp_incoming)
+1592:    R.add_post("/api/pvp/respond", api_pvp_respond)
+=== 4. API: ЕСТЬ ЛИ GANG_TERRITORIES И API_ME ===
+11:    CREDIT_MAX, CREDIT_TERMS, CASES, GANG_TERRITORIES, GANG_CREATE_COST,
+139:async def api_me(request):
+775:        terr_incomes = {t["id"]: t["income"] for t in GANG_TERRITORIES}
+959:    for t in GANG_TERRITORIES:
+1434:    for t in GANG_TERRITORIES:
+1457:    territory = next((t for t in GANG_TERRITORIES if t["id"] == tid), None)
+=== 5. DB: ТАБЛИЦЫ БАНД ===
+79:CREATE TABLE IF NOT EXISTS gangs (
+80-    gang_id INTEGER PRIMARY KEY AUTOINCREMENT,
+81-    name TEXT UNIQUE NOT NULL,
+82-    emoji TEXT NOT NULL,
+83-    leader_id INTEGER NOT NULL UNIQUE,
+84-    treasury INTEGER DEFAULT 0,
+85-    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+86-);
+87-CREATE TABLE IF NOT EXISTS gang_members (
+88-    gang_id INTEGER NOT NULL,
+89-    user_id INTEGER NOT NULL UNIQUE,
+--
+94:CREATE TABLE IF NOT EXISTS gang_territories (
+95-    territory_id INTEGER PRIMARY KEY,
+96-    gang_id INTEGER,
+97-    capturing_gang_id INTEGER,
+98-    capture_end INTEGER,
+99-    updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+100-);
+101-"""
+102-
+103-class Database:
+104-    def __init__(self, path=DB_PATH):

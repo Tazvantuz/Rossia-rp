@@ -2043,6 +2043,7 @@ function confirmSellItem(iid) {
 // Добавить loadCases/loadGang в showTab
 
 
+
 async function renderGhetto() {
   const container = document.getElementById('ghetto-map-container');
   if (!container) return;
@@ -2070,6 +2071,7 @@ async function renderGhetto() {
         </div>`;
     });
   } catch(e) {
-    container.innerHTML = `<div style="color:#e74c3c;text-align:center;grid-column:1/-1;">Ошибка: ${e.message}</div>`;
+    console.error("Ghetto error:", e);
+    container.innerHTML = `<div style="color:#e74c3c;text-align:center;grid-column:1/-1;padding:20px;font-size:14px;word-break:break-word;">Ошибка загрузки: ${e.message || 'Сервер недоступен'}</div>`;
   }
 }

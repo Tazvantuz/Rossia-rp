@@ -1427,22 +1427,18 @@ async def api_gang_treasury(request):
     gang = await db.fetchone("SELECT * FROM gangs WHERE gang_id=?", (gid,))
     return web.json_response({"ok": True, "treasury": gang["treasury"]})
 
+
 async def api_gang_territories(request):
-    """Карта Гетто: список территорий с владельцами."""
     ud = await _user(request)
     territories = []
     for t in GANG_TERRITORIES:
         owner = await db.fetchone(
-            "SELECT gt.gang_id, g.name, g.emoji FROM gang_territories gt "
-            "JOIN gangs g ON g.gang_id=gt.gang_id WHERE gt.territory_id=?", (t["id"],))
-        # Ищем активный захват
-        capture = await db.fetchone(
-            "SELECT * FROM territory_captures WHERE territory_id=? AND status='active'", (t["id"],))
+            "SELECT g.gang_id, g.name FROM gang_territories gt JOIN gangs g ON g.gang_id=gt.gang_id WHERE gt.territory_id=?",
+            (t["id"],))
         territories.append({
-            "id": t["id"], "name": t["name"], "emoji": t["emoji"],
-            "income": t["income"],
-            "owner": dict(owner) if owner else None,
-            "capture": dict(capture) if capture else None
+            "id": t["id"], "name": t["name"], "emoji": t.get("emoji", "🏙️"),
+            "income": t.get("income", 1000),
+            "owner": {"gang_id": owner["gang_id"], "name": owner["name"]} if owner else None
         })
     return web.json_response({"territories": territories})
 
