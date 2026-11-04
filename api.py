@@ -84,12 +84,14 @@ def _save_ach(uid, ach): return db.execute(
     "UPDATE players SET achievements=? WHERE user_id=?", (json.dumps(ach), uid))
 
 def _player_json(p):
+    from game import get_combat_stats
     return {
         "user_id": p["user_id"], "nickname": p["nickname"],
         "balance": p["balance"], "level": p["level"], "xp": p["xp"],
         "xp_next": xp_to_next(p["level"]),
         "location_id": p["location_id"],
         "outfit": get_outfit(p),
+        "combat_stats": get_combat_stats(p),
         "current_job": p.get("current_job"),
         "businesses": _json_biz(p),
         "achievements": _json_ach(p),
