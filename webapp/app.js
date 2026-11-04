@@ -798,32 +798,6 @@ const CASINO = {
   slots:    {name:"Слоты",   emoji:"🎰", display:"🎰", desc:"3 в ряд — x5"},
 };
 
-function renderCasino() {
-  const tabs = $("#casino-tabs");
-  tabs.innerHTML = Object.entries(CASINO).map(([id,g])=>`
-    <div class="casino-tab ${state.casinoGame===id?'active':''}" onclick="state.casinoGame='${id}';renderCasino()">
-      <span class="casino-tab-emoji">${g.emoji}</span>
-      ${g.name.split(":")[0]}
-    </div>`).join("");
-  // Обновить дисплей
-  const g = CASINO[state.casinoGame];
-  const display = $("#casino-display");
-  if (display && !display.classList.contains("rolling-dice") && !display.classList.contains("spinning-coin") && !display.classList.contains("spinning-wheel") && !display.classList.contains("jackpot-win")) {
-    if (state.casinoGame === "slots") {
-      display.outerHTML = `<div class="casino-slots" id="casino-slots">
-        <div class="slot-reel"><div class="reel-inner">🍒</div></div>
-        <div class="slot-reel"><div class="reel-inner">🍋</div></div>
-        <div class="slot-reel"><div class="reel-inner">🍊</div></div>
-      </div>`;
-    } else {
-      if (!display || display.id !== "casino-display") {
-        $(".casino-stage").innerHTML = `<div class="casino-display" id="casino-display">${g.display}</div>`;
-      } else {
-        display.textContent = g.display;
-      }
-    }
-  }
-}
 
 
 function doubleBet() {
@@ -842,82 +816,6 @@ function setBet(v) {
   const inp = $("#bet-input");
   if (v === "max") inp.value = state.player.balance;
   else inp.value = v;
-}
-async function playCasino() {
-  if (state.casinoLocked && Date.now() - state.casinoLockTime < 5000) {
-    toast(`⏳ Кд ${Math.ceil((state.casinoLockTime + 5000 - Date.now())/1000)}с`, "error");
-    return;
-  }
-  const bet = parseInt($("#bet-input").value) || 0;
-  if (bet <= 0) { toast("Введи ставку", "error"); return; }
-  if (bet > state.player.balance) { toast("Не хватает денег", "error"); return; }
-
-  const game = state.casinoGame;
-  const stage = $(".casino-stage");
-
-  // Анимация
-  if (game === "slots") {
-    document.querySelectorAll(".slot-reel").forEach(r => {
-      r.classList.add("spinning");
-      r.querySelector(".reel-inner").innerHTML = ["🍒","🍋","🍊","🔔","⭐","💎"].map(s => `<div>${s}</div>`).join("");
-    });
-  } else if (game === "dice") {
-    const d = $("#casino-display");
-    if (d) { d.classList.add("rolling-dice"); d.textContent = "🎲"; }
-  } else if (game === "coin") {
-    const d = $("#casino-display");
-    if (d) { d.classList.add("spinning-coin"); d.textContent = "🪙"; }
-  } else if (game === "jackpot") {
-    const d = $("#casino-display");
-    if (d) { d.classList.add("jackpot-win"); d.textContent = "💎"; }
-  } else {
-    const d = $("#casino-display");
-    if (d) { d.classList.add("spinning-wheel"); d.textContent = CASINO[game].display; }
-  }
-
-  // Ждём анимацию 1.5 сек, потом запрос
-  await new Promise(r => setTimeout(r, 1500));
-
-  try {
-    const d = await api("casino_play", {game, bet});
-    state.player = d.player; renderPlayer();
-    state.casinoLocked = true; state.casinoLockTime = Date.now();
-    setTimeout(()=>{ state.casinoLocked = false; }, 5000);
-
-    // Убрать анимацию, показать финальный дисплей
-    if (game === "slots") {
-      document.querySelectorAll(".slot-reel").forEach(r => r.classList.remove("spinning"));
-      // Результат уже в d.result — "🍒🍋🍊 — проигрыш" — извлечь эмодзи
-      const m = d.result.match(/(.)(.)(.)/);
-      if (m) {
-        const reels = document.querySelectorAll(".reel-inner");
-        [m[1],m[2],m[3]].forEach((sym, i) => {
-          if (reels[i]) reels[i].innerHTML = `<div>${sym}</div>`;
-        });
-      }
-    } else {
-      const disp = $("#casino-display");
-      if (disp) {
-        disp.classList.remove("rolling-dice","spinning-coin","spinning-wheel","jackpot-win");
-        disp.textContent = CASINO[game].display;
-        if (d.win > 0 && game === "jackpot") disp.classList.add("jackpot-win");
-      }
-    }
-
-    const isWin = d.win > 0;
-    $("#casino-result").innerHTML = `<div class="casino-result ${isWin?'win':'lose'}">
-      <div style="font-size:20px;margin-bottom:4px">${d.result}</div>
-      <div style="font-size:24px;font-weight:900">${isWin?`+${fmtMoney(d.win)}₽`:`-${fmtMoney(bet)}₽`}</div>
-    </div>`;
-    if (isWin) { toast(`🎉 +${fmtMoney(d.net)}₽`, "success"); if (tg) tg.HapticFeedback?.notificationOccurred("success"); }
-    else { toast("😢 Проигрыш", "error"); if (tg) tg.HapticFeedback?.notificationOccurred("error"); }
-    if (d.new_achievements?.length) notifyAchievements(d.new_achievements);
-  } catch(e) {
-    document.querySelectorAll(".slot-reel").forEach(r => r.classList.remove("spinning"));
-    const disp = $("#casino-display");
-    if (disp) disp.classList.remove("rolling-dice","spinning-coin","spinning-wheel","jackpot-win");
-    toast(e.message, "error");
-  }
 }
 
 // ══════════════════════════════════════════════════════════════

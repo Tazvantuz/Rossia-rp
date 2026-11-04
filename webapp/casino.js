@@ -1,5 +1,7 @@
 // ═══════════ КАЗИНО (НОВОЕ) ═══════════
 state.casinoGame = 'coin';
+state.coinChoice = 'Орёл';
+state.diceChoice = 'Больше 3';
 state.rouletteChoice = 'red';
 state.rouletteNumber = null;
 
@@ -21,16 +23,25 @@ function renderCasino() {
 
   if (state.casinoGame === 'coin') {
     stage.innerHTML = `
+      <div style="display:flex;gap:8px;margin-bottom:15px;width:100%;max-width:300px;">
+        <button class="btn ${state.coinChoice==='Орёл'?'btn-primary':'btn-secondary'}" style="flex:1;" onclick="state.coinChoice='Орёл';renderCasino()">🦅 Орёл</button>
+        <button class="btn ${state.coinChoice==='Решка'?'btn-primary':'btn-secondary'}" style="flex:1;" onclick="state.coinChoice='Решка';renderCasino()">🪙 Решка</button>
+      </div>
       <div class="coin-container" onclick="playCasino()">
         <div class="coin" id="coin-el">
           <div class="coin-side coin-front">🦅</div>
           <div class="coin-side coin-back">🪙</div>
         </div>
       </div>
-      <div style="margin-top:15px;color:var(--hint);font-size:12px;">Нажми на монету или кнопку ИГРАТЬ</div>
     `;
   } else if (state.casinoGame === 'dice') {
-    stage.innerHTML = `<div class="dice-container" id="dice-el">🎲</div>`;
+    stage.innerHTML = `
+      <div style="display:flex;gap:8px;margin-bottom:15px;width:100%;max-width:300px;">
+        <button class="btn ${state.diceChoice==='Больше 3'?'btn-primary':'btn-secondary'}" style="flex:1;" onclick="state.diceChoice='Больше 3';renderCasino()">Больше 3</button>
+        <button class="btn ${state.diceChoice==='Меньше 4'?'btn-primary':'btn-secondary'}" style="flex:1;" onclick="state.diceChoice='Меньше 4';renderCasino()">Меньше 4</button>
+      </div>
+      <div class="dice-container" id="dice-el">🎲</div>
+    `;
   } else if (state.casinoGame === 'roulette') {
     let html = `<div class="roulette-table" id="roulette-table">`;
     html += `<div class="roulette-cell green ${state.rouletteChoice==='green'?'selected':''}" onclick="state.rouletteChoice='green';state.rouletteNumber=null;renderCasino()">ЗЕРО (x14)</div>`;
@@ -107,6 +118,10 @@ async function playCasino() {
     if (game === 'roulette') {
       payload.choice = state.rouletteChoice;
       if (state.rouletteChoice === 'number') payload.number = state.rouletteNumber;
+    } else if (game === 'coin') {
+      payload.choice = state.coinChoice;
+    } else if (game === 'dice') {
+      payload.choice = state.diceChoice;
     }
     const d = await api("casino_play", payload);
 

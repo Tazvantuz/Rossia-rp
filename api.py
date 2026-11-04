@@ -12,7 +12,7 @@ from game import (
     GANG_MAX_MEMBERS, CAPTURE_HOURS, PVP_PARTS, PVP_PARTS_NAMES,
     get_combat_stats,
     START_BALANCE, xp_to_next, crypto_price, item_json, item_sell_price,
-    get_outfit,
+    get_outfit, roulette_color, ROULETTE_NUMBERS,
 )
 
 BOT_TOKEN = None
@@ -425,14 +425,19 @@ async def api_casino_play(request):
     result_text = ""
 
     if game == "coin":
+        choice = body.get("choice", "Орёл")
         side = random.choice(["Орёл", "Решка"])
         result_text = f"Монетка: {side}"
-        win_amount = int(bet * 2)
+        if choice == side:
+            win_amount = int(bet * 2)
+        else:
+            result_text += " — проигрыш"
 
     elif game == "dice":
+        choice = body.get("choice", "Больше 3")
         roll = random.randint(1, 6)
         result_text = f"Кости: выпало {roll}"
-        if roll > 3:
+        if (choice == "Больше 3" and roll > 3) or (choice == "Меньше 4" and roll < 4):
             win_amount = int(bet * 1.8)
         else:
             result_text += " — проигрыш"
