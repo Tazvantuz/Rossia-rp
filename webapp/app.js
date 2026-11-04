@@ -541,8 +541,7 @@ function renderAppearance() {
     for (const [slot, item] of Object.entries(p.outfit)) {
       if (item.item_id) equipped.push({slot, item});
     }
-    const slotEquipped = equipped.filter(e => SLOT_KEY[e.slot.replace("_id","")] === undefined ? true : SLOT_FILTERS.find(f=>f.id===SLOT_KEY[e.slot] === undefined || true));
-    const inv = state.invItems.filter(it => it.slot === state.shopFilter);
+      const inv = state.invItems.filter(it => it.slot === state.shopFilter);
     const equippedInSlot = equipped.filter(e => SLOT_KEY[state.shopFilter] === e.slot);
 
     if (equippedInSlot.length > 0) {
@@ -611,18 +610,6 @@ function showEquipped(slot) {
   `);
 }
 
-function showInvItem(iid) {
-  const it = state.invItems.find(x=>x.item_id===iid);
-  if (!it) return;
-  openModal(`
-    <div class="shop-preview">${renderCharacterSVG({...emptyOutfit(), [SLOT_KEY[it.slot]]: {item_id: iid}}, {width: 160, height: 320})}</div>
-    <h2 style="color:${it.rarity_color};text-align:center">${it.name}</h2>
-    <div style="color:${it.rarity_color};font-size:12px;margin:8px 0 16px;font-weight:700;text-align:center">${it.rarity_name} · ×${it.quantity}</div>
-    <p style="color:var(--hint);margin-bottom:16px;text-align:center">${it.desc}</p>${_itemStatsHtml(it, 'block')}
-    <button class="btn btn-primary" onclick="equipItem('${iid}')">⚡ Надеть</button>
-    <button class="btn btn-secondary" onclick="sellItem('${iid}')">💰 Продать за ${it.sell_price}₽</button>
-  `);
-}
 
 async function equipItem(iid) {
   try {
@@ -856,7 +843,6 @@ const CASINO = {
 };
 
 
-
 function doubleBet() {
   const inp = $("#bet-input");
   if (!inp) return;
@@ -954,38 +940,8 @@ const ACH_MAP = {
   fashion:{name:"Модник",emoji:"👔"}, level10:{name:"Опытный",emoji:"⭐"},
   rich_king:{name:"Император",emoji:"👑"}, trader:{name:"Барыга",emoji:"🤝"},
 };
-async function showTradeOffer(uid, name) {
-  try {
-    const [myInv, theirInv] = await Promise.all([api("inventory"), api("player_items", {user_id: uid})]);
-    const myHtml = myInv.items.length > 0
-      ? myInv.items.map(i=>`<label style="display:flex;gap:8px;padding:6px;background:var(--bg-3);border-radius:8px;margin-bottom:4px;font-size:12px"><input type="checkbox" class="give-item" value="${i.item_id}"> ${i.name} ×${i.quantity}</label>`).join("")
-      : '<p style="color:var(--hint)">Пусто</p>';
-    const theirHtml = theirInv.items.length > 0
-      ? theirInv.items.map(i=>`<label style="display:flex;gap:8px;padding:6px;background:var(--bg-3);border-radius:8px;margin-bottom:4px;font-size:12px"><input type="checkbox" class="want-item" value="${i.item_id}"> ${i.name} ×${i.quantity}</label>`).join("")
-      : '<p style="color:var(--hint)">Пусто</p>';
-    openModal(`
-      <h2 style="margin-bottom:16px">Трейд с ${name}</h2>
-      <p style="font-weight:700;margin-bottom:8px">Я даю:</p>
-      <input id="give-money" type="number" placeholder="₽" style="width:100%;padding:10px;background:var(--bg-3);border:none;border-radius:8px;color:#fff;margin-bottom:8px">
-      <div style="max-height:150px;overflow-y:auto">${myHtml}</div>
-      <p style="font-weight:700;margin:16px 0 8px">Я хочу:</p>
-      <input id="want-money" type="number" placeholder="₽" style="width:100%;padding:10px;background:var(--bg-3);border:none;border-radius:8px;color:#fff;margin-bottom:8px">
-      <div style="max-height:150px;overflow-y:auto">${theirHtml}</div>
-      <button class="btn btn-primary" onclick="sendTradeOffer(${uid})" style="margin-top:16px">🤝 Отправить</button>
-    `);
-  } catch(e) { toast(e.message, "error"); }
-}
-async function sendTradeOffer(uid) {
-  const give_money = parseInt($("#give-money").value) || 0;
-  const want_money = parseInt($("#want-money").value) || 0;
-  const give_items = [...document.querySelectorAll(".give-item:checked")].map(x=>x.value);
-  const want_items = [...document.querySelectorAll(".want-item:checked")].map(x=>x.value);
-  if (!give_money && !want_money && !give_items.length && !want_items.length) { toast("Пустой", "error"); return; }
-  try {
-    await api("trade/send", {to_user: uid, give_money, give_items, want_money, want_items});
-    closeModal(); toast("✅ Отправлено", "success");
-  } catch(e) { toast(e.message, "error"); }
-}
+
+
 function renderTrades(trades) {
   const incEl = $("#trades-incoming"), outEl = $("#trades-outgoing");
   if (trades.incoming.length === 0 && trades.outgoing.length === 0) {
@@ -1283,18 +1239,7 @@ function escapeHtml(text) {
   div.textContent = text == null ? "" : text;
   return div.innerHTML;
 }
-async function sendChat() {
-  const inp = $("#chat-input");
-  if (!inp) return;
-  const msg = inp.value.trim();
-  if (!msg) return;
-  try {
-    await api("chat/send", {message: msg});
-    inp.value = "";
-    loadChat();
-    if (tg) tg.HapticFeedback?.impactOccurred("light");
-  } catch(e) { toast(e.message, "error"); }
-}
+
 
 boot();
 
@@ -1356,61 +1301,6 @@ async function startPvPUI(bid) {
   }, 3000);
 }
 
-async function loadPvPState(bid, silent = false) {
-  try {
-    const d = await api("pvp/state", {battle_id: bid});
-    if (d.status === "finished") {
-      if (pvpTimerInterval) { clearInterval(pvpTimerInterval); pvpTimerInterval = null; }
-      pvpCurrentBattle = null;
-      closeModal();
-      toast("⚔️ Бой окончен!", "success");
-      refreshPlayer();
-      return;
-    }
-    if (d.status === "pending") {
-      if (!silent) toast("Ждём ответа соперника...");
-      return;
-    }
-    const isMyTurn = d.turn === state.player.user_id;
-    const logHtml = (d.log || []).slice(-5).map(l => {
-      if (l.type === "hit") return `💥 ${l.attacker} → ${l.part}: -${l.damage}`;
-      if (l.type === "block") return `🛡 ${l.attacker}: блок ${l.part}`;
-      if (l.type === "defend") return `🛡 ${l.player}: защита ${l.part}`;
-      if (l.type === "timeout") return `⏰ ${l.player}: таймаут (защита ${l.part})`;
-      return "";
-    }).join("<br>");
-    const myPart = d.is_attacker ? "attacker" : "defender";
-    const enemyPart = d.is_attacker ? "defender" : "attacker";
-    const me = d[myPart]; const enemy = d[enemyPart];
-
-    // Таймер
-    let timerHtml = "";
-    if (isMyTurn) {
-      timerHtml = `<div style="text-align:center;padding:8px;background:rgba(46,204,113,.15);border-radius:10px;margin:12px 0;font-weight:700;color:var(--success)">🎯 Твой ход (${d.seconds_left}с)</div>`;
-    } else {
-      const color = d.seconds_left < 10 ? "var(--danger)" : "var(--hint)";
-      timerHtml = `<div style="text-align:center;padding:8px;background:rgba(0,0,0,.3);border-radius:10px;margin:12px 0;font-weight:700;color:${color}">⏳ Ход ${enemy.nickname} (${d.seconds_left}с)</div>`;
-    }
-
-    openModal(`
-      <h2 style="text-align:center;margin-bottom:12px">⚔️ Гоп-стоп</h2>
-      <div class="pvp-card">
-        <div class="pvp-hp-row"><span>${enemy.nickname}</span><span>${enemy.hp}/${enemy.max_hp}</span></div>
-        <div class="pvp-hp-bar"><div class="pvp-hp-fill" style="width:${enemy.hp/enemy.max_hp*100}%"></div></div>
-        <div class="pvp-hp-row" style="margin-top:12px"><span>${me.nickname} (ты)</span><span>${me.hp}/${me.max_hp}</span></div>
-        <div class="pvp-hp-bar"><div class="pvp-hp-fill" style="width:${me.hp/me.max_hp*100}%"></div></div>
-      </div>
-      ${timerHtml}
-      ${logHtml ? `<div class="pvp-log">${logHtml}</div>` : ''}
-      ${isMyTurn ? `
-        <button class="pvp-part-btn" onclick="pvpChooseAction('attack')">⚔️ Атаковать</button>
-        <button class="pvp-part-btn" onclick="pvpChooseAction('defend')">🛡 Защищаться</button>
-      ` : `<p style="text-align:center;padding:12px;color:var(--hint);font-size:13px">Если противник не ответит за ${d.timeout}с — сработает авто-защита</p>`}
-    `);
-  } catch(e) {
-    if (!silent) toast(e.message, "error");
-  }
-}
 
 function pvpChooseAction(action) {
   pvpMyTurnAction = action;
@@ -1424,109 +1314,11 @@ function pvpChooseAction(action) {
   `);
 }
 
-async function pvpDoAction(part) {
-  try {
-    const d = await api("pvp/action", {battle_id: pvpCurrentBattle, action: pvpMyTurnAction, part});
-    if (d.finished) {
-      openModal(`
-        <div style="text-align:center;padding:20px 0">
-          <div style="font-size:80px">${d.winner_id === state.player.user_id ? '🏆' : '💀'}</div>
-          <h2 style="margin-top:16px">${d.winner_id === state.player.user_id ? 'ПОБЕДА!' : 'Поражение'}</h2>
-          <p style="margin-top:12px">${d.winner_id === state.player.user_id ? `Ты отжал ${fmtMoney(d.steal)}₽ у ${d.loser_name}` : `${d.winner_name} отжал у тебя ${fmtMoney(d.steal)}₽`}</p>
-          <button class="btn btn-primary" onclick="closeModal();refreshPlayer()" style="margin-top:16px">OK</button>
-        </div>`);
-      refreshPlayer();
-      return;
-    }
-    if (d.waiting) {
-      openModal(`<p style="text-align:center;padding:40px;color:var(--hint)">⏳ Ждём хода противника...</p>`);
-      setTimeout(() => loadPvPState(pvpCurrentBattle), 2000);
-      return;
-    }
-    loadPvPState(pvpCurrentBattle);
-  } catch(e) { toast(e.message, "error"); }
-}
 
 // ══════════════════════════════════════════════════════════════
 //  БАНДЫ
 // ══════════════════════════════════════════════════════════════
-function showCreateGang() {
-  openModal(`
-    <h2>🚬 Создать банду</h2>
-    <input id="gang-name-input" type="text" maxlength="20" placeholder="Название банды" style="width:100%;padding:12px;background:var(--bg-3);border:none;border-radius:10px;color:#fff;margin:12px 0;font-size:16px">
-    <p style="font-size:12px;color:var(--hint);margin-bottom:8px">Эмодзи (1 шт):</p>
-    <input id="gang-emoji-input" type="text" maxlength="2" value="🚬" style="width:100%;padding:12px;background:var(--bg-3);border:none;border-radius:10px;color:#fff;font-size:24px;text-align:center;margin-bottom:12px">
-    <button class="btn btn-primary" onclick="createGang()">Создать за 50 000₽</button>
-  `);
-}
 
-async function createGang() {
-  const name = $("#gang-name-input").value.trim();
-  const emoji = $("#gang-emoji-input").value.trim() || "🚬";
-  try {
-    await api("gang/create", {name, emoji});
-    closeModal(); loadGang();
-    toast("🚬 Банда создана!", "success");
-  } catch(e) { toast(e.message, "error"); }
-}
-
-async function joinGang(gid) {
-  try {
-    await api("gang/join", {gang_id: gid});
-    loadGang(); toast("✅ Вступил в банду");
-  } catch(e) { toast(e.message, "error"); }
-}
-
-async function leaveGang() {
-  if (!confirm("Покинуть банду?")) return;
-  try {
-    await api("gang/leave");
-    loadGang(); toast("Покинул банду");
-  } catch(e) { toast(e.message, "error"); }
-}
-
-function showGangDeposit() {
-  const amt = prompt("Сколько вложить в казну? (есть: " + fmtMoney(state.player.balance) + "₽)");
-  if (!amt) return;
-  api("gang/deposit", {amount: parseInt(amt)}).then(() => {
-    refreshPlayer().then(() => loadGang());
-    toast("💰 Вложено", "success");
-  }).catch(e => toast(e.message, "error"));
-}
-
-function showGangWithdraw() {
-  const amt = prompt("Сколько вывести из казны?");
-  if (!amt) return;
-  api("gang/withdraw", {amount: parseInt(amt)}).then(() => {
-    refreshPlayer().then(() => loadGang());
-    toast("💸 Выведено", "success");
-  }).catch(e => toast(e.message, "error"));
-}
-
-async function showTerritoryCapture(tid, name, income, gangId, capGangId) {
-  const d = await api("gang/get");
-  const isLeader = d.is_leader_or_deputy;
-  const canCapture = isLeader && !capGangId && gangId !== d.gang.gang_id;
-  let statusText = "Ничейная территория";
-  if (gangId === d.gang.gang_id) statusText = "🟢 Наша территория";
-  else if (gangId) statusText = "🔴 Чужая территория";
-  else if (capGangId === d.gang.gang_id) statusText = "⏳ Захватывается";
-  openModal(`
-    <h2>🗺 ${name}</h2>
-    <p style="margin:16px 0">Доход: <b style="color:var(--money)">+${income}₽/ч</b></p>
-    <p style="color:var(--hint);margin-bottom:16px">${statusText}</p>
-    ${canCapture ? `<button class="btn btn-primary" onclick="captureTerritory(${tid})">⚔️ Захватить (1 час)</button>` : ''}
-    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal()">Закрыть</button>
-  `);
-}
-
-async function captureTerritory(tid) {
-  try {
-    await api("gang/capture", {territory_id: tid});
-    closeModal(); loadGang();
-    toast("⚔️ Захват начат! Жди 1 час", "success");
-  } catch(e) { toast(e.message, "error"); }
-}
 
 // ══════════════════════════════════════════════════════════════
 //  НОВЫЙ ТРЕЙД (визуальный)
@@ -1535,104 +1327,12 @@ const SLOT_KEY_MAP = {head:"head_id", body:"body_id", legs:"legs_id", right_hand
 let tradeGiveItems = new Set();
 let tradeWantItems = new Set();
 
-async function showTradeOffer(uid, name) {
-  try {
-    const [myInv, theirInv] = await Promise.all([api("inventory"), api("player_items", {user_id: uid})]);
-    tradeGiveItems = new Set();
-    tradeWantItems = new Set();
-    const myItemsHtml = myInv.items.map(i => `
-      <div class="trade-item" data-iid="${i.item_id}" onclick="toggleTradeItem(this, 'give')">
-        <div class="trade-item-emoji">${i.emoji}</div>
-        <div class="trade-item-name">${i.name}</div>${_itemStatsHtml(i, 'mini')}
-      </div>`).join("");
-    const theirItemsHtml = theirInv.items.length > 0 ? theirInv.items.map(i => `
-      <div class="trade-item" data-iid="${i.item_id}" onclick="toggleTradeItem(this, 'want')">
-        <div class="trade-item-emoji">${i.emoji}</div>
-        <div class="trade-item-name">${i.name}</div>${_itemStatsHtml(i, 'mini')}
-      </div>`).join("") : '<p style="color:var(--hint);padding:20px;text-align:center">У них пусто</p>';
-    openModal(`
-      <h2 style="text-align:center;margin-bottom:16px">🤝 Трейд с ${name}</h2>
-      <p style="font-weight:700;margin-bottom:6px">📤 Я даю</p>
-      <input id="give-money" type="number" placeholder="Деньги ₽" style="width:100%;padding:10px;background:var(--bg-3);border:none;border-radius:8px;color:#fff;margin-bottom:6px" value="0">
-      <div class="trade-inventory" id="give-inv">${myItemsHtml || '<p style="color:var(--hint);text-align:center;padding:10px">Твой инвентарь пуст</p>'}</div>
-      <p style="font-weight:700;margin:12px 0 6px">📥 Я хочу</p>
-      <input id="want-money" type="number" placeholder="Деньги ₽" style="width:100%;padding:10px;background:var(--bg-3);border:none;border-radius:8px;color:#fff;margin-bottom:6px" value="0">
-      <div class="trade-inventory" id="want-inv">${theirItemsHtml}</div>
-      <div class="trade-summary" id="trade-summary">Выбери предметы</div>
-      <button class="btn btn-primary" style="margin-top:12px" onclick="sendTradeOffer(${uid})">🤝 Отправить предложение</button>
-    `);
-  } catch(e) { toast(e.message, "error"); }
-}
-
-function toggleTradeItem(el, kind) {
-  const iid = el.dataset.iid;
-  el.classList.toggle("selected");
-  if (kind === "give") {
-    if (el.classList.contains("selected")) tradeGiveItems.add(iid);
-    else tradeGiveItems.delete(iid);
-  } else {
-    if (el.classList.contains("selected")) tradeWantItems.add(iid);
-    else tradeWantItems.delete(iid);
-  }
-  const giveMoney = parseInt($("#give-money")?.value) || 0;
-  const wantMoney = parseInt($("#want-money")?.value) || 0;
-  $("#trade-summary").innerHTML = `
-    <b>Ты даёшь:</b> ${giveMoney > 0 ? fmtMoney(giveMoney)+"₽ " : ""}${tradeGiveItems.size > 0 ? tradeGiveItems.size+" предмет(ов)" : "ничего"}<br>
-    <b>Ты хочешь:</b> ${wantMoney > 0 ? fmtMoney(wantMoney)+"₽ " : ""}${tradeWantItems.size > 0 ? tradeWantItems.size+" предмет(ов)" : "ничего"}
-  `;
-}
 
 // Переопределить sendTradeOffer
-async function sendTradeOffer(uid) {
-  const give_money = parseInt($("#give-money").value) || 0;
-  const want_money = parseInt($("#want-money").value) || 0;
-  if (!give_money && !want_money && !tradeGiveItems.size && !tradeWantItems.size) {
-    toast("Пустой трейд", "error"); return;
-  }
-  try {
-    await api("trade/send", {
-      to_user: uid, give_money,
-      give_items: [...tradeGiveItems],
-      want_money,
-      want_items: [...tradeWantItems]
-    });
-    closeModal();
-    toast("✅ Предложение отправлено", "success");
-  } catch(e) { toast(e.message, "error"); }
-}
+
 
 // Переопределить showInvItem — новое меню продажи
-async function showInvItem(iid) {
-  const it = state.invItems.find(x=>x.item_id===iid);
-  if (!it) return;
-  openModal(`
-    <div class="shop-preview">${renderCharacterSVG({...emptyOutfit(), [SLOT_KEY_MAP[it.slot]]: {item_id: iid}}, {width: 160, height: 320})}</div>
-    <h2 style="color:${it.rarity_color};text-align:center">${it.name}</h2>
-    <div style="color:${it.rarity_color};font-size:12px;margin:8px 0 16px;font-weight:700;text-align:center">${it.rarity_name} · ×${it.quantity}</div>
-    <p style="color:var(--hint);margin-bottom:16px;text-align:center">${it.desc}</p>${_itemStatsHtml(it, 'block')}
-    <button class="btn btn-primary" onclick="equipItem('${iid}')">⚡ Надеть</button>
-    <button class="btn btn-secondary" onclick="confirmSellItem('${iid}')">💰 Продать</button>
-  `);
-}
 
-function confirmSellItem(iid) {
-  const it = state.invItems.find(x=>x.item_id===iid);
-  if (!it) return;
-  openModal(`
-    <h2 style="text-align:center">💰 Продать?</h2>
-    <div style="text-align:center;margin:24px 0;padding:20px;background:var(--bg-3);border-radius:12px">
-      <div style="font-size:48px">${it.emoji}</div>
-      <div style="font-weight:800;margin-top:8px;color:${it.rarity_color}">${it.name}</div>
-      <div style="color:var(--hint);font-size:12px;margin-top:4px">${it.desc}</div>
-      <div style="margin-top:16px;padding:12px;background:rgba(243,156,18,.15);border-radius:8px">
-        <div style="font-size:12px;color:var(--hint)">Цена продажи (50% от магазина)</div>
-        <div style="font-size:24px;font-weight:900;color:var(--money);margin-top:4px">${fmtMoney(it.sell_price)}₽</div>
-      </div>
-    </div>
-    <button class="btn btn-primary" onclick="sellItem('${iid}')">✅ Да, продать</button>
-    <button class="btn btn-secondary" onclick="showInvItem('${iid}')">❌ Нет, назад</button>
-  `);
-}
 
 // Отслеживание PvP-вызовов
 setInterval(checkPvPChallenges, 5000);
@@ -1718,76 +1418,7 @@ async function openCase(cid) {
 // ══════════════════════════════════════════════════════════════
 //  БАНДЫ
 // ══════════════════════════════════════════════════════════════
-async function loadGang() {
-  try {
-    const d = await api("gang/get");
-    const el = $("#gang-content");
-    if (!d.in_gang) {
-      let listHtml = d.gangs.length > 0 ? d.gangs.map(g => `
-        <div class="member-row">
-          <div style="font-size:22px">${g.emoji}</div>
-          <div style="flex:1"><div style="font-weight:700">${g.name}</div>
-          <div style="font-size:11px;color:var(--hint)">${g.members_count}/10 · казна ${fmtMoney(g.treasury)}₽</div></div>
-          <button class="btn btn-secondary" style="width:auto;padding:8px 14px;margin:0" onclick="joinGang(${g.gang_id})">Вступить</button>
-        </div>`).join("") : '<p style="color:var(--hint);text-align:center;padding:20px">Банд пока нет</p>';
-      el.innerHTML = `
-        <h2 class="section-title">🚬 Банды</h2>
-        <div style="background:var(--bg-2);border-radius:16px;padding:16px;margin-bottom:16px">
-          <p style="margin-bottom:12px">Создай свою банду за <b style="color:var(--money)">50 000₽</b></p>
-          <button class="btn btn-primary" onclick="showCreateGang()">🚬 Создать банду</button>
-        </div>
-        <h3 class="section-subtitle">Существующие банды</h3>
-        ${listHtml}`;
-      return;
-    }
-    // Уведомления о захватах
-    if (d.notifications && d.notifications.length > 0) {
-      for (const n of d.notifications) {
-        if (n.type === "captured") toast(`🎉 Захвачена: ${n.name} (+${n.income}₽/ч)`, "success");
-        if (n.type === "lost") toast(`💀 Потеряна: ${n.name}`, "error");
-      }
-    }
-    const g = d.gang;
-    const terrHtml = d.territories.map(t => {
-      let cls = "neutral", label = "Ничейная";
-      if (t.capturing_gang_id === g.gang_id) { cls = "capturing"; label = `Захват ${formatTime(t.capture_left)}`; }
-      else if (t.gang_id === g.gang_id) { cls = "mine"; label = "Наша"; }
-      else if (t.gang_id) { cls = "enemy"; label = "Чужая"; }
-      return `<div class="territory ${cls}" onclick="showTerritoryCapture(${t.id},'${t.name}',${t.income},${t.gang_id||0},${t.capturing_gang_id||0})">
-        <div class="territory-emoji">${t.emoji}</div>
-        <div class="territory-name">${t.name}</div>
-        <div class="territory-income">+${t.income}₽/ч</div>
-        <div style="font-size:9px;margin-top:2px">${label}</div>
-      </div>`;
-    }).join("");
-    const membersHtml = d.members.map(m => {
-      const roleClass = `role-${m.role}`;
-      const roleName = {leader:"Лидер",deputy:"Зам",member:"Боец"}[m.role];
-      return `<div class="member-row">
-        <div style="flex:1"><b>${m.nickname}</b> · ур. ${m.level}</div>
-        <span class="member-role ${roleClass}">${roleName}</span>
-      </div>`;
-    }).join("");
-    el.innerHTML = `
-      <div class="gang-banner">
-        <div style="font-size:64px">${g.emoji}</div>
-        <div class="gang-name">${g.name}</div>
-        <div class="gang-treasury">💰 Казна: ${fmtMoney(g.treasury)}₽</div>
-      </div>
-      ${d.is_leader_or_deputy ? `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-          <button class="btn btn-primary" onclick="showGangDeposit()" style="margin:0">💰 Вложить</button>
-          <button class="btn btn-secondary" onclick="showGangWithdraw()" style="margin:0">💸 Вывести</button>
-        </div>
-      ` : ''}
-      <h3 class="section-subtitle">🗺 Территории (ГЕТТО)</h3>
-      <div class="gang-map">${terrHtml}</div>
-      <h3 class="section-subtitle">👥 Участники (${d.members.length}/10)</h3>
-      ${membersHtml}
-      ${d.my_role !== "leader" ? `<button class="btn btn-secondary" style="margin-top:12px" onclick="leaveGang()">🚪 Покинуть банду</button>` : ''}
-    `;
-  } catch(e) { toast(e.message, "error"); }
-}
+
 
 function showCreateGang() {
   openModal(`
@@ -1971,7 +1602,6 @@ function confirmSellItem(iid) {
 
 // Отслеживание PvP-вызовов
 // Добавить loadCases/loadGang в showTab
-
 
 
 async function renderGhetto() {
