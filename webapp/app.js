@@ -1265,9 +1265,14 @@ function startChatPolling() {
   };
   tick();
   chatInterval = setInterval(tick, 3000);
+  if (window._convPoll) clearInterval(window._convPoll);
+  window._convPoll = setInterval(() => {
+    if (state.player) loadConversations();
+  }, 15000);
 }
 function stopChatPolling() {
   if (chatInterval) { clearInterval(chatInterval); chatInterval = null; }
+  if (window._convPoll) { clearInterval(window._convPoll); window._convPoll = null; }
 }
 async function loadChat() {
   if (state.chatWith && state.chatWith !== 'global') return;
