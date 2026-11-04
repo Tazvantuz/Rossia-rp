@@ -1225,6 +1225,8 @@ async def _pvp_finish(winner_id, loser_id, bid):
                               "winner_id":winner_id,"winner_name":winner["nickname"],
                               "loser_name":loser["nickname"],"steal":steal})
 
+
+
 # ══════════════════════════════════════════════════════════════
 #  PVP (ГОП-СТОП) — базовая реализация
 # ══════════════════════════════════════════════════════════════
@@ -1550,6 +1552,18 @@ def setup_routes(app):
     R.add_post("/api/roulette", api_roulette)
     R.add_post("/api/crime", api_crime)
     R.add_post("/api/credit/take", api_credit_take)
+    R.add_post("/api/pvp/incoming", api_pvp_incoming)
+    R.add_post("/api/pvp/start", api_pvp_start)
+    R.add_post("/api/pvp/respond", api_pvp_respond)
+    R.add_post("/api/pvp/state", api_pvp_state)
+    R.add_post("/api/pvp/action", api_pvp_action)
+    R.add_post("/api/gang/info", api_gang_info)
+    R.add_post("/api/gang/create", api_gang_create)
+    R.add_post("/api/gang/join", api_gang_join)
+    R.add_post("/api/gang/treasury", api_gang_treasury)
+    R.add_post("/api/gang/territories", api_gang_territories)
+    R.add_post("/api/territory/capture/start", api_territory_capture_start)
+    R.add_post("/api/territory/capture/resolve", api_territory_capture_resolve)
     R.add_post("/api/credit/pay", api_credit_pay)
     R.add_post("/api/crypto/buy", api_crypto_buy)
     R.add_post("/api/crypto/sell", api_crypto_sell)
