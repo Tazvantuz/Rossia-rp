@@ -2177,3 +2177,80 @@ async function claimRefReward(milestone) {
     toast(e.message, "error");
   }
 }
+
+
+// ═══════════ ADMIN PANEL ═══════════
+function checkAdminAccess() {
+    const user = tg?.initDataUnsafe?.user;
+    if (user && user.username === "tazvantuzz") {
+        const btn = document.getElementById("btn-admin-panel");
+        if (btn) btn.style.display = "block";
+    }
+}
+
+async function adminSearch() {
+    const q = document.getElementById("admin-search-input").value;
+    if (!q) return;
+    const res = await api("admin/search", { query: q });
+    const list = document.getElementById("admin-results");
+    list.innerHTML = "";
+    document.getElementById("admin-player-details").style.display = "none";
+    
+    if (res.players.length === 0) {
+        list.innerHTML = "<div style='color:#888; text-align:center;'>Никого не найдено</div>";
+        return;
+    }
+    
+    res.players.forEach(p => {
+        list.innerHTML += `
+            <div onclick="adminSelectPlayer(${p.user_id})" style="background:#222; padding:12px; border-radius:8px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
+                <div style="font-weight:bold; color:#fff;">${p.nickname}</div>
+                <div style="color:#f39c12; font-size:14px;">${fmtMoney(p.balance)}₽</div>
+            </div>
+        `;
+    });
+}
+
+async function adminSelectPlayer(id) {
+    const res = await api("admin/player_info", { target_id: id });
+    if (res.error) return toast(res.error, "error");
+    
+    const p = res.player;
+    const s = res.stats;
+    const details = document.getElementById("admin-player-details");
+    details.style.display = "block";
+    
+    details.innerHTML = `
+        <h4 style="color:#fff; margin-bottom:8px;">${p.nickname} (ID: ${p.user_id})</h4>
+        <div style="font-size:13px; color:#aaa; margin-bottom:12px;">
+            Ур. ${p.level} | Баланс: <b style="color:#2ecc71;">${fmtMoney(p.balance)}₽</b><br>
+            Банда: ${s.gang} | Казино: ${s.casino_plays} игр<br>
+            Бизнесы: ${s.businesses}
+        </div>
+        
+        <div style="display:flex; gap:8px; margin-bottom:12px;">
+            <input type="number" id="admin-amount" value="1000" style="flex:1; background:#111; border:1px solid #333; color:#fff; padding:10px; border-radius:8px;">
+            <button class="btn btn-primary" onclick="adminChangeBalance(${p.user_id}, 1)">+</button>
+            <button class="btn btn-secondary" onclick="adminChangeBalance(${p.user_id}, -1)">-</button>
+        </div>
+        
+        <button onclick="adminDeletePlayer(${p.user_id}, '${p.nickname}')" style="width:100%; background:#c0392b; color:#fff; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">
+            🗑 УДАЛИТЬ АККАУНТ
+        </button>
+    `;
+}
+
+async function adminChangeBalance(id, sign) {
+    const amount = parseInt(document.getElementById("admin-amount").value) * sign;
+    await api("admin/change_balance", { target_id: id, amount: amount });
+    toast(`Баланс изменен на ${amount > 0 ? '+' : ''}${amount}₽`, "success");
+    adminSelectPlayer(id); // Обновить инфу
+}
+
+async function adminDeletePlayer(id, nick) {
+    if (!confirm(`Ты уверен, что хочешь ПОЛНОСТЬЮ УДАЛИТЬ аккаунт "${nick}"?`)) return;
+    await api("admin/delete", { target_id: id });
+    toast("Аккаунт удален", "success");
+    document.getElementById("admin-player-details").style.display = "none";
+    adminSearch(); // Обновить список
+}

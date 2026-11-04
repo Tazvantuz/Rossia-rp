@@ -237,5 +237,24 @@
 <script src="app.js?v=5"></script>
 <script src="casino.js"></script>
 <script src="gang.js"></script>
+
+<div id="admin-panel" class="modal hidden">
+  <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
+    <div class="modal-close" onclick="document.getElementById('admin-panel').classList.add('hidden')">✕</div>
+    <h3 style="color:#e74c3c; margin-bottom:16px;">🛠 Админ-панель</h3>
+    
+    <div style="display:flex; gap:8px; margin-bottom:16px;">
+      <input type="text" id="admin-search-input" placeholder="Ник игрока..." style="flex:1; background:#111; border:1px solid #333; color:#fff; padding:10px; border-radius:8px;">
+      <button class="btn btn-primary" onclick="adminSearch()" style="padding:10px 16px;">Найти</button>
+    </div>
+    
+    <div id="admin-results" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;"></div>
+    
+    <div id="admin-player-details" style="display:none; background:#1e1e1e; border:1px solid #e74c3c; border-radius:12px; padding:16px;">
+      <!-- Заполняется через JS -->
+    </div>
+  </div>
+</div>
+
 </body>
 </html>

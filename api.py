@@ -1669,8 +1669,87 @@ async def api_upgrade_business(request):
     return web.json_response({"player": _player_json(p), "success": True})
 
 
+
+# ═══════════ ADMIN PANEL ═══════════
+ADMIN_USERNAME = "tazvantuzz"
+
+async def _is_admin(request):
+    try:
+        init_data = request.headers.get("X-Init-Data")
+        if not init_data:
+            body_bytes = await request.read()
+            body = json.loads(body_bytes)
+            init_data = body.get("initData")
+        if not init_data:
+            return False
+        parsed = dict(parse_qsl(init_data))
+        user_str = parsed.get("user")
+        if user_str:
+            user = json.loads(user_str)
+            return user.get("username") == ADMIN_USERNAME
+    except: pass
+    return False
+
+async def api_admin_search(request):
+    if not await _is_admin(request):
+        return web.json_response({"error": "Доступ запрещен"}, status=403)
+    body = await request.json()
+    query = body.get("query", "").strip()
+    if not query:
+        return web.json_response({"players": []})
+    rows = await db.fetchall("SELECT user_id, nickname, balance, level FROM players WHERE nickname LIKE ? LIMIT 20", (f"%{query}%",))
+    return web.json_response({"players": [dict(r) for r in rows]})
+
+async def api_admin_player_info(request):
+    if not await _is_admin(request):
+        return web.json_response({"error": "Доступ запрещен"}, status=403)
+    body = await request.json()
+    target_id = int(body.get("target_id"))
+    p = await _player(target_id)
+    if not p: return web.json_response({"error": "Игрок не найден"}, status=404)
+    
+    biz = _json_biz(p)
+    biz_str = ", ".join([f"{b['id']} (ур.{b.get('level', 1)})" for b in biz]) if biz else "Нет"
+    
+    return web.json_response({
+        "player": _player_json(p),
+        "stats": {
+            "gang": "Есть" if await db.fetchone("SELECT gang_id FROM gang_members WHERE user_id=?", (target_id,)) else "Нет",
+            "businesses": biz_str,
+            "casino_plays": p.get("casino_plays", 0),
+            "crimes_won": p.get("crimes_won", 0)
+        }
+    })
+
+async def api_admin_change_balance(request):
+    if not await _is_admin(request):
+        return web.json_response({"error": "Доступ запрещен"}, status=403)
+    body = await request.json()
+    target_id = int(body.get("target_id"))
+    amount = int(body.get("amount"))
+    await db.execute("UPDATE players SET balance = balance + ? WHERE user_id = ?", (amount, target_id))
+    return web.json_response({"success": True})
+
+async def api_admin_delete(request):
+    if not await _is_admin(request):
+        return web.json_response({"error": "Доступ запрещен"}, status=403)
+    body = await request.json()
+    target_id = int(body.get("target_id"))
+    
+    # Удаляем все следы игрока
+    await db.execute("DELETE FROM players WHERE user_id = ?", (target_id,))
+    await db.execute("DELETE FROM gang_members WHERE user_id = ?", (target_id,))
+    await db.execute("DELETE FROM trades WHERE from_user = ? OR to_user = ?", (target_id, target_id))
+    
+    return web.json_response({"success": True})
+
+
 def setup_routes(app):
     R = app.router
+    R.add_post("/api/admin/search", api_admin_search)
+    R.add_post("/api/admin/player_info", api_admin_player_info)
+    R.add_post("/api/admin/change_balance", api_admin_change_balance)
+    R.add_post("/api/admin/delete", api_admin_delete)
     R.add_post("/api/me", api_me)
     R.add_post("/api/register", api_register)
     R.add_post("/api/reset", api_reset)
