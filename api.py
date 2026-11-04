@@ -4,6 +4,7 @@ from urllib.parse import parse_qsl
 from aiohttp import web
 from database import db
 from game import (
+    CLASSES,
     LOCATIONS, ITEMS, JOBS, BUSINESSES, CASINO_GAMES, ACHIEVEMENTS,
     DAILY_REWARDS, SLOTS, SLOT_NAMES, SLOT_CATEGORY, SLOT_BY_CATEGORY,
     CATEGORY_NAMES, CATEGORY_EMOJI, RARITIES, MAX_LEVEL, START_LOCATION,
