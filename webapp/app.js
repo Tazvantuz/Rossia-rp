@@ -241,6 +241,7 @@ function showTab(tab) {
   if (tab==="work") loadWork();
   if (tab==="casino") renderCasino();
   if (tab==="people") loadPeople();
+  if (tab==="ghetto" && typeof renderGhetto === "function") renderGhetto();
   if (tab==="chat") startChatPolling();
   if (tab==="more") updateMoreBadges();
   window.scrollTo(0,0);
