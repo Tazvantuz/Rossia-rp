@@ -1,8 +1,13 @@
 import os
 import aiosqlite
 
-DATA_DIR = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH", ".")
-DB_PATH = os.path.join(DATA_DIR, "new_era_rpg.db")
+# Railway монтирует том в /data — использовать его если существует
+if os.path.isdir("/data") and os.access("/data", os.W_OK):
+    DB_PATH = "/data/new_era_rpg.db"
+    print(f"💾 БД: {DB_PATH} (Railway volume)")
+else:
+    DB_PATH = "new_era_rpg.db"
+    print(f"💾 БД: {DB_PATH} (локально)")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS players (
