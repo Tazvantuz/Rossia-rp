@@ -1262,22 +1262,63 @@ async function challengePvP(uid, name) {
 async function checkPvPChallenges() {
   try {
     const d = await api("pvp/incoming");
-    if (d.challenges && d.challenges.length > 0) {
-      const c = d.challenges[0];
-      openModal(`
-        <h2>⚔️ Гоп-стоп</h2>
-        <p style="margin:16px 0"><b>${c.attacker_name}</b> хочет напасть на тебя!</p>
-        <p style="color:var(--danger);font-size:13px;margin-bottom:16px">При проигрыше отдашь 10% денег</p>
-        <button class="btn btn-primary" onclick="respondPvP(${c.battle_id}, true)">⚔️ Принять бой</button>
-        <button class="btn btn-secondary" onclick="respondPvP(${c.battle_id}, false)">❌ Отказаться</button>
-      `);
+    if (!d.challenges || d.challenges.length === 0) return;
+    const c = d.challenges[0];
+    if (window._activePvPChallenge === c.battle_id) return;
+    window._activePvPChallenge = c.battle_id;
+
+    let secondsLeft = 30;
+    try {
+      const created = new Date(c.created_at.replace(" ", "T") + "Z");
+      secondsLeft = Math.max(0, 30 - Math.floor((Date.now() - created.getTime()) / 1000));
+    } catch(_) {}
+
+    if (secondsLeft <= 0) {
+      try { await api("pvp/respond", {battle_id: c.battle_id, accept: false}); } catch(_) {}
+      window._activePvPChallenge = null;
+      return;
     }
+
+    const render = (sl) => {
+      openModal(`
+        <h2 style="text-align:center">⚔️ Гоп-стоп</h2>
+        <p style="margin:16px 0;text-align:center"><b>${c.attacker_name}</b> хочет напасть на тебя!</p>
+        <p style="color:var(--danger);font-size:13px;margin-bottom:8px;text-align:center">При проигрыше отдашь 10% денег</p>
+        <p style="text-align:center;font-size:18px;font-weight:800;color:${sl > 10 ? 'var(--success)' : 'var(--danger)'};margin:16px 0;">⏰ Осталось: ${sl} сек</p>
+        <button class="btn btn-primary" style="padding:16px;font-size:16px;" onclick="respondPvP(${c.battle_id}, true)">⚔️ Принять бой</button>
+        <button class="btn btn-secondary" style="padding:16px;font-size:16px;" onclick="respondPvP(${c.battle_id}, false)">❌ Отказаться</button>
+      `);
+    };
+
+    render(secondsLeft);
+    if (window._pvpChalTimer) clearInterval(window._pvpChalTimer);
+    window._pvpChalTimer = setInterval(async () => {
+      secondsLeft -= 1;
+      if (secondsLeft <= 0) {
+        clearInterval(window._pvpChalTimer);
+        window._pvpChalTimer = null;
+        window._activePvPChallenge = null;
+        try {
+          await api("pvp/respond", {battle_id: c.battle_id, accept: false});
+          closeModal();
+          toast("⏰ Время на ответ истекло", "error");
+        } catch(_) {}
+      } else {
+        const timerEl = document.querySelector('#modal-body p[style*="Осталось"]');
+        if (timerEl) {
+          timerEl.textContent = `⏰ Осталось: ${secondsLeft} сек`;
+          timerEl.style.color = secondsLeft > 10 ? 'var(--success)' : 'var(--danger)';
+        }
+      }
+    }, 1000);
   } catch(e) {}
 }
 
 async function respondPvP(bid, accept) {
   try {
     await api("pvp/respond", {battle_id: bid, accept});
+    if (window._pvpChalTimer) { clearInterval(window._pvpChalTimer); window._pvpChalTimer = null; }
+    window._activePvPChallenge = null;
     closeModal();
     if (accept) startPvPUI(bid);
     else toast("Отказался");
@@ -1922,24 +1963,85 @@ async function loadNotifications() {
 function showNotifications() {
   api("notifications/get").then(d => {
     let html = '<h2>🔔 Уведомления</h2>';
-    if (d.notifications.length === 0) html += '<p style="color:var(--hint);text-align:center;">Пусто</p>';
-    else {
+    if (d.notifications.length === 0) {
+      html += '<p style="color:var(--hint);text-align:center;padding:20px;">Пусто</p>';
+    } else {
       html += d.notifications.map(n => {
+        const hideBtn = `<button class="btn btn-secondary" style="width:auto;padding:6px 10px;margin:0;font-size:14px;float:right;color:var(--hint);" onclick="hideNotification(${n.id})">✕</button>`;
         let actions = "";
         if (n.type === 'gang_invite' && !n.is_read) {
-          actions = `<div style="display:flex;gap:6px;margin-top:8px;">
-            <button class="btn btn-primary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="acceptGangInvite(${n.id})">✅ Принять</button>
-            <button class="btn btn-secondary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="declineGangInvite(${n.id})">❌ Отклонить</button>
+          actions = `<div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+            <button class="btn btn-primary" style="margin:0;width:100%;padding:14px;font-size:15px;" onclick="acceptGangInvite(${n.id})">✅ Принять приглашение</button>
+            <button class="btn btn-secondary" style="margin:0;width:100%;padding:14px;font-size:15px;" onclick="declineGangInvite(${n.id})">❌ Отклонить</button>
           </div>`;
         }
-        return `<div style="padding:10px; background:var(--bg-3); border-radius:8px; margin-bottom:6px; font-size:13px; ${n.is_read ? 'opacity:0.6' : ''}">${n.text}${actions}</div>`;
+        if (n.type === 'pvp' && n.seconds_left !== undefined) {
+          const sl = n.seconds_left || 0;
+          const timerText = sl > 0 ? `<span style="color:var(--danger);font-weight:700;">⏰ ${sl} сек на ответ</span>` : '<span style="color:var(--danger);">⏰ Время истекло</span>';
+          const bidFromData = (() => { try { return JSON.parse(n.data || '{}').battle_id; } catch(_) { return null; } })();
+          if (bidFromData && sl > 0) {
+            actions = `<div style="margin-top:8px;font-size:12px;">${timerText}</div>
+              <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+                <button class="btn btn-primary" style="margin:0;width:100%;padding:14px;font-size:15px;background:linear-gradient(135deg,#c0392b,#e74c3c);" onclick="respondPvPFromNotif(${bidFromData}, true, ${n.id})">⚔️ Принять бой</button>
+                <button class="btn btn-secondary" style="margin:0;width:100%;padding:14px;font-size:15px;" onclick="respondPvPFromNotif(${bidFromData}, false, ${n.id})">❌ Отказаться</button>
+              </div>`;
+          } else {
+            actions = `<div style="margin-top:8px;font-size:12px;">${timerText}</div>`;
+          }
+        }
+        return `<div style="padding:12px; background:var(--bg-3); border-radius:10px; margin-bottom:8px; font-size:13px; ${n.is_read ? 'opacity:0.6' : ''}; overflow:hidden;">
+          ${hideBtn}
+          <div style="padding-right:40px;">${n.text}</div>
+          ${actions}
+        </div>`;
       }).join("");
     }
     openModal(html);
     api("notifications/read");
     const badge = document.getElementById("bell-badge");
     if (badge) badge.classList.add("hidden");
+
+    if (window._notifRefresh) clearInterval(window._notifRefresh);
+    if (d.notifications.some(n => n.type === 'pvp' && n.seconds_left > 0)) {
+      window._notifRefresh = setInterval(() => {
+        const modal = document.getElementById("modal");
+        if (!modal || modal.classList.contains("hidden")) {
+          clearInterval(window._notifRefresh);
+          window._notifRefresh = null;
+          return;
+        }
+        showNotificationsSilent();
+      }, 3000);
+    }
   });
+}
+
+async function showNotificationsSilent() {
+  try {
+    const d = await api("notifications/get");
+    if (!d.notifications.some(n => n.type === 'pvp' && n.seconds_left > 0)) {
+      if (window._notifRefresh) { clearInterval(window._notifRefresh); window._notifRefresh = null; }
+    }
+    const modalBody = document.getElementById("modal-body");
+    if (!modalBody || !d.notifications) return;
+  } catch(_) {}
+}
+
+async function respondPvPFromNotif(bid, accept, nid) {
+  try {
+    await api("pvp/respond", {battle_id: bid, accept});
+    await api("notifications/delete", {notification_id: nid});
+    closeModal();
+    if (accept) startPvPUI(bid);
+    else toast("❌ Отказался");
+  } catch(e) { toast(e.message, "error"); }
+}
+
+async function hideNotification(nid) {
+  try {
+    await api("notifications/delete", {notification_id: nid});
+    showNotifications();
+  } catch(e) { toast(e.message, "error"); }
 }
 
 async function acceptGangInvite(nid) {

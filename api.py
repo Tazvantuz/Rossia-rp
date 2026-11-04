@@ -15,6 +15,11 @@ from game import (
     get_outfit, roulette_color, ROULETTE_NUMBERS,
 )
 
+try:
+    from game import PVP_TURN_TIMEOUT
+except ImportError:
+    PVP_TURN_TIMEOUT = 30
+
 BOT_TOKEN = None
 def set_token(t):
     global BOT_TOKEN
@@ -1304,13 +1309,45 @@ async def api_gang_capture(request):
 
 async def api_notifications_get(request):
     ud = await _user(request); uid = ud["id"]
+    await _cleanup_stale_pvp()
     rows = await db.fetchall("SELECT * FROM notifications WHERE user_id=? ORDER BY id DESC LIMIT 30", (uid,))
-    unread = sum(1 for r in rows if not r["is_read"])
-    return web.json_response({"notifications": rows, "unread": unread})
+    now_unix = int(time.time())
+    result = []
+    for row in rows:
+        r = dict(row)
+        if r.get("type") == "pvp" and r.get("data"):
+            try:
+                data = json.loads(r["data"])
+                bid = data.get("battle_id")
+                if bid:
+                    b = await db.fetchone("SELECT status FROM pvp_battles WHERE battle_id=?", (bid,))
+                    if b and b["status"] == "pending":
+                        try:
+                            import datetime
+                            dt = datetime.datetime.strptime(r["created_at"], "%Y-%m-%d %H:%M:%S")
+                            created_unix = int(dt.timestamp())
+                            r["seconds_left"] = max(0, 30 - (now_unix - created_unix))
+                        except:
+                            r["seconds_left"] = 30
+                    else:
+                        continue
+            except: pass
+        result.append(r)
+    unread = sum(1 for r in result if not r.get("is_read"))
+    return web.json_response({"notifications": result, "unread": unread})
+
+async def api_notifications_delete(request):
+    ud = await _user(request); uid = ud["id"]
+    body = await request.json()
+    nid = int(body.get("notification_id", 0))
+    if not nid:
+        return web.json_response({"error": "Неверный ID"}, status=400)
+    await db.execute("DELETE FROM notifications WHERE id=? AND user_id=?", (nid, uid))
+    return web.json_response({"ok": True})
 
 async def api_notifications_read(request):
     ud = await _user(request); uid = ud["id"]
-    await db.execute("UPDATE notifications SET is_read=1 WHERE user_id=? AND type != 'gang_invite'", (uid,))
+    await db.execute("UPDATE notifications SET is_read=1 WHERE user_id=? AND type NOT IN ('gang_invite','pvp')", (uid,))
     return web.json_response({"ok": True})
 
 
@@ -1450,7 +1487,7 @@ async def _cleanup_stale_pvp():
     try:
         await db.execute(
             "UPDATE pvp_battles SET status='expired' WHERE status='pending' "
-            "AND (strftime('%s','now') - strftime('%s', created_at)) > 300"
+            "AND (strftime('%s','now') - strftime('%s', created_at)) > 30"
         )
     except Exception as e:
         print(f"⚠️ _cleanup_stale_pvp: {e}")
@@ -1481,7 +1518,7 @@ async def api_pvp_challenge(request):
         VALUES (?,?,?,?,?,?,?,?,?,'pending')""",
         (uid, target_id, s1["hp"], s2["hp"], s1["hp"], s2["hp"],
          s1["damage"], s2["damage"], uid))
-    await db.execute("INSERT INTO notifications (user_id, type, text) VALUES (?, 'pvp', ?)", (target_id, f"Вызов на гоп-стоп от {p1['nickname']}"))
+    await db.execute("INSERT INTO notifications (user_id, type, text, data) VALUES (?, 'pvp', ?, ?)", (target_id, f"Вызов на гоп-стоп от {p1['nickname']}", json.dumps({"battle_id": bid})))
     return web.json_response({"ok":True,"battle_id":bid,"attacker":p1["nickname"],
                               "defender":p2["nickname"]})
 async def api_pvp_incoming(request):
@@ -1497,10 +1534,18 @@ async def api_pvp_respond(request):
     body = await request.json()
     bid = int(body.get("battle_id",0))
     accept = bool(body.get("accept"))
+    await _cleanup_stale_pvp()
     b = await db.fetchone(
         "SELECT * FROM pvp_battles WHERE battle_id=? AND defender_id=? AND status='pending'",
         (bid, uid))
-    if not b: return web.json_response({"error":"Бой не найден"}, status=400)
+    if not b:
+        return web.json_response({"error":"Бой не найден или истёк"}, status=400)
+    fresh = await db.fetchone(
+        "SELECT 1 FROM pvp_battles WHERE battle_id=? AND status='pending' "
+        "AND (strftime('%s','now') - strftime('%s', created_at)) <= 30", (bid,))
+    if not fresh:
+        await db.execute("UPDATE pvp_battles SET status='expired' WHERE battle_id=?", (bid,))
+        return web.json_response({"error":"Время на ответ истекло (30 сек)"}, status=400)
     if not accept:
         await db.execute("UPDATE pvp_battles SET status='declined' WHERE battle_id=?", (bid,))
         return web.json_response({"ok":True,"declined":True})
@@ -2099,6 +2144,7 @@ def setup_routes(app):
     R.add_post("/api/chat/send", api_chat_send)
     R.add_post("/api/notifications/get", api_notifications_get)
     R.add_post("/api/notifications/read", api_notifications_read)
+    R.add_post("/api/notifications/delete", api_notifications_delete)
     R.add_post("/api/friend/search", api_friend_search)
     R.add_post("/api/friend/request", api_friend_request)
     R.add_post("/api/friend/respond", api_friend_respond)
