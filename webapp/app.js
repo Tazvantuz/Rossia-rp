@@ -2080,12 +2080,23 @@ async function renderGhetto() {
 
 
 // ═══════════ РЕФЕРАЛЫ ═══════════
+
 async function renderReferral() {
+  const countEl = document.getElementById("ref-count");
+  const earnedEl = document.getElementById("ref-earned");
+  const linkEl = document.getElementById("ref-link-input");
+  const milestonesContainer = document.getElementById("ref-milestones");
+  
+  if (!countEl) return;
+
   try {
     const d = await api("referral/info", {});
-    document.getElementById("ref-count").textContent = d.count;
-    document.getElementById("ref-earned").textContent = d.earned + "₽";
-    document.getElementById("ref-link-input").value = d.link;
+    
+    if (!d || d.error) throw new Error(d?.error || "Пустой ответ сервера");
+
+    countEl.textContent = d.count;
+    earnedEl.textContent = fmtMoney(d.earned);
+    linkEl.value = d.link;
 
     const milestones = [
       { count: 3, reward: 15000, icon: "🎁" },
@@ -2093,8 +2104,7 @@ async function renderReferral() {
       { count: 10, reward: 100000, icon: "👑" }
     ];
 
-    const container = document.getElementById("ref-milestones");
-    container.innerHTML = "";
+    milestonesContainer.innerHTML = "";
 
     milestones.forEach(m => {
       const isClaimed = d.claims.includes(m.count);
@@ -2104,17 +2114,17 @@ async function renderReferral() {
       if (isClaimed) {
         btnHtml = `<button class="ref-mile-btn" disabled>✅ Получено</button>`;
       } else if (isReady) {
-        btnHtml = `<button class="ref-mile-btn" onclick="claimRefReward(${m.count})">🎁 Забрать ${m.reward}₽</button>`;
+        btnHtml = `<button class="ref-mile-btn" onclick="claimRefReward(${m.count})">🎁 Забрать ${fmtMoney(m.reward)}₽</button>`;
       } else {
         btnHtml = `<button class="ref-mile-btn" disabled>Нужно еще ${m.count - d.count} чел.</button>`;
       }
 
-      container.innerHTML += `
+      milestonesContainer.innerHTML += `
         <div class="ref-mile-card ${isClaimed ? 'claimed' : ''}">
           <div class="ref-mile-icon">${m.icon}</div>
           <div class="ref-mile-info">
             <div class="ref-mile-title">Пригласи ${m.count} друзей</div>
-            <div class="ref-mile-desc">Награда: <span class="ref-mile-reward">${m.reward}₽</span></div>
+            <div class="ref-mile-desc">Награда: <span class="ref-mile-reward">${fmtMoney(m.reward)}₽</span></div>
             ${btnHtml}
           </div>
         </div>
@@ -2122,6 +2132,13 @@ async function renderReferral() {
     });
   } catch(e) {
     console.error("Referral error:", e);
+    // Выводим ошибку прямо на экран, чтобы не было вечной загрузки
+    linkEl.value = "Ошибка сервера";
+    milestonesContainer.innerHTML = `
+      <div style="color:#e74c3c;text-align:center;padding:20px;background:rgba(231,76,60,0.1);border-radius:12px;">
+        Не удалось загрузить данные: ${e.message}<br>
+        <button onclick="renderReferral()" style="margin-top:10px;background:#e74c3c;color:#fff;border:none;padding:8px 16px;border-radius:8px;">Повторить</button>
+      </div>`;
   }
 }
 

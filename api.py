@@ -136,7 +136,21 @@ async def _check_achievements(uid, p):
 
 # ═══════════ ENDPOINTS ═══════════
 
+
+_ref_migrated = False
+async def _ensure_ref_columns():
+    global _ref_migrated
+    if _ref_migrated: return
+    try:
+        await db.execute("ALTER TABLE players ADD COLUMN referrer_id INTEGER DEFAULT NULL")
+    except Exception: pass
+    try:
+        await db.execute("ALTER TABLE players ADD COLUMN ref_claims TEXT DEFAULT '[]'")
+    except Exception: pass
+    _ref_migrated = True
+
 async def api_me(request):
+    await _ensure_ref_columns()
     ud = await _user(request); uid = ud["id"]
     try:
         p = await _player(uid)
@@ -1543,17 +1557,23 @@ async def api_territory_capture_resolve(request):
 #  ЕЖЕЧАСНЫЙ ДОХОД С ТЕРРИТОРИЙ (фоновая задача)
 
 
+
 async def api_referral_info(request):
+    await _ensure_ref_columns()
     ud = await _user(request); uid = ud["id"]
     p = await _player(uid)
     
-    # Считаем количество рефералов
-    row = await db.fetchone("SELECT COUNT(*) as c FROM players WHERE referrer_id=?", (uid,))
-    count = row["c"] if row else 0
+    # Считаем количество рефералов (безопасный запрос)
+    try:
+        row = await db.fetchone("SELECT COUNT(*) as c FROM players WHERE referrer_id=?", (uid,))
+        count = row["c"] if row else 0
+    except Exception:
+        count = 0
     
     # Получаем забранные бонусы
     import json
-    try: claims = json.loads(p.get("ref_claims") or "[]")
+    claims_str = p.get("ref_claims") if p else None
+    try: claims = json.loads(claims_str or "[]")
     except: claims = []
     
     # Сумма заработанного (5000 за каждого)
