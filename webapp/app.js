@@ -2228,10 +2228,21 @@ async function adminSelectPlayer(id) {
             Бизнесы: ${s.businesses}
         </div>
         
-        <div style="display:flex; gap:8px; margin-bottom:12px;">
-            <input type="number" id="admin-amount" value="1000" style="flex:1; background:#111; border:1px solid #333; color:#fff; padding:10px; border-radius:8px;">
-            <button class="btn btn-primary" onclick="adminChangeBalance(${p.user_id}, 1)">+</button>
-            <button class="btn btn-secondary" onclick="adminChangeBalance(${p.user_id}, -1)">-</button>
+        <div style="margin-bottom:12px;">
+            <div style="font-size:12px; color:#aaa; margin-bottom:4px;">Изменить баланс:</div>
+            <div style="display:flex; gap:8px;">
+                <input type="number" id="admin-amount" value="1000" style="flex:1; background:#111; border:1px solid #333; color:#fff; padding:10px; border-radius:8px;">
+                <button class="btn btn-primary" onclick="adminChangeBalance(${p.user_id}, 1)">+</button>
+                <button class="btn btn-secondary" onclick="adminChangeBalance(${p.user_id}, -1)">-</button>
+            </div>
+        </div>
+
+        <div style="margin-bottom:16px;">
+            <div style="font-size:12px; color:#aaa; margin-bottom:4px;">Установить уровень (сбросит XP):</div>
+            <div style="display:flex; gap:8px;">
+                <input type="number" id="admin-level" value="${p.level}" min="1" max="100" style="flex:1; background:#111; border:1px solid #333; color:#fff; padding:10px; border-radius:8px;">
+                <button class="btn btn-primary" onclick="adminSetLevel(${p.user_id})">OK</button>
+            </div>
         </div>
         
         <button onclick="adminDeletePlayer(${p.user_id}, '${p.nickname}')" style="width:100%; background:#c0392b; color:#fff; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">
@@ -2245,6 +2256,20 @@ async function adminChangeBalance(id, sign) {
     await api("admin/change_balance", { target_id: id, amount: amount });
     toast(`Баланс изменен на ${amount > 0 ? '+' : ''}${amount}₽`, "success");
     adminSelectPlayer(id); // Обновить инфу
+}
+
+
+async function adminSetLevel(id) {
+    const lvl = parseInt(document.getElementById("admin-level").value);
+    if (!lvl || lvl < 1) return toast("Некорректный уровень", "error");
+    
+    try {
+        await api("admin/set_level", { target_id: id, level: lvl });
+        toast(`Уровень изменен на ${lvl}`, "success");
+        adminSelectPlayer(id); // Обновляем карточку
+    } catch(e) {
+        toast(e.message, "error");
+    }
 }
 
 async function adminDeletePlayer(id, nick) {

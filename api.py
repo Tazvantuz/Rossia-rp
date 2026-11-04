@@ -1744,8 +1744,26 @@ async def api_admin_delete(request):
     return web.json_response({"success": True})
 
 
+
+async def api_admin_set_level(request):
+    if not await _is_admin(request):
+        return web.json_response({"error": "Доступ запрещен"}, status=403)
+    body = await request.json()
+    target_id = int(body.get("target_id"))
+    new_level = int(body.get("level", 1))
+    
+    # Ограничиваем уровень рамками игры
+    if new_level < 1: new_level = 1
+    if new_level > MAX_LEVEL: new_level = MAX_LEVEL
+    
+    # Устанавливаем уровень и сбрасываем опыт
+    await db.execute("UPDATE players SET level = ?, xp = 0 WHERE user_id = ?", (new_level, target_id))
+    return web.json_response({"success": True})
+
+
 def setup_routes(app):
     R = app.router
+    R.add_post("/api/admin/set_level", api_admin_set_level)
     R.add_post("/api/admin/search", api_admin_search)
     R.add_post("/api/admin/player_info", api_admin_player_info)
     R.add_post("/api/admin/change_balance", api_admin_change_balance)
