@@ -711,6 +711,8 @@ async def api_trade_send(request):
         "INSERT INTO trades (from_user,to_user,give_money,give_items,want_money,want_items) "
         "VALUES (?,?,?,?,?,?)",
         (uid, to_user, give_money, json.dumps(give_items), want_money, json.dumps(want_items)))
+    p = await _player(uid)
+    await db.execute("INSERT INTO notifications (user_id, type, text) VALUES (?, 'trade', ?)", (body.get("to_user"), f"Трейд от {p['nickname']}"))
     return web.json_response({"ok": True, "trade_id": tid})
 
 async def api_trades_list(request):
@@ -946,31 +948,67 @@ async def api_pvp_state(request):
     if b and b["status"] == "active":
         now = int(time.time())
         turn_started = b.get("turn_started_at") or now
-        if now - turn_started > PVP_TURN_TIMEOUT:
-            await _pvp_do_action(bid, b["turn"], "defend", "torso")
-            b = await db.fetchone("SELECT * FROM pvp_battles WHERE battle_id=?", (bid,))
-            if b and b["status"] == "active":
-                import json as _j
-                log = _j.loads(b["log"] or "[]")
-                log.append({"type":"timeout","player":"система","part":"Торс"})
-                await db.execute("UPDATE pvp_battles SET log=?, turn_started_at=? WHERE battle_id=?",
-                                 (_j.dumps(log), int(time.time()), bid))
+        if now - turn_started > 30:
+            loser_id = b["turn"]
+            winner_id = b["attacker_id"] if loser_id == b["defender_id"] else b["defender_id"]
+            loser = await _player(loser_id)
+            steal = int(loser["balance"] * 0.1)
+            await db.execute("UPDATE players SET balance=balance-? WHERE user_id=?", (steal, loser_id))
+            await db.execute("UPDATE players SET balance=balance+? WHERE user_id=?", (steal, winner_id))
+            await db.execute("UPDATE pvp_battles SET status='finished' WHERE battle_id=?", (bid,))
+            return web.json_response({"status": "finished", "winner_id": winner_id, "timeout": True})
+    
     state = await _pvp_state_response(bid, uid)
-    if not state:
-        return web.json_response({"error":"Бой не найден"}, status=400)
+    if not state: return web.json_response({"error":"Бой не найден"}, status=400)
+    state["pending_attack_part"] = b.get("pending_attack_part") if b else None
     return web.json_response(state)
 
 async def api_pvp_action(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
-    bid = int(body.get("battle_id",0))
+    bid = int(body.get("battle_id", 0))
     action = body.get("action")
     part = body.get("part")
-    result = await _pvp_do_action(bid, uid, action, part)
-    if isinstance(result, dict) and "error" in result:
-        return web.json_response({"error":result["error"]}, status=400)
-    return result
-
+    
+    b = await db.fetchone("SELECT * FROM pvp_battles WHERE battle_id=?", (bid,))
+    if not b or b["status"] != "active": return web.json_response({"error": "Бой недоступен"}, status=400)
+    if b["turn"] != uid: return web.json_response({"error": "Не твой ход"}, status=400)
+        
+    now = int(time.time())
+    if now - (b["turn_started_at"] or now) > 30: return web.json_response({"error": "Время вышло"}, status=400)
+        
+    if action == "attack":
+        next_turn = b["defender_id"] if uid == b["attacker_id"] else b["attacker_id"]
+        await db.execute("UPDATE pvp_battles SET pending_attack_part=?, turn=?, turn_started_at=? WHERE battle_id=?", (part, next_turn, now, bid))
+        return web.json_response({"ok": True})
+        
+    elif action == "defend":
+        attack_part = b.get("pending_attack_part")
+        if not attack_part: return web.json_response({"error": "Нет атаки для защиты"}, status=400)
+        
+        attacker_id = b["defender_id"] if uid == b["attacker_id"] else b["attacker_id"]
+        att_p = await _player(attacker_id)
+        stats = get_combat_stats(att_p)
+        dmg = stats["damage"]
+        
+        if attack_part == part: dmg = 0
+            
+        hp_field = "attacker_hp" if uid == b["attacker_id"] else "defender_hp"
+        new_hp = max(0, b[hp_field] - dmg)
+        
+        await db.execute(f"UPDATE pvp_battles SET {hp_field}=?, pending_attack_part=NULL, turn=?, turn_started_at=? WHERE battle_id=?", (new_hp, uid, now, bid))
+        
+        if new_hp <= 0:
+            winner_id = attacker_id
+            loser_id = uid
+            loser = await _player(loser_id)
+            steal = int(loser["balance"] * 0.1)
+            await db.execute("UPDATE players SET balance=balance-? WHERE user_id=?", (steal, loser_id))
+            await db.execute("UPDATE players SET balance=balance+? WHERE user_id=?", (steal, winner_id))
+            await db.execute("UPDATE pvp_battles SET status='finished' WHERE battle_id=?", (bid,))
+            return web.json_response({"ok": True, "finished": True, "winner_id": winner_id, "steal": steal})
+            
+        return web.json_response({"ok": True, "damage": dmg, "hp_left": new_hp})
 
 async def api_gang_create(request):
     ud = await _user(request); uid = ud["id"]
@@ -1206,6 +1244,73 @@ async def api_gang_capture(request):
     return web.json_response({"ok":True,"ends_at":end})
 
 
+async def api_notifications_get(request):
+    ud = await _user(request); uid = ud["id"]
+    rows = await db.fetchall("SELECT * FROM notifications WHERE user_id=? ORDER BY id DESC LIMIT 30", (uid,))
+    unread = sum(1 for r in rows if not r["is_read"])
+    return web.json_response({"notifications": rows, "unread": unread})
+
+async def api_notifications_read(request):
+    ud = await _user(request); uid = ud["id"]
+    await db.execute("UPDATE notifications SET is_read=1 WHERE user_id=?", (uid,))
+    return web.json_response({"ok": True})
+
+async def api_friend_search(request):
+    ud = await _user(request); uid = ud["id"]
+    body = await request.json(); q = body.get("query", "").strip()
+    if len(q) < 2: return web.json_response({"error": "Минимум 2 символа"}, status=400)
+    rows = await db.fetchall("SELECT user_id, nickname, level FROM players WHERE nickname LIKE ? AND user_id != ? LIMIT 10", (f"%{q}%", uid))
+    return web.json_response({"results": rows})
+
+async def api_friend_request(request):
+    ud = await _user(request); uid = ud["id"]
+    body = await request.json(); target_id = int(body.get("target_id", 0))
+    if target_id == uid: return web.json_response({"error": "Себя нельзя"}, status=400)
+    p = await _player(uid)
+    if not await _player(target_id): return web.json_response({"error": "Игрок не найден"}, status=404)
+    if await db.fetchone("SELECT * FROM friends WHERE user_id=? AND friend_id=?", (uid, target_id)): return web.json_response({"error": "Запрос уже отправлен"}, status=400)
+    ex2 = await db.fetchone("SELECT * FROM friends WHERE user_id=? AND friend_id=? AND status='pending'", (target_id, uid))
+    if ex2:
+        await db.execute("UPDATE friends SET status='accepted' WHERE user_id=? AND friend_id=?", (target_id, uid))
+        await db.execute("INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, 'accepted')", (uid, target_id))
+        return web.json_response({"ok": True, "accepted": True})
+    await db.execute("INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, 'pending')", (uid, target_id))
+    await db.execute("INSERT INTO notifications (user_id, type, text) VALUES (?, 'friend', ?)", (target_id, f"Запрос в друзья от {p['nickname']}"))
+    return web.json_response({"ok": True})
+
+async def api_friend_respond(request):
+    ud = await _user(request); uid = ud["id"]
+    body = await request.json(); target_id = int(body.get("target_id", 0)); accept = bool(body.get("accept"))
+    ex = await db.fetchone("SELECT * FROM friends WHERE user_id=? AND friend_id=? AND status='pending'", (target_id, uid))
+    if not ex: return web.json_response({"error": "Запрос не найден"}, status=404)
+    if accept:
+        await db.execute("UPDATE friends SET status='accepted' WHERE user_id=? AND friend_id=?", (target_id, uid))
+        await db.execute("INSERT INTO friends (user_id, friend_id, status) VALUES (?, ?, 'accepted')", (uid, target_id))
+    else:
+        await db.execute("DELETE FROM friends WHERE user_id=? AND friend_id=?", (target_id, uid))
+    return web.json_response({"ok": True})
+
+async def api_friend_list(request):
+    ud = await _user(request); uid = ud["id"]
+    friends = await db.fetchall("SELECT f.friend_id as user_id, p.nickname, p.level FROM friends f JOIN players p ON p.user_id=f.friend_id WHERE f.user_id=? AND f.status='accepted'", (uid,))
+    reqs = await db.fetchall("SELECT f.user_id, p.nickname, p.level FROM friends f JOIN players p ON p.user_id=f.user_id WHERE f.friend_id=? AND f.status='pending'", (uid,))
+    return web.json_response({"friends": friends, "requests": reqs})
+
+async def api_chat_pm_send(request):
+    ud = await _user(request); uid = ud["id"]
+    body = await request.json(); to_id = int(body.get("to_id", 0)); msg = (body.get("message") or "").strip()
+    if not msg: return web.json_response({"error": "Пустое"}, status=400)
+    if len(msg) > 500: msg = msg[:500]
+    await db.execute("INSERT INTO private_messages (from_id, to_id, message) VALUES (?,?,?)", (uid, to_id, msg))
+    return web.json_response({"ok": True})
+
+async def api_chat_pm_get(request):
+    ud = await _user(request); uid = ud["id"]
+    body = await request.json(); with_id = int(body.get("with_id", 0))
+    rows = await db.fetchall("SELECT * FROM private_messages WHERE (from_id=? AND to_id=?) OR (from_id=? AND to_id=?) ORDER BY id ASC LIMIT 100", (uid, with_id, with_id, uid))
+    await db.execute("UPDATE private_messages SET is_read=1 WHERE to_id=? AND from_id=?", (uid, with_id))
+    return web.json_response({"messages": rows})
+
 async def api_chat_send(request):
     ud = await _user(request); uid = ud["id"]
     p = await _player(uid)
@@ -1293,6 +1398,7 @@ async def api_pvp_challenge(request):
         VALUES (?,?,?,?,?,?,?,?,?,'pending')""",
         (uid, target_id, s1["hp"], s2["hp"], s1["hp"], s2["hp"],
          s1["damage"], s2["damage"], uid))
+    await db.execute("INSERT INTO notifications (user_id, type, text) VALUES (?, 'pvp', ?)", (target_id, f"Вызов на гоп-стоп от {p1['nickname']}"))
     return web.json_response({"ok":True,"battle_id":bid,"attacker":p1["nickname"],
                               "defender":p2["nickname"]})
 async def api_pvp_incoming(request):
@@ -1908,6 +2014,14 @@ def setup_routes(app):
     R.add_post("/api/gang/set_deputy", api_gang_set_deputy)
     R.add_post("/api/gang/captures", api_gang_captures)
     R.add_post("/api/chat/send", api_chat_send)
+    R.add_post("/api/notifications/get", api_notifications_get)
+    R.add_post("/api/notifications/read", api_notifications_read)
+    R.add_post("/api/friend/search", api_friend_search)
+    R.add_post("/api/friend/request", api_friend_request)
+    R.add_post("/api/friend/respond", api_friend_respond)
+    R.add_post("/api/friend/list", api_friend_list)
+    R.add_post("/api/chat/pm/send", api_chat_pm_send)
+    R.add_post("/api/chat/pm/get", api_chat_pm_get)
     R.add_post("/api/chat/get", api_chat_get)
     R.add_post("/api/cases/list", api_cases_list)
     R.add_post("/api/cases/open", api_cases_open)

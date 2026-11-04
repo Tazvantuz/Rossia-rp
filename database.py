@@ -98,6 +98,10 @@ CREATE TABLE IF NOT EXISTS gang_territories (
     capture_end INTEGER,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, type TEXT NOT NULL, text TEXT NOT NULL, is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS friends (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, friend_id INTEGER NOT NULL, status TEXT DEFAULT 'pending', UNIQUE(user_id, friend_id));
+CREATE TABLE IF NOT EXISTS private_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, from_id INTEGER NOT NULL, to_id INTEGER NOT NULL, message TEXT NOT NULL, is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 """
 
 class Database:
@@ -126,6 +130,7 @@ class Database:
         # Миграция pvp_battles.turn_started_at
         try:
             await self.conn.execute("ALTER TABLE pvp_battles ADD COLUMN turn_started_at INTEGER DEFAULT 0")
+            await self.conn.execute("ALTER TABLE pvp_battles ADD COLUMN pending_attack_part TEXT")
             await self.conn.commit()
         except: pass
     async def fetchone(self, q, p=()):
