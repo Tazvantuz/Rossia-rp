@@ -108,7 +108,7 @@ async function playCasino() {
       payload.choice = state.rouletteChoice;
       if (state.rouletteChoice === 'number') payload.number = state.rouletteNumber;
     }
-    const d = await api("casino/play", payload);
+    const d = await api("casino_play", payload);
 
     await new Promise(r => setTimeout(r, 2000));
 
@@ -138,7 +138,7 @@ async function playCasino() {
     state.casinoLockTime = Date.now();
     setTimeout(() => { if (btn) btn.disabled = false; }, 5000);
   } catch(e) {
-    resEl.textContent = "Ошибка сервера";
+    resEl.textContent = e.message || "Ошибка сервера";
     toast("Ошибка казино: " + e.message, "error");
     if (btn) btn.disabled = false;
   }
