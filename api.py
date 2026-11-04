@@ -1147,6 +1147,44 @@ async def api_reset(request):
     return web.json_response({"ok": True, "message": "Персонаж сброшен"})
 
 
+async def _forced_credit_collect(uid):
+    """Если кредит просрочен — списать всё что есть. Возвращает сколько списано."""
+    try:
+        p = await _player(uid)
+        debt = p.get("credit_amount", 0) or 0
+        due = p.get("credit_due", 0) or 0
+        if debt <= 0 or due <= 0:
+            return 0
+        now = int(time.time())
+        if now < due:
+            return 0
+        if p["balance"] <= 0:
+            return 0
+        pay = min(p["balance"], debt)
+        await db.execute(
+            "UPDATE players SET balance = balance - ?, credit_amount = credit_amount - ? WHERE user_id = ?",
+            (pay, pay, uid))
+        p = await _player(uid)
+        if p["credit_amount"] <= 0:
+            await db.execute(
+                "UPDATE players SET credit_amount = 0, credit_due = 0 WHERE user_id = ?", (uid,))
+        return pay
+    except Exception as e:
+        print(f"⚠️ _forced_credit_collect error: {e}")
+        return 0
+
+async def _pvp_finish(winner_id, loser_id, bid):
+    _PENDING_MOVES.pop(f"pvp_turn_{bid}", None)
+    winner = await _player(winner_id)
+    loser = await _player(loser_id)
+    if not winner or not loser: return web.json_response({"error":"Нет игрока"}, status=400)
+    steal = int(loser["balance"] * 0.10)
+    await db.execute("UPDATE players SET balance=balance-? WHERE user_id=?", (steal, loser_id))
+    await db.execute("UPDATE players SET balance=balance+? WHERE user_id=?", (steal, winner_id))
+    return web.json_response({"ok":True,"finished":True,
+                              "winner_id":winner_id,"winner_name":winner["nickname"],
+                              "loser_name":loser["nickname"],"steal":steal})
+
 def setup_routes(app):
     R = app.router
     R.add_post("/api/me", api_me)
