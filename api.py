@@ -165,6 +165,7 @@ async def _ensure_ref_columns():
 
 async def api_me(request):
     await _ensure_ref_columns()
+    await _ensure_pvp_columns()
     ud = await _user(request); uid = ud["id"]
     await _expire_user_battles(uid)
     try:
@@ -985,53 +986,93 @@ async def api_pvp_state(request):
     return web.json_response(state)
 
 async def api_pvp_action(request):
-    ud = await _user(request); uid = ud["id"]
-    body = await request.json()
-    bid = int(body.get("battle_id", 0))
-    action = body.get("action")
-    part = body.get("part")
-    
-    b = await db.fetchone("SELECT * FROM pvp_battles WHERE battle_id=?", (bid,))
-    if not b or b["status"] != "active": return web.json_response({"error": "Бой недоступен"}, status=400)
-    try: cur_turn = int(b["turn"])
-    except: cur_turn = 0
-    if cur_turn != int(uid): return web.json_response({"error": "Не твой ход"}, status=400)
-        
-    now = int(time.time())
-    if now - (b["turn_started_at"] or now) > 30: return web.json_response({"error": "Время вышло"}, status=400)
-        
-    if action == "attack":
-        next_turn = b["defender_id"] if uid == b["attacker_id"] else b["attacker_id"]
-        await db.execute("UPDATE pvp_battles SET pending_attack_part=?, turn=?, turn_started_at=? WHERE battle_id=?", (part, next_turn, now, bid))
-        return web.json_response({"ok": True})
-        
-    elif action == "defend":
-        attack_part = b.get("pending_attack_part")
-        if not attack_part: return web.json_response({"error": "Нет атаки для защиты"}, status=400)
-        
-        attacker_id = b["defender_id"] if uid == b["attacker_id"] else b["attacker_id"]
-        att_p = await _player(attacker_id)
-        stats = get_combat_stats(att_p)
-        dmg = stats["damage"]
-        
-        if attack_part == part: dmg = 0
-            
-        hp_field = "attacker_hp" if uid == b["attacker_id"] else "defender_hp"
-        new_hp = max(0, b[hp_field] - dmg)
-        
-        await db.execute(f"UPDATE pvp_battles SET {hp_field}=?, pending_attack_part=NULL, turn=?, turn_started_at=? WHERE battle_id=?", (new_hp, uid, now, bid))
-        
-        if new_hp <= 0:
-            winner_id = attacker_id
-            loser_id = uid
-            loser = await _player(loser_id)
-            steal = int(loser["balance"] * 0.1)
-            await db.execute("UPDATE players SET balance=balance-? WHERE user_id=?", (steal, loser_id))
-            await db.execute("UPDATE players SET balance=balance+? WHERE user_id=?", (steal, winner_id))
-            await db.execute("UPDATE pvp_battles SET status='finished' WHERE battle_id=?", (bid,))
-            return web.json_response({"ok": True, "finished": True, "winner_id": winner_id, "steal": steal})
-            
-        return web.json_response({"ok": True, "damage": dmg, "hp_left": new_hp})
+    try:
+        await _ensure_pvp_columns()
+        ud = await _user(request); uid = int(ud["id"])
+        body = await request.json()
+        bid = int(body.get("battle_id", 0))
+        action = body.get("action")
+        part = body.get("part")
+
+        if action not in ("attack", "defend"):
+            return web.json_response({"error": "action: attack/defend"}, status=400)
+        if part not in ("head", "torso", "legs"):
+            return web.json_response({"error": "part: head/torso/legs"}, status=400)
+
+        b = await db.fetchone("SELECT * FROM pvp_battles WHERE battle_id=?", (bid,))
+        if not b:
+            return web.json_response({"error": "Бой не найден"}, status=400)
+        if b["status"] != "active":
+            return web.json_response({"error": "Бой не активен (статус: " + str(b["status"]) + ")"}, status=400)
+
+        try: cur_turn = int(b["turn"])
+        except Exception as _e:
+            print(f"⚠️ turn parse error: b['turn']={b['turn']!r}: {_e}")
+            cur_turn = 0
+        if cur_turn != uid:
+            return web.json_response({"error": "Не твой ход"}, status=400)
+
+        now = int(time.time())
+        try: turn_started = int(b["turn_started_at"] or now)
+        except: turn_started = now
+        if now - turn_started > 30:
+            return web.json_response({"error": "Время вышло"}, status=400)
+
+        if action == "attack":
+            try: attacker_id = int(b["attacker_id"])
+            except: attacker_id = 0
+            try: defender_id = int(b["defender_id"])
+            except: defender_id = 0
+            next_turn = defender_id if uid == attacker_id else attacker_id
+            await db.execute(
+                "UPDATE pvp_battles SET pending_attack_part=?, turn=?, turn_started_at=? WHERE battle_id=?",
+                (part, next_turn, now, bid))
+            return web.json_response({"ok": True})
+
+        else:  # defend
+            attack_part = b.get("pending_attack_part")
+            if not attack_part:
+                return web.json_response({"error": "Нет атаки для защиты"}, status=400)
+
+            try: attacker_id = int(b["defender_id"]) if uid == int(b["attacker_id"]) else int(b["attacker_id"])
+            except Exception as _e:
+                print(f"⚠️ attacker_id parse: {_e}")
+                return web.json_response({"error": "Ошибка данных боя"}, status=500)
+
+            att_p = await _player(attacker_id)
+            if not att_p:
+                return web.json_response({"error": "Атакующий не найден"}, status=400)
+            stats = get_combat_stats(att_p)
+            dmg = int(stats.get("damage", 5))
+
+            if attack_part == part:
+                dmg = 0
+
+            hp_field = "attacker_hp" if uid == int(b["attacker_id"]) else "defender_hp"
+            cur_hp = int(b.get(hp_field) or 0)
+            new_hp = max(0, cur_hp - dmg)
+
+            await db.execute(
+                f"UPDATE pvp_battles SET {hp_field}=?, pending_attack_part=NULL, turn=?, turn_started_at=? WHERE battle_id=?",
+                (new_hp, uid, now, bid))
+
+            if new_hp <= 0:
+                winner_id = attacker_id
+                loser_id = uid
+                loser = await _player(loser_id)
+                steal = int((loser["balance"] if loser else 0) * 0.1)
+                await db.execute("UPDATE players SET balance=balance-? WHERE user_id=?", (steal, loser_id))
+                await db.execute("UPDATE players SET balance=balance+? WHERE user_id=?", (steal, winner_id))
+                await db.execute("UPDATE pvp_battles SET status='finished' WHERE battle_id=?", (bid,))
+                return web.json_response({"ok": True, "finished": True, "winner_id": winner_id, "steal": steal})
+
+            return web.json_response({"ok": True, "damage": dmg, "hp_left": new_hp})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return web.json_response({"error": f"Сервер: {e}"}, status=500)
+
 
 async def api_gang_create(request):
     ud = await _user(request); uid = ud["id"]
@@ -1528,6 +1569,13 @@ async def _cleanup_stale_pvp():
         )
     except Exception as e:
         print(f"⚠️ _cleanup_stale_pvp: {e}")
+
+async def _ensure_pvp_columns():
+    """Гарантирует наличие колонок pvp_battles (на случай если миграция не сработала)."""
+    for _col_def in ["turn_started_at INTEGER DEFAULT 0", "pending_attack_part TEXT"]:
+        try:
+            await db.execute(f"ALTER TABLE pvp_battles ADD COLUMN {_col_def}")
+        except: pass
 
 async def _expire_user_battles(uid):
     """Чистит pending > 30 сек, резолвит active с таймаутом > 30 сек."""

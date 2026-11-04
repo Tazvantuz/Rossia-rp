@@ -144,12 +144,15 @@ class Database:
         # Миграция notifications.data
         try: await self.conn.execute("ALTER TABLE notifications ADD COLUMN data TEXT DEFAULT NULL"); await self.conn.commit()
         except: pass
-        # Миграция pvp_battles.turn_started_at
-        try:
-            await self.conn.execute("ALTER TABLE pvp_battles ADD COLUMN turn_started_at INTEGER DEFAULT 0")
-            await self.conn.execute("ALTER TABLE pvp_battles ADD COLUMN pending_attack_part TEXT")
-            await self.conn.commit()
-        except: pass
+        # Миграции pvp_battles — отдельные try/except для каждой колонки
+        for _col in [
+            "turn_started_at INTEGER DEFAULT 0",
+            "pending_attack_part TEXT",
+        ]:
+            try:
+                await self.conn.execute(f"ALTER TABLE pvp_battles ADD COLUMN {_col}")
+                await self.conn.commit()
+            except: pass
     async def fetchone(self, q, p=()):
         async with self.conn.execute(q, p) as cur:
             r = await cur.fetchone()
