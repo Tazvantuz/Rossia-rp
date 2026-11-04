@@ -948,6 +948,7 @@ function renderLocationInfo(loc) {
 }
 function renderPlayersList(players) {
   if (players.length === 0) { $("#players-list").innerHTML = '<p style="color:var(--hint);text-align:center;padding:20px">Никого нет</p>'; return; }
+  players = [...players].sort((a, b) => (b.is_online ? 1 : 0) - (a.is_online ? 1 : 0));
   $("#players-list").innerHTML = players.map(p=>`
     <div class="player-card" onclick="viewPlayer(${p.user_id})">
       <div class="player-avatar">👤</div>
@@ -2189,7 +2190,8 @@ async function loadFriends() {
     const d = await api("friend/list");
     const reqBox = document.getElementById("friend-requests-box");
     if (d.requests.length > 0) {
-      reqBox.innerHTML = `<h3 class="section-subtitle" style="color:#f39c12">Запросы (${d.requests.length})</h3>` + d.requests.map(r => `
+      const sortedReqs = [...d.requests].sort((a, b) => (b.is_online ? 1 : 0) - (a.is_online ? 1 : 0));
+      reqBox.innerHTML = `<h3 class="section-subtitle" style="color:#f39c12">Запросы (${d.requests.length})</h3>` + sortedReqs.map(r => `
         <div class="player-card">
           <div class="player-info">
             <div class="player-name">${r.nickname}</div>
@@ -2204,7 +2206,8 @@ async function loadFriends() {
     const list = document.getElementById("friend-list");
     if (d.friends.length === 0) list.innerHTML = '<p style="color:var(--hint);text-align:center;">Пока нет друзей</p>';
     else {
-      list.innerHTML = d.friends.map(f => `
+      const sortedFriends = [...d.friends].sort((a, b) => (b.is_online ? 1 : 0) - (a.is_online ? 1 : 0));
+      list.innerHTML = sortedFriends.map(f => `
         <div class="player-card" onclick="viewPlayer(${f.user_id})">
           <div class="player-avatar">👤</div>
           <div class="player-info">
