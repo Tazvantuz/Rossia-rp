@@ -2100,6 +2100,13 @@ async function loadPvPState(bid, silent = false) {
       refreshPlayer();
       return;
     }
+    if (d.status === "expired" || d.status === "declined") {
+      if (pvpTimerInterval) { clearInterval(pvpTimerInterval); pvpTimerInterval = null; }
+      pvpCurrentBattle = null;
+      closeModal();
+      toast(d.status === "expired" ? "⏰ Вызов истёк" : "❌ Вызов отклонён", "error");
+      return;
+    }
     if (d.status === "pending") {
       if (!silent) toast("Ждём ответа соперника...");
       return;

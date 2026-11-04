@@ -1432,7 +1432,18 @@ async def api_cases_open(request):
     await _add_inv(uid, won, 1)
     p = await _player(uid)
     return web.json_response({"player":_player_json(p), "won":item_json(won)})
+async def _cleanup_stale_pvp():
+    """Помечает все pending-бои старше 5 минут как expired."""
+    try:
+        await db.execute(
+            "UPDATE pvp_battles SET status='expired' WHERE status='pending' "
+            "AND (strftime('%s','now') - strftime('%s', created_at)) > 300"
+        )
+    except Exception as e:
+        print(f"⚠️ _cleanup_stale_pvp: {e}")
+
 async def api_pvp_challenge(request):
+    await _cleanup_stale_pvp()
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     target_id = int(body.get("user_id", 0))
@@ -1461,6 +1472,7 @@ async def api_pvp_challenge(request):
     return web.json_response({"ok":True,"battle_id":bid,"attacker":p1["nickname"],
                               "defender":p2["nickname"]})
 async def api_pvp_incoming(request):
+    await _cleanup_stale_pvp()
     ud = await _user(request); uid = ud["id"]
     rows = await db.fetchall(
         "SELECT b.*, p.nickname as attacker_name FROM pvp_battles b "

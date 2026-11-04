@@ -135,6 +135,11 @@ class Database:
                 await self.conn.execute(f"ALTER TABLE players ADD COLUMN {m}")
                 await self.conn.commit()
             except: pass
+        # Автоочистка зависших PvP-вызовов при старте
+        try:
+            await self.conn.execute("UPDATE pvp_battles SET status='expired' WHERE status='pending' AND (strftime('%s','now') - strftime('%s', created_at)) > 300")
+            await self.conn.commit()
+        except: pass
         # Миграция notifications.data
         try: await self.conn.execute("ALTER TABLE notifications ADD COLUMN data TEXT DEFAULT NULL"); await self.conn.commit()
         except: pass
