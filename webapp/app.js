@@ -242,6 +242,7 @@ function showTab(tab) {
   if (tab==="casino") renderCasino();
   if (tab==="people") loadPeople();
   if (tab==="ghetto" && typeof renderGhetto === "function") renderGhetto();
+  if (tab==="ghetto" && typeof renderGhetto === "function") renderGhetto();
   if (tab==="chat") startChatPolling();
   if (tab==="more") updateMoreBadges();
   window.scrollTo(0,0);
@@ -2040,3 +2041,35 @@ function confirmSellItem(iid) {
 
 // Отслеживание PvP-вызовов
 // Добавить loadCases/loadGang в showTab
+
+
+async function renderGhetto() {
+  const container = document.getElementById('ghetto-map-container');
+  if (!container) return;
+  container.innerHTML = '<div style="color:#aaa;text-align:center;grid-column:1/-1;">Загрузка...</div>';
+
+  try {
+    const d = await api("gang/territories", {});
+    container.innerHTML = '';
+    
+    if (!d.territories || d.territories.length === 0) {
+      container.innerHTML = '<div style="color:#aaa;text-align:center;grid-column:1/-1;">Территории не найдены</div>';
+      return;
+    }
+
+    d.territories.forEach(t => {
+      const ownerName = t.owner ? t.owner.name : "Свободна";
+      const ownerColor = t.owner ? "#e67e22" : "#2ecc71";
+      
+      container.innerHTML += `
+        <div class="territory-card" style="background:#1e2a38;border-radius:12px;padding:12px;text-align:center;border:2px solid ${ownerColor};box-shadow:0 4px 6px rgba(0,0,0,0.3);">
+          <div style="font-size:32px;margin-bottom:4px;">${t.emoji}</div>
+          <div style="font-size:14px;font-weight:bold;color:#fff;">${t.name}</div>
+          <div style="font-size:12px;color:${ownerColor};margin-top:4px;font-weight:bold;">${ownerName}</div>
+          <div style="font-size:11px;color:#8494a5;margin-top:4px;">💰 ${t.income}₽/ч</div>
+        </div>`;
+    });
+  } catch(e) {
+    container.innerHTML = `<div style="color:#e74c3c;text-align:center;grid-column:1/-1;">Ошибка: ${e.message}</div>`;
+  }
+}
