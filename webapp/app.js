@@ -268,6 +268,44 @@ function _onlineHtml(isOnline) {
   return `<span class="online-status ${cls}"><span class="online-dot ${cls}"></span>${label}</span>`;
 }
 
+async function updateChatBadge() {
+  try {
+    const d = await api("chat/pm/unread_count", {});
+    let badge = document.getElementById("chat-nav-badge");
+    const navBtn = document.querySelector('.nav-btn[data-nav="chat"]');
+    if (!navBtn) return;
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.id = "chat-nav-badge";
+      badge.className = "nav-badge";
+      navBtn.style.position = "relative";
+      navBtn.appendChild(badge);
+    }
+    if (d.count > 0) {
+      badge.textContent = d.count > 99 ? "99+" : d.count;
+      badge.style.display = "inline-block";
+    } else {
+      badge.style.display = "none";
+    }
+  } catch(_) {}
+}
+
+async function loadConversations() {
+  try {
+    const d = await api("chat/pm/conversations", {});
+    if (!state.openPMs) state.openPMs = [];
+    for (const c of (d.conversations || [])) {
+      if (!state.openPMs.find(x => Number(x.uid) === Number(c.user_id))) {
+        state.openPMs.push({uid: c.user_id, name: c.nickname, unread: c.unread});
+      } else {
+        const existing = state.openPMs.find(x => Number(x.uid) === Number(c.user_id));
+        existing.unread = c.unread;
+      }
+    }
+    renderChatTabs();
+  } catch(_) {}
+}
+
 async function loadOnlineCount() {
   try {
     const d = await api("online_count", {});
@@ -320,6 +358,7 @@ async function boot() {
       state.classInfo = d.class || { name: d.player.class_name, emoji: d.player.class_emoji };
       show("main"); renderPlayer();
       showTab("home"); checkAdminAccess();
+      updateChatBadge();
       loadOnlineCount();
       if (d.new_achievements?.length) notifyAchievements(d.new_achievements);
       if (d.credit_paid) setTimeout(() => toast(`💸 Банк списал ${fmtMoney(d.credit_paid)}₽`, "error"), 800);
@@ -2212,6 +2251,8 @@ function openPM(uid, name) {
     state.openPMs.push({uid: uid, name: name});
   }
   state.chatWith = uid;
+  const existing = state.openPMs.find(x => Number(x.uid) === uid);
+  if (existing) existing.unread = 0;
   closeModal();
   showTab("chat");
 }
@@ -2224,7 +2265,8 @@ function renderChatTabs() {
   if (Array.isArray(state.openPMs)) {
     for (const p of state.openPMs) {
       const isActive = Number(state.chatWith) === Number(p.uid);
-      html += `<button class="chat-tab ${isActive ? 'active' : ''}" data-chat="${p.uid}" onclick="switchChat(${p.uid})">👤 ${escapeHtml(p.name)}</button>`;
+      const unreadDot = (p.unread && p.unread > 0) ? `<span style="background:#e74c3c;color:#fff;border-radius:8px;padding:0 5px;font-size:10px;margin-left:4px;">${p.unread}</span>` : '';
+      html += `<button class="chat-tab ${isActive ? 'active' : ''}" data-chat="${p.uid}" onclick="switchChat(${p.uid})">👤 ${escapeHtml(p.name)}${unreadDot}</button>`;
     }
   }
   tabs.innerHTML = html;
@@ -2254,6 +2296,7 @@ async function sendChat() {
     } else {
       await api("chat/pm/send", { to_id: state.chatWith, message: msg });
       loadPM();
+      updateChatBadge();
     }
     inp.value = "";
     if (tg) tg.HapticFeedback?.impactOccurred("light");
@@ -2272,7 +2315,8 @@ showTab = function(tab) {
     } else {
       loadPM();
     }
-    renderChatTabs();
+    loadConversations().then(() => renderChatTabs());
+    updateChatBadge();
   }
   if (tab === "home") loadNotifications();
 };
@@ -2355,3 +2399,4 @@ async function pvpDoAction(action, part) {
 // Автообновление уведомлений раз в 15 секунд
 setInterval(loadNotifications, 15000);
 setInterval(loadOnlineCount, 30000);
+setInterval(updateChatBadge, 15000);

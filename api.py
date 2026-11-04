@@ -1510,6 +1510,23 @@ async def api_chat_pm_send(request):
     await db.execute("INSERT INTO private_messages (from_id, to_id, message) VALUES (?,?,?)", (uid, to_id, msg))
     return web.json_response({"ok": True})
 
+async def api_chat_pm_unread_count(request):
+    ud = await _user(request); uid = ud["id"]
+    row = await db.fetchone(
+        "SELECT COUNT(*) as c FROM private_messages WHERE to_id=? AND is_read=0", (uid,))
+    return web.json_response({"count": row["c"] if row else 0})
+
+async def api_chat_pm_conversations(request):
+    ud = await _user(request); uid = ud["id"]
+    rows = await db.fetchall(
+        "SELECT pm.from_id as user_id, p.nickname, MAX(pm.id) as last_id, "
+        "SUM(CASE WHEN pm.to_id=? AND pm.is_read=0 THEN 1 ELSE 0 END) as unread "
+        "FROM private_messages pm "
+        "JOIN players p ON p.user_id = pm.from_id "
+        "WHERE pm.to_id=? "
+        "GROUP BY pm.from_id ORDER BY last_id DESC LIMIT 30", (uid, uid))
+    return web.json_response({"conversations": rows})
+
 async def api_chat_pm_get(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json(); with_id = int(body.get("with_id", 0))
@@ -2343,6 +2360,8 @@ def setup_routes(app):
     R.add_post("/api/friend/list", api_friend_list)
     R.add_post("/api/chat/pm/send", api_chat_pm_send)
     R.add_post("/api/chat/pm/get", api_chat_pm_get)
+    R.add_post("/api/chat/pm/unread_count", api_chat_pm_unread_count)
+    R.add_post("/api/chat/pm/conversations", api_chat_pm_conversations)
     R.add_post("/api/chat/get", api_chat_get)
     R.add_post("/api/cases/list", api_cases_list)
     R.add_post("/api/cases/open", api_cases_open)

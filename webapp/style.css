@@ -623,3 +623,5 @@ input[type=number]{-moz-appearance:textfield}
 .online-status { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 600; }
 .online-status.on { color: #2ecc71; }
 .online-status.off { color: #8494a5; }
+
+.nav-badge { position: absolute; top: 0; right: 4px; background: #e74c3c; color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 8px; min-width: 14px; text-align: center; border: 1px solid var(--bg-2); }
