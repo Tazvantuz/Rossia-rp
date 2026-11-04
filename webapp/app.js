@@ -230,6 +230,9 @@ const $$ = s => document.querySelectorAll(s);
 
 function show(id) { $$(".screen").forEach(x=>x.classList.remove("active")); $(`#${id}`).classList.add("active"); window.scrollTo(0,0); }
 function showTab(tab) {
+  if (tab === "home" && state.player) {
+    setTimeout(() => renderCharacterInto("#character-view"), 0);
+  }
   $$(".tab-content").forEach(c=>c.classList.remove("active"));
   $(`.tab-content[data-tab="${tab}"]`).classList.add("active");
   $$(".nav-btn").forEach(b=>b.classList.toggle("active", b.dataset.nav===tab));
