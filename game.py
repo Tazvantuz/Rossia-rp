@@ -392,3 +392,60 @@ def get_combat_stats(player):
             hp += ITEMS[iid].get("hp", 0)
             dmg += ITEMS[iid].get("damage", 0)
     return {"hp": hp, "damage": dmg}
+
+# ═══════════════════════════════════════════════════════════════
+# БАЛАНСИРОВКА СТАТОВ (BALANCE_APPLIED)
+# Линейное распределение стат внутри (редкость, слот) по цене.
+# Кейсовые предметы (h_case_*, ...) не трогаются.
+# ═══════════════════════════════════════════════════════════════
+_CASE_PREFIXES = ("h_case_", "b_case_", "l_case_", "rh_case_", "lh_case_")
+
+_RANGES = {
+    ("common", "head"):   (5, 12),
+    ("common", "body"):   (5, 15),
+    ("common", "legs"):   (5, 12),
+    ("common", "hand"):   (1, 5),
+    ("uncommon", "head"): (15, 30),
+    ("uncommon", "body"): (15, 32),
+    ("uncommon", "legs"): (15, 30),
+    ("uncommon", "hand"): (6, 14),
+    ("rare", "head"):     (40, 70),
+    ("rare", "body"):     (40, 65),
+    ("rare", "legs"):     (40, 70),
+    ("rare", "hand"):     (18, 30),
+    ("epic", "head"):     (85, 140),
+    ("epic", "body"):     (90, 150),
+    ("epic", "legs"):     (85, 130),
+    ("epic", "hand"):     (40, 70),
+    ("legendary", "head"):(200, 280),
+    ("legendary", "body"):(250, 350),
+    ("legendary", "legs"):(180, 250),
+    ("legendary", "hand"):(60, 150),
+}
+
+def _apply_balance():
+    from collections import defaultdict
+    def _cat(slot):
+        if slot in ("head", "body", "legs"): return slot
+        if slot in ("right_hand", "left_hand"): return "hand"
+        return None
+    groups = defaultdict(list)
+    for iid, it in ITEMS.items():
+        if iid.startswith(_CASE_PREFIXES): continue
+        cat = _cat(it.get("slot"))
+        rar = it.get("rarity")
+        if not cat or rar not in ("common","uncommon","rare","epic","legendary"): continue
+        groups[(rar, cat)].append((iid, it.get("price", 0)))
+    for key, lst in groups.items():
+        lo, hi = _RANGES.get(key, (1, 1))
+        lst.sort(key=lambda x: x[1])
+        n = len(lst)
+        stat_key = "damage" if key[1] == "hand" else "hp"
+        for idx, (iid, _) in enumerate(lst):
+            if n == 1:
+                val = (lo + hi) // 2
+            else:
+                val = lo + int((hi - lo) * idx / (n - 1) + 0.5)
+            ITEMS[iid][stat_key] = val
+
+_apply_balance()

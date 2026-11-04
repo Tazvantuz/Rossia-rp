@@ -603,3 +603,5 @@ input[type=number]{-moz-appearance:textfield}
 }
 .char-stats .s-hp { color: #2ecc71; }
 .char-stats .s-dmg { color: #e74c3c; }
+
+.char-stats:empty { display: none; }

@@ -211,8 +211,9 @@ async def api_register(request):
 
 async def api_shop(request):
     await _user(request)
+    rarity_order = {"common":0, "uncommon":1, "rare":2, "epic":3, "legendary":4}
     items = []
-    for iid, it in ITEMS.items():
+    for iid, it in sorted(ITEMS.items(), key=lambda kv: (rarity_order.get(kv[1].get("rarity","common"), 99), kv[1].get("price", 0))):
         items.append(item_json(iid))
     return web.json_response({"items": items})
 
