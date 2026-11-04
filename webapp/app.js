@@ -169,6 +169,12 @@ const ITEMS_SVG = {
   h_case_helmet_alpha: `<ellipse cx="100" cy="55" rx="34" ry="36" fill="#0a0a0a"/><path d="M66 50 Q100 40 134 50 L134 55 Q100 65 66 55 Z" fill="#1a1a1a"/><ellipse cx="88" cy="52" rx="9" ry="5" fill="#3498db" opacity="0.4"/><ellipse cx="112" cy="52" rx="9" ry="5" fill="#3498db" opacity="0.4"/><path d="M78 70 L122 70" stroke="#333" stroke-width="2"/><rect x="94" y="20" width="12" height="6" fill="#f39c12" rx="2"/><circle cx="88" cy="52" r="3" fill="#2ecc71"/><circle cx="112" cy="52" r="3" fill="#2ecc71"/>`,
   rh_case_uzi_gold: `<g transform="translate(140,197)"><rect x="-6" y="0" width="22" height="8" rx="1" fill="#ffd700"/><rect x="-4" y="8" width="8" height="14" fill="#d4ac0d"/><rect x="10" y="-4" width="4" height="10" fill="#d4ac0d"/><circle cx="16" cy="4" r="2" fill="#b8860b"/><rect x="-8" y="-4" width="18" height="3" fill="#ffd700"/></g>`,
   lh_case_brilliant: `<g transform="translate(45,190)"><rect x="0" y="0" width="30" height="22" rx="3" fill="#3498db"/><rect x="0" y="6" width="30" height="2" fill="#2874a6"/><circle cx="15" cy="-2" r="4" fill="none" stroke="#3498db" stroke-width="2"/><path d="M8 10 L12 16 L18 16 L22 10 Z" fill="#e74c3c"/><path d="M10 12 L14 14 L20 14 L22 12" stroke="#fff" stroke-width="0.5" fill="none"/><circle cx="15" cy="13" r="1" fill="#fff" opacity="0.9"/><circle cx="6" cy="18" r="1" fill="#f39c12"/><circle cx="24" cy="18" r="1" fill="#f39c12"/></g>`,
+    rh_case_knife: `<g transform="translate(140,197)"><rect x="-5" y="-3" width="10" height="20" rx="2" fill="#1a1a1a"/><path d="M-5 -3 L5 -3 L4 -25 L-4 -25 Z" fill="#d4d4d4"/><path d="M-4 -25 L4 -25 L4 -22 L-4 -22 Z" fill="#9a9a9a"/><circle cx="0" cy="-8" r="2" fill="#1a1a1a"/><rect x="-6" y="17" width="12" height="3" rx="1" fill="#333"/></g>`,
+  l_case_adidas: `<rect x="75" y="205" width="24" height="160" rx="4" fill="#1a1a1a"/><rect x="101" y="205" width="24" height="160" rx="4" fill="#1a1a1a"/><path d="M80 215 L80 355 M84 215 L84 355 M88 215 L88 355" stroke="#fff" stroke-width="1.5"/><path d="M106 215 L106 355 M110 215 L110 355 M114 215 L114 355" stroke="#fff" stroke-width="1.5"/><path d="M75 355 L99 355 M101 355 L125 355" stroke="#fff" stroke-width="2"/><circle cx="87" cy="240" r="2" fill="#f39c12"/><circle cx="87" cy="280" r="2" fill="#f39c12"/><circle cx="113" cy="240" r="2" fill="#f39c12"/><circle cx="113" cy="280" r="2" fill="#f39c12"/>`,
+  l_case_gold_shorts: `<path d="M72 200 L72 260 L100 260 L100 200 Z" fill="#ffd700"/><path d="M100 200 L100 260 L128 260 L128 200 Z" fill="#ffd700"/><path d="M72 200 L128 200 L128 215 L72 215 Z" fill="#d4ac0d"/><path d="M80 240 L92 240 M108 240 L120 240 M80 250 L92 250 M108 250 L120 250" stroke="#fff" stroke-width="1.5" opacity="0.7"/><circle cx="85" cy="225" r="2" fill="#fff"/><circle cx="115" cy="225" r="2" fill="#fff"/><circle cx="100" cy="235" r="2" fill="#fff"/>`,
+  h_case_dragon: `<path d="M68 42 Q100 15 132 42 L132 52 Q100 62 68 52 Z" fill="#2c3e50"/><path d="M78 32 Q82 18 88 28 L88 35 Z" fill="#1a252f"/><path d="M112 32 Q118 18 122 28 L122 35 Z" fill="#1a252f"/><ellipse cx="88" cy="50" rx="8" ry="5" fill="#e74c3c"/><ellipse cx="112" cy="50" rx="8" ry="5" fill="#e74c3c"/><circle cx="88" cy="50" r="2" fill="#000"/><circle cx="112" cy="50" r="2" fill="#000"/><path d="M95 60 Q100 62 105 60" stroke="#e74c3c" stroke-width="2" fill="none"/><path d="M98 52 L96 62 L100 60 Z" fill="#f39c12"/>`,
+  b_case_dragon_armor: `<path d="M70 95 L130 95 L130 205 L70 205 Z" fill="#2c3e50"/><path d="M70 95 L75 105 L75 205 L70 205 Z" fill="#1a252f"/><path d="M130 95 L125 105 L125 205 L130 205 Z" fill="#1a252f"/><rect x="85" y="125" width="30" height="60" fill="#1a252f"/><path d="M85 130 L100 120 L115 130" stroke="#e74c3c" stroke-width="2" fill="none"/><path d="M85 180 L100 190 L115 180" stroke="#e74c3c" stroke-width="2" fill="none"/><path d="M75 120 Q100 115 125 120" stroke="#f39c12" stroke-width="1.5" fill="none"/><path d="M75 190 Q100 195 125 190" stroke="#f39c12" stroke-width="1.5" fill="none"/><ellipse cx="100" cy="155" rx="8" ry="12" fill="#e74c3c"/>`,
+  rh_case_dragon_sword: `<g transform="translate(140,197)"><rect x="-6" y="-3" width="12" height="20" rx="2" fill="#2c3e50"/><rect x="-6" y="-3" width="12" height="3" fill="#f39c12"/><path d="M-5 -3 L5 -3 L4 -65 L-4 -65 Z" fill="#d4d4d4"/><path d="M-4 -65 L4 -65 L3 -60 L-3 -60 Z" fill="#9a9a9a"/><path d="M-2 -55 L2 -55 M-2 -45 L2 -45 M-2 -35 L2 -35 M-2 -25 L2 -25 M-2 -15 L2 -15" stroke="#f39c12" stroke-width="1.2"/><circle cx="0" cy="-65" r="2" fill="#e74c3c"/><path d="M-8 17 L8 17" stroke="#f39c12" stroke-width="2"/></g>`,
 };
 
 function renderCharacterSVG(outfit, opts = {}) {
@@ -316,6 +322,19 @@ function updateTimers() {
       dailyBtn.style.opacity = "0.6";
       dailyTimer.textContent = formatTime(cd);
       dailyTimer.classList.remove("hidden");
+    }
+  }
+  // Рулетка
+  const rouletteTimer = $("#roulette-timer");
+  if (rouletteTimer && p.last_roulette !== undefined) {
+    const nowR = Math.floor(Date.now()/1000);
+    const cdR = p.last_roulette ? (p.last_roulette + 21600) - nowR : 0;
+    if (cdR <= 0) {
+      rouletteTimer.textContent = "✅";
+      rouletteTimer.classList.add("ready");
+    } else {
+      rouletteTimer.textContent = formatTime(cdR);
+      rouletteTimer.classList.remove("ready");
     }
   }
   // Кредит
@@ -647,42 +666,54 @@ async function collectBusiness() {
 //  КАЗИНО
 // ══════════════════════════════════════════════════════════════
 const CASINO = {
-  coin:{name:"Монетка",emoji:"🪙",desc:"Орёл/решка — x2"},
-  dice:{name:"Кости",emoji:"🎲",desc:"Больше 3 — x1.8"},
-  red:{name:"Рулетка: красное",emoji:"🔴",desc:"Красное — x2"},
-  black:{name:"Рулетка: чёрное",emoji:"⚫",desc:"Чёрное — x2"},
-  zero:{name:"Рулетка: зеро",emoji:"🟢",desc:"Зеро — x35"},
-  jackpot:{name:"Джекпот",emoji:"💎",desc:"8% шанс — x10"},
-  slots:{name:"Слоты",emoji:"🎰",desc:"3 в ряд — x5"},
+  coin:     {name:"Монетка", emoji:"🪙", display:"🪙", desc:"Орёл/решка — x2"},
+  dice:     {name:"Кости",   emoji:"🎲", display:"🎲", desc:"Больше 3 — x1.8"},
+  red:      {name:"Рулетка: красное", emoji:"🔴", display:"🔴", desc:"Красное — x2"},
+  black:    {name:"Рулетка: чёрное",  emoji:"⚫", display:"⚫", desc:"Чёрное — x2"},
+  zero:     {name:"Рулетка: зеро",    emoji:"🟢", display:"🟢", desc:"Зеро — x35"},
+  jackpot:  {name:"Джекпот", emoji:"💎", display:"💎", desc:"8% шанс — x10"},
+  slots:    {name:"Слоты",   emoji:"🎰", display:"🎰", desc:"3 в ряд — x5"},
 };
 
 function renderCasino() {
-  const locked = state.casinoLocked && Date.now() - state.casinoLockTime < 5000;
-  const remaining = locked ? Math.ceil((state.casinoLockTime + 5000 - Date.now())/1000) : 0;
-  $("#casino-games").innerHTML = Object.entries(CASINO).map(([id,g])=>`
-    <div class="casino-game ${state.casinoGame===id?'selected':''}" onclick="state.casinoGame='${id}';renderCasino()" style="${state.casinoGame===id?'border:2px solid var(--button)':''}">
-      <div class="cg-header"><div class="cg-emoji">${g.emoji}</div><div class="cg-name">${g.name}</div></div>
-      <div class="cg-desc">${g.desc}</div>
-    </div>
-  `).join("") + `<button class="btn btn-primary ${locked?'casino-locked':''}" onclick="playCasino()" style="margin-top:16px" ${locked?'disabled':''}>
-    ${locked ? `⏳ Кд ${remaining}с` : '🎰 Играть'}
-  </button>`;
+  const tabs = $("#casino-tabs");
+  tabs.innerHTML = Object.entries(CASINO).map(([id,g])=>`
+    <div class="casino-tab ${state.casinoGame===id?'active':''}" onclick="state.casinoGame='${id}';renderCasino()">
+      <span class="casino-tab-emoji">${g.emoji}</span>
+      ${g.name.split(":")[0]}
+    </div>`).join("");
+  // Обновить дисплей
+  const g = CASINO[state.casinoGame];
+  const display = $("#casino-display");
+  if (display && !display.classList.contains("rolling-dice") && !display.classList.contains("spinning-coin") && !display.classList.contains("spinning-wheel") && !display.classList.contains("jackpot-win")) {
+    if (state.casinoGame === "slots") {
+      display.outerHTML = `<div class="casino-slots" id="casino-slots">
+        <div class="slot-reel"><div class="reel-inner">🍒</div></div>
+        <div class="slot-reel"><div class="reel-inner">🍋</div></div>
+        <div class="slot-reel"><div class="reel-inner">🍊</div></div>
+      </div>`;
+    } else {
+      if (!display || display.id !== "casino-display") {
+        $(".casino-stage").innerHTML = `<div class="casino-display" id="casino-display">${g.display}</div>`;
+      } else {
+        display.textContent = g.display;
+      }
+    }
+  }
 }
+
+
 function doubleBet() {
   const inp = $("#bet-input");
   if (!inp) return;
-  let v = parseInt(inp.value) || 0;
-  v = Math.max(1, v * 2);
-  if (v > state.player.balance) v = state.player.balance;
-  if (v < 1) v = 1;
-  inp.value = v;
+  const cur = parseInt(inp.value) || 0;
+  inp.value = Math.max(1, cur * 2);
 }
 function halveBet() {
   const inp = $("#bet-input");
   if (!inp) return;
-  let v = parseInt(inp.value) || 0;
-  v = Math.max(1, Math.floor(v / 2));
-  inp.value = v;
+  const cur = parseInt(inp.value) || 0;
+  inp.value = Math.max(1, Math.floor(cur / 2));
 }
 function setBet(v) {
   const inp = $("#bet-input");
@@ -697,21 +728,73 @@ async function playCasino() {
   const bet = parseInt($("#bet-input").value) || 0;
   if (bet <= 0) { toast("Введи ставку", "error"); return; }
   if (bet > state.player.balance) { toast("Не хватает денег", "error"); return; }
+
+  const game = state.casinoGame;
+  const stage = $(".casino-stage");
+
+  // Анимация
+  if (game === "slots") {
+    document.querySelectorAll(".slot-reel").forEach(r => {
+      r.classList.add("spinning");
+      r.querySelector(".reel-inner").innerHTML = ["🍒","🍋","🍊","🔔","⭐","💎"].map(s => `<div>${s}</div>`).join("");
+    });
+  } else if (game === "dice") {
+    const d = $("#casino-display");
+    if (d) { d.classList.add("rolling-dice"); d.textContent = "🎲"; }
+  } else if (game === "coin") {
+    const d = $("#casino-display");
+    if (d) { d.classList.add("spinning-coin"); d.textContent = "🪙"; }
+  } else if (game === "jackpot") {
+    const d = $("#casino-display");
+    if (d) { d.classList.add("jackpot-win"); d.textContent = "💎"; }
+  } else {
+    const d = $("#casino-display");
+    if (d) { d.classList.add("spinning-wheel"); d.textContent = CASINO[game].display; }
+  }
+
+  // Ждём анимацию 1.5 сек, потом запрос
+  await new Promise(r => setTimeout(r, 1500));
+
   try {
-    const d = await api("casino_play", {game: state.casinoGame, bet});
+    const d = await api("casino_play", {game, bet});
     state.player = d.player; renderPlayer();
     state.casinoLocked = true; state.casinoLockTime = Date.now();
-    renderCasino();
-    setTimeout(()=>{ state.casinoLocked = false; renderCasino(); }, 5000);
+    setTimeout(()=>{ state.casinoLocked = false; }, 5000);
+
+    // Убрать анимацию, показать финальный дисплей
+    if (game === "slots") {
+      document.querySelectorAll(".slot-reel").forEach(r => r.classList.remove("spinning"));
+      // Результат уже в d.result — "🍒🍋🍊 — проигрыш" — извлечь эмодзи
+      const m = d.result.match(/(.)(.)(.)/);
+      if (m) {
+        const reels = document.querySelectorAll(".reel-inner");
+        [m[1],m[2],m[3]].forEach((sym, i) => {
+          if (reels[i]) reels[i].innerHTML = `<div>${sym}</div>`;
+        });
+      }
+    } else {
+      const disp = $("#casino-display");
+      if (disp) {
+        disp.classList.remove("rolling-dice","spinning-coin","spinning-wheel","jackpot-win");
+        disp.textContent = CASINO[game].display;
+        if (d.win > 0 && game === "jackpot") disp.classList.add("jackpot-win");
+      }
+    }
+
     const isWin = d.win > 0;
-    $("#casino-result").innerHTML = `<div style="padding:16px;background:${isWin?'rgba(46,204,113,.2)':'rgba(231,76,60,.2)'};border-radius:12px;text-align:center;margin-top:16px">
-      <div style="font-size:32px">${d.result}</div>
-      <div style="font-size:16px;font-weight:800;margin-top:8px;color:${isWin?'var(--success)':'var(--danger)'}">${isWin?`+${fmtMoney(d.win)}₽`:`-${fmtMoney(bet)}₽`}</div>
+    $("#casino-result").innerHTML = `<div class="casino-result ${isWin?'win':'lose'}">
+      <div style="font-size:20px;margin-bottom:4px">${d.result}</div>
+      <div style="font-size:24px;font-weight:900">${isWin?`+${fmtMoney(d.win)}₽`:`-${fmtMoney(bet)}₽`}</div>
     </div>`;
     if (isWin) { toast(`🎉 +${fmtMoney(d.net)}₽`, "success"); if (tg) tg.HapticFeedback?.notificationOccurred("success"); }
     else { toast("😢 Проигрыш", "error"); if (tg) tg.HapticFeedback?.notificationOccurred("error"); }
     if (d.new_achievements?.length) notifyAchievements(d.new_achievements);
-  } catch(e) { toast(e.message, "error"); }
+  } catch(e) {
+    document.querySelectorAll(".slot-reel").forEach(r => r.classList.remove("spinning"));
+    const disp = $("#casino-display");
+    if (disp) disp.classList.remove("rolling-dice","spinning-coin","spinning-wheel","jackpot-win");
+    toast(e.message, "error");
+  }
 }
 
 // ══════════════════════════════════════════════════════════════
@@ -1116,22 +1199,6 @@ boot();
 // ══════════════════════════════════════════════════════════════
 //  КЕЙСЫ
 // ══════════════════════════════════════════════════════════════
-async function openCase(cid) {
-  try {
-    const d = await api("cases/open", {case_id: cid});
-    state.player = d.player; renderPlayer();
-    openModal(`
-      <div style="text-align:center;padding:24px 0">
-        <div style="font-size:80px;animation:bounce 1s">${d.won.emoji}</div>
-        <h2 style="color:${d.won.rarity_color};margin-top:16px">${d.won.name}</h2>
-        <div style="color:${d.won.rarity_color};font-size:13px;font-weight:800;margin-top:4px">${d.won.rarity_name}</div>
-        <p style="color:var(--hint);margin-top:12px">${d.won.desc || ''}</p>
-        <button class="btn btn-primary" onclick="closeModal();loadCases()" style="margin-top:16px">Забрать</button>
-      </div>`);
-    if (tg) tg.HapticFeedback?.notificationOccurred("success");
-  } catch(e) { toast(e.message, "error"); }
-}
-
 // ══════════════════════════════════════════════════════════════
 //  PVP
 // ══════════════════════════════════════════════════════════════
@@ -1454,26 +1521,51 @@ async function loadCases() {
   try {
     const d = await api("cases/list");
     const el = $("#cases-list");
-    el.innerHTML = d.cases.map(c => {
-      const itemsHtml = c.items.map(it => `
-        <div class="case-item-row">
-          <span>${it.emoji}</span>
-          <span style="color:${it.rarity_color};font-weight:700">${it.name}</span>
-          <span class="case-item-chance">${it.chance}%</span>
-        </div>`).join("");
-      return `<div class="case-card">
-        <div class="case-header">
-          <div class="case-emoji">${c.emoji}</div>
-          <div class="case-title">
-            <div class="case-name">${c.name}</div>
-            <div class="case-price">${fmtMoney(c.price)}₽</div>
-          </div>
+    el.innerHTML = d.cases.map(c => `
+      <div class="case-preview-card" onclick="showCaseDetail('${c.case_id}')">
+        <div class="case-preview-emoji">${c.emoji}</div>
+        <div class="case-preview-info">
+          <div class="case-preview-name">${c.name}</div>
+          <div class="case-preview-sub">5 уникальных предметов</div>
         </div>
-        <div class="case-items">${itemsHtml}</div>
-        <button class="btn btn-primary" onclick="openCase('${c.case_id}')" ${d.balance < c.price ? 'disabled' : ''}>${d.balance < c.price ? '❌ Не хватает денег' : `🎁 Открыть за ${fmtMoney(c.price)}₽`}</button>
-      </div>`;
-    }).join("");
+        <div class="case-preview-price">${fmtMoney(c.price)}₽</div>
+      </div>
+    `).join("");
+    state.casesData = d;
   } catch(e) { toast(e.message, "error"); }
+}
+
+function showCaseDetail(cid) {
+  const c = state.casesData.cases.find(x => x.case_id === cid);
+  if (!c) return;
+  const bal = state.casesData.balance;
+  // Использовать пустой outfit для превью
+  const itemsHtml = c.items.map(it => {
+    const preview = {...emptyOutfit()};
+    const slotKey = SLOT_KEY[it.slot];
+    preview[slotKey] = {item_id: it.item_id};
+    const stats = [];
+    if (it.hp) stats.push(`❤️ +${it.hp} HP`);
+    if (it.damage) stats.push(`⚔️ +${it.damage} DMG`);
+    if (!stats.length) stats.push("—");
+    return `<div class="case-modal-item" style="border-color:${it.rarity_color}">
+      <div class="case-modal-item-svg">${renderCharacterSVG(preview, {width: 80, height: 160})}</div>
+      <div class="case-modal-item-name" style="color:${it.rarity_color}">${it.name}</div>
+      <div class="case-modal-item-chance">${it.chance}%</div>
+      <div class="case-modal-item-stats">${stats.join("<br>")}</div>
+    </div>`;
+  }).join("");
+  openModal(`
+    <div style="text-align:center;margin-bottom:16px">
+      <div style="font-size:56px">${c.emoji}</div>
+      <h2>${c.name}</h2>
+      <div style="font-size:20px;font-weight:900;color:var(--money);margin-top:4px">${fmtMoney(c.price)}₽</div>
+    </div>
+    <div class="case-modal-items">${itemsHtml}</div>
+    <button class="btn btn-primary" onclick="openCase('${cid}')" ${bal < c.price ? 'disabled' : ''}>
+      ${bal < c.price ? '❌ Не хватает денег' : `🎁 Открыть за ${fmtMoney(c.price)}₽`}
+    </button>
+  `);
 }
 
 async function openCase(cid) {

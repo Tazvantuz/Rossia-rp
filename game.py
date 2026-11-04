@@ -283,50 +283,55 @@ HAND_DAMAGE = {
 for iid, dmg in HAND_DAMAGE.items():
     if iid in ITEMS: ITEMS[iid]["damage"] = dmg
 
-# ═══════ УНИКАЛЬНЫЕ ПРЕДМЕТЫ ИЗ КЕЙСОВ ═══════
+
+# ═══════ УНИКАЛЬНЫЕ ПРЕДМЕТЫ ИЗ КЕЙСОВ (15, только кейсы) ═══════
 CASE_ITEMS = {
-  "h_case_bandit":    {"name":"Бандитская шапка","emoji":"🧢","slot":"head","price":3000,"rarity":"rare","desc":"Только из кейса!","hp":10},
-  "b_case_tracksuit": {"name":"Спортивка Adidas (настоящая)","emoji":"👕","slot":"body","price":8000,"rarity":"epic","desc":"Только из кейса!","hp":60},
-  "h_case_rooster":   {"name":"Золотая маска петуха","emoji":"🐔","slot":"head","price":15000,"rarity":"epic","desc":"Только из кейса!","hp":30},
-  "b_case_chains":    {"name":"Футболка с цепями","emoji":"👕","slot":"body","price":12000,"rarity":"epic","desc":"Только из кейса!","hp":80},
-  "h_case_gold_uzi":  {"name":"Золотой УЗИ","emoji":"👑","slot":"head","price":50000,"rarity":"legendary","desc":"Только из кейса!","hp":100},
-  "h_case_crypto":    {"name":"Маска биткоина","emoji":"₿","slot":"head","price":30000,"rarity":"epic","desc":"Только из кейса!","hp":50},
-  "b_case_armani_real":{"name":"Пиджак Armani (оригинал)","emoji":"🤵","slot":"body","price":100000,"rarity":"legendary","desc":"Только из кейса!","hp":200},
-  "h_case_helmet_alpha":{"name":"Шлем Альфа","emoji":"🪖","slot":"head","price":80000,"rarity":"legendary","desc":"Только из кейса!","hp":150},
-  "rh_case_uzi_gold": {"name":"Золотой УЗИ (оружие)","emoji":"🔫","slot":"right_hand","price":150000,"rarity":"legendary","desc":"Только из кейса!","damage":80},
-  "lh_case_brilliant":{"name":"Бриллиантовый кейс","emoji":"💼","slot":"left_hand","price":300000,"rarity":"legendary","desc":"Только из кейса!","damage":50},
+    # Basic кейс (5)
+    "h_case_bandit":   {"name":"Бандитская шапка","emoji":"🧢","slot":"head","price":1500,"rarity":"uncommon","desc":"Только из кейса","hp":15},
+    "b_case_tracksuit":{"name":"Спортивка Adidas (оригинал)","emoji":"👕","slot":"body","price":3000,"rarity":"uncommon","desc":"Только из кейса","hp":40},
+    "l_case_adidas":   {"name":"Треники Adidas (оригинал)","emoji":"👖","slot":"legs","price":2500,"rarity":"uncommon","desc":"Только из кейса","hp":30},
+    "rh_case_knife":   {"name":"Выкидной нож","emoji":"🔪","slot":"right_hand","price":3500,"rarity":"rare","desc":"Только из кейса","damage":22},
+    "b_case_chains":   {"name":"Футболка с цепями","emoji":"👕","slot":"body","price":4000,"rarity":"rare","desc":"Только из кейса","hp":60},
+    # Rare кейс (5)
+    "h_case_rooster":  {"name":"Золотая маска петуха","emoji":"🐔","slot":"head","price":15000,"rarity":"epic","desc":"Только из кейса","hp":50},
+    "h_case_crypto":   {"name":"Маска биткоина","emoji":"₿","slot":"head","price":20000,"rarity":"epic","desc":"Только из кейса","hp":45},
+    "b_case_armani_real":{"name":"Пиджак Armani (оригинал)","emoji":"🤵","slot":"body","price":25000,"rarity":"epic","desc":"Только из кейса","hp":120},
+    "rh_case_uzi_gold":{"name":"Золотой УЗИ","emoji":"🔫","slot":"right_hand","price":30000,"rarity":"epic","desc":"Только из кейса","damage":70},
+    "l_case_gold_shorts":{"name":"Золотые шорты","emoji":"🩳","slot":"legs","price":22000,"rarity":"epic","desc":"Только из кейса","hp":80},
+    # Legendary кейс (5)
+    "h_case_helmet_alpha":{"name":"Шлем Альфа","emoji":"🪖","slot":"head","price":80000,"rarity":"legendary","desc":"Только из кейса","hp":200},
+    "lh_case_brilliant":{"name":"Бриллиантовый кейс","emoji":"💼","slot":"left_hand","price":100000,"rarity":"legendary","desc":"Только из кейса","damage":80},
+    "h_case_dragon":   {"name":"Шлем дракона","emoji":"🐲","slot":"head","price":150000,"rarity":"legendary","desc":"Только из кейса","hp":250},
+    "b_case_dragon_armor":{"name":"Доспех дракона","emoji":"🛡","slot":"body","price":200000,"rarity":"legendary","desc":"Только из кейса","hp":300},
+    "rh_case_dragon_sword":{"name":"Меч дракона","emoji":"⚔","slot":"right_hand","price":250000,"rarity":"legendary","desc":"Только из кейса","damage":150},
 }
 ITEMS.update(CASE_ITEMS)
 
-# ═══════ КЕЙСЫ ═══════
+# ═══════ КЕЙСЫ (ТОЛЬКО УНИКАЛЬНЫЕ ПРЕДМЕТЫ) ═══════
 CASES = {
   "basic": {"name":"Кейс новичка","emoji":"📦","price":1000,
     "items":[
-      {"iid":"h_cig","chance":40},
-      {"iid":"b_alco","chance":30},
-      {"iid":"l_family","chance":15},
-      {"iid":"rh_cig","chance":10},
-      {"iid":"h_case_bandit","chance":4},
-      {"iid":"b_case_tracksuit","chance":1},
+      {"iid":"h_case_bandit","chance":35},
+      {"iid":"b_case_tracksuit","chance":25},
+      {"iid":"l_case_adidas","chance":20},
+      {"iid":"rh_case_knife","chance":15},
+      {"iid":"b_case_chains","chance":5},
     ]},
   "rare": {"name":"Кейс гопника","emoji":"🎁","price":5000,
     "items":[
-      {"iid":"h_balaclava","chance":35},
-      {"iid":"b_cage","chance":30},
-      {"iid":"h_crown","chance":20},
-      {"iid":"h_case_rooster","chance":10},
-      {"iid":"b_case_chains","chance":4},
-      {"iid":"h_case_gold_uzi","chance":1},
+      {"iid":"h_case_rooster","chance":35},
+      {"iid":"h_case_crypto","chance":25},
+      {"iid":"b_case_armani_real","chance":20},
+      {"iid":"rh_case_uzi_gold","chance":15},
+      {"iid":"l_case_gold_shorts","chance":5},
     ]},
   "legendary": {"name":"Кейс олигарха","emoji":"💎","price":25000,
     "items":[
-      {"iid":"h_gold_crown","chance":40},
-      {"iid":"b_tuxedo","chance":25},
-      {"iid":"h_case_crypto","chance":15},
-      {"iid":"b_case_armani_real","chance":10},
-      {"iid":"h_case_helmet_alpha","chance":7},
-      {"iid":"rh_case_uzi_gold","chance":2.5},
-      {"iid":"lh_case_brilliant","chance":0.5},
+      {"iid":"h_case_helmet_alpha","chance":40},
+      {"iid":"lh_case_brilliant","chance":25},
+      {"iid":"h_case_dragon","chance":20},
+      {"iid":"b_case_dragon_armor","chance":10},
+      {"iid":"rh_case_dragon_sword","chance":5},
     ]},
 }
 

@@ -76,7 +76,7 @@
 
       <h3 class="section-subtitle">⚡ Быстрые действия</h3>
       <button class="btn btn-secondary" id="daily-btn" onclick="claimDaily()">🎁 Ежедневный бонус <span id="daily-timer" class="badge"></span></button>
-      <button class="btn btn-secondary" onclick="claimRoulette()">🎡 Рулетка дня (6ч)</button>
+      <button class="btn btn-secondary" id="roulette-btn" onclick="claimRoulette()">🎡 Рулетка дня <span id="roulette-timer" class="badge-timer"></span></button>
     </section>
 
     <section class="tab-content" data-tab="appearance">
@@ -99,7 +99,12 @@
 
     <section class="tab-content" data-tab="casino">
       <h2 class="section-title">🎰 Казино</h2>
-      <div class="bet-row">
+      <div class="casino-tabs" id="casino-tabs"></div>
+      <div class="casino-stage">
+        <div class="casino-display" id="casino-display">🪙</div>
+      </div>
+      <div id="casino-result"></div>
+      <div class="bet-row" style="margin-top:16px">
         <input id="bet-input" type="number" placeholder="Ставка ₽" min="1">
         <div class="bet-quick">
           <button onclick="setBet(100)">100</button>
@@ -108,12 +113,11 @@
           <button onclick="setBet('max')">MAX</button>
         </div>
         <div class="bet-x-row">
-          <button onclick="halfBet()" class="bet-x-btn">➗ ÷2</button>
+          <button onclick="halveBet()" class="bet-x-btn">➗ ÷2</button>
           <button onclick="doubleBet()" class="bet-x-btn">✖️ x2</button>
         </div>
       </div>
-      <div id="casino-games"></div>
-      <div id="casino-result"></div>
+      <button class="btn btn-primary" onclick="playCasino()" style="margin-top:12px">🎰 Играть</button>
     </section>
 
     <section class="tab-content" data-tab="people">
@@ -129,8 +133,8 @@
 
     <section class="tab-content" data-tab="cases">
       <h2 class="section-title">🎁 Кейсы</h2>
-      <p style="color:var(--hint);margin-bottom:12px;font-size:13px">Открывай кейсы — может выпасть уникальный предмет, которого нет в магазине!</p>
-      <div id="cases-list"></div>
+      <p style="color:var(--hint);margin-bottom:12px;font-size:13px">Только уникальные предметы!</p>
+      <div id="cases-list" class="cases-grid"></div>
     </section>
 
     <section class="tab-content" data-tab="gang">
