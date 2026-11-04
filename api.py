@@ -1484,7 +1484,7 @@ async def _unused_pvp_incoming(request):
         "WHERE defender_id=? AND status='pending'", (uid,))
     return web.json_response({"incoming": [dict(r) for r in rows]})
 
-async def _unused_pvp_start(request):
+async def api_pvp_start(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     target_id = int(body.get("target_id", 0))
