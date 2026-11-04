@@ -1116,32 +1116,6 @@ boot();
 // ══════════════════════════════════════════════════════════════
 //  КЕЙСЫ
 // ══════════════════════════════════════════════════════════════
-async function loadCases() {
-  try {
-    const d = await api("cases/list");
-    const el = $("#cases-list");
-    el.innerHTML = d.cases.map(c => {
-      const itemsHtml = c.items.map(it => `
-        <div class="case-item-row">
-          <span>${it.emoji}</span>
-          <span style="color:${it.rarity_color};font-weight:700">${it.name}</span>
-          <span class="case-item-chance">${it.chance}%</span>
-        </div>`).join("");
-      return `<div class="case-card">
-        <div class="case-header">
-          <div class="case-emoji">${c.emoji}</div>
-          <div class="case-title">
-            <div class="case-name">${c.name}</div>
-            <div class="case-price">${fmtMoney(c.price)}₽</div>
-          </div>
-        </div>
-        <div class="case-items">${itemsHtml}</div>
-        <button class="btn btn-primary" onclick="openCase('${c.case_id}')" ${d.balance < c.price ? 'disabled' : ''}>${d.balance < c.price ? '❌ Не хватает денег' : `🎁 Открыть за ${fmtMoney(c.price)}₽`}</button>
-      </div>`;
-    }).join("");
-  } catch(e) { toast(e.message, "error"); }
-}
-
 async function openCase(cid) {
   try {
     const d = await api("cases/open", {case_id: cid});
@@ -1278,70 +1252,6 @@ async function pvpDoAction(part) {
 // ══════════════════════════════════════════════════════════════
 //  БАНДЫ
 // ══════════════════════════════════════════════════════════════
-async function loadGang() {
-  try {
-    const d = await api("gang/get");
-    const el = $("#gang-content");
-    if (!d.in_gang) {
-      let listHtml = d.gangs.length > 0 ? d.gangs.map(g => `
-        <div class="member-row">
-          <div style="font-size:22px">${g.emoji}</div>
-          <div style="flex:1"><div style="font-weight:700">${g.name}</div>
-          <div style="font-size:11px;color:var(--hint)">${g.members_count}/10 · казна ${fmtMoney(g.treasury)}₽</div></div>
-          <button class="btn btn-secondary" style="width:auto;padding:8px 14px;margin:0" onclick="joinGang(${g.gang_id})">Вступить</button>
-        </div>`).join("") : '<p style="color:var(--hint);text-align:center;padding:20px">Банд пока нет</p>';
-      el.innerHTML = `
-        <h2 class="section-title">🚬 Банды</h2>
-        <div style="background:var(--bg-2);border-radius:16px;padding:16px;margin-bottom:16px">
-          <p style="margin-bottom:12px">Создай свою банду за <b style="color:var(--money)">50 000₽</b></p>
-          <button class="btn btn-primary" onclick="showCreateGang()">🚬 Создать банду</button>
-        </div>
-        <h3 class="section-subtitle">Существующие банды</h3>
-        ${listHtml}`;
-      return;
-    }
-    const g = d.gang;
-    const terrHtml = d.territories.map(t => {
-      let cls = "neutral", label = "Ничейная";
-      if (t.capturing_gang_id === g.gang_id) { cls = "capturing"; label = `Захват ${formatTime(t.capture_left)}`; }
-      else if (t.gang_id === g.gang_id) { cls = "mine"; label = "Наша"; }
-      else if (t.gang_id) { cls = "enemy"; label = "Чужая"; }
-      return `<div class="territory ${cls}" onclick="showTerritoryCapture(${t.id},'${t.name}',${t.income},${t.gang_id||0},${t.capturing_gang_id||0})">
-        <div class="territory-emoji">${t.emoji}</div>
-        <div class="territory-name">${t.name}</div>
-        <div class="territory-income">+${t.income}₽/ч</div>
-        <div style="font-size:9px;margin-top:2px">${label}</div>
-      </div>`;
-    }).join("");
-    const membersHtml = d.members.map(m => {
-      const roleClass = `role-${m.role}`;
-      const roleName = {leader:"Лидер",deputy:"Зам",member:"Боец"}[m.role];
-      return `<div class="member-row">
-        <div style="flex:1"><b>${m.nickname}</b> · ур. ${m.level}</div>
-        <span class="member-role ${roleClass}">${roleName}</span>
-      </div>`;
-    }).join("");
-    el.innerHTML = `
-      <div class="gang-banner">
-        <div style="font-size:64px">${g.emoji}</div>
-        <div class="gang-name">${g.name}</div>
-        <div class="gang-treasury">💰 Казна: ${fmtMoney(g.treasury)}₽</div>
-      </div>
-      ${d.is_leader_or_deputy ? `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
-          <button class="btn btn-primary" onclick="showGangDeposit()" style="margin:0">💰 Вложить</button>
-          <button class="btn btn-secondary" onclick="showGangWithdraw()" style="margin:0">💸 Вывести</button>
-        </div>
-      ` : ''}
-      <h3 class="section-subtitle">🗺 Территории (ГЕТТО)</h3>
-      <div class="gang-map">${terrHtml}</div>
-      <h3 class="section-subtitle">👥 Участники (${d.members.length}/10)</h3>
-      ${membersHtml}
-      ${d.my_role !== "leader" ? `<button class="btn btn-secondary" style="margin-top:12px" onclick="leaveGang()">🚪 Покинуть банду</button>` : ''}
-    `;
-  } catch(e) { toast(e.message, "error"); }
-}
-
 function showCreateGang() {
   openModal(`
     <h2>🚬 Создать банду</h2>
