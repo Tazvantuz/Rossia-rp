@@ -712,7 +712,7 @@ async def api_trade_send(request):
         "VALUES (?,?,?,?,?,?)",
         (uid, to_user, give_money, json.dumps(give_items), want_money, json.dumps(want_items)))
     p = await _player(uid)
-    await db.execute("INSERT INTO notifications (user_id, type, text) VALUES (?, 'trade', ?)", (body.get("to_user"), f"Трейд от {p['nickname']}"))
+    await db.execute("INSERT INTO notifications (user_id, type, text) VALUES (?, 'trade', ?)", (to_user, f"Трейд от {p['nickname']}"))
     return web.json_response({"ok": True, "trade_id": tid})
 
 async def api_trades_list(request):
@@ -1429,7 +1429,6 @@ async def api_reset(request):
     ud = await _user(request); uid = ud["id"]
     await db.execute("DELETE FROM players WHERE user_id=?", (uid,))
     await db.execute("DELETE FROM inventory WHERE user_id=?", (uid,))
-    await db.execute("DELETE FROM party_members WHERE user_id=?", (uid,))
     await db.execute("DELETE FROM gang_members WHERE user_id=?", (uid,))
     return web.json_response({"ok": True, "message": "Персонаж сброшен"})
 
@@ -1988,7 +1987,6 @@ def setup_routes(app):
     R.add_post("/api/gang/info", api_gang_info)
     R.add_post("/api/gang/create", api_gang_create)
     R.add_post("/api/gang/join", api_gang_join)
-    R.add_post("/api/gang/treasury", api_gang_treasury)
     R.add_post("/api/gang/territories", api_gang_territories)
     R.add_post("/api/territory/capture/start", api_territory_capture_start)
     R.add_post("/api/territory/capture/resolve", api_territory_capture_resolve)

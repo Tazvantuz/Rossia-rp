@@ -381,6 +381,7 @@ CAPTURE_HOURS = 1
 PVP_PARTS = ["head","torso","legs"]
 PVP_PARTS_NAMES = {"head":"Голова","torso":"Торс","legs":"Ноги"}
 PVP_BASE_HP = 100
+PVP_TURN_TIMEOUT = 30
 
 def get_combat_stats(player):
     """HP и урон с учётом одежды."""
