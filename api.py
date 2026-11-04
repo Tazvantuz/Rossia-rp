@@ -2004,9 +2004,7 @@ def setup_routes(app):
     R.add_post("/api/trade/accept", api_trade_accept)
     R.add_post("/api/trade/decline", api_trade_decline)
     R.add_post("/api/leaderboard", api_leaderboard)
-    R.add_post("/api/gang/create", api_gang_create)
     R.add_post("/api/gang/get", api_gang_get)
-    R.add_post("/api/gang/join", api_gang_join)
     R.add_post("/api/gang/leave", api_gang_leave)
     R.add_post("/api/gang/deposit", api_gang_deposit)
     R.add_post("/api/gang/withdraw", api_gang_withdraw)
@@ -2026,10 +2024,6 @@ def setup_routes(app):
     R.add_post("/api/cases/list", api_cases_list)
     R.add_post("/api/cases/open", api_cases_open)
     R.add_post("/api/pvp/challenge", api_pvp_challenge)
-    R.add_post("/api/pvp/incoming", api_pvp_incoming)
-    R.add_post("/api/pvp/respond", api_pvp_respond)
-    R.add_post("/api/pvp/state", api_pvp_state)
-    R.add_post("/api/pvp/action", api_pvp_action)
 
 
 # ══════════════════════════════════════════════════════════════
