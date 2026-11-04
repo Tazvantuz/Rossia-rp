@@ -243,7 +243,6 @@ function showTab(tab) {
   if (tab==="casino") renderCasino();
   if (tab==="people") loadPeople();
   if (tab==="ghetto" && typeof renderGhetto === "function") renderGhetto();
-  if (tab==="ghetto" && typeof renderGhetto === "function") renderGhetto();
   if (tab==="referral") renderReferral();
   if (tab==="chat") startChatPolling();
   if (tab==="more") { updateMoreBadges(); checkAdminAccess(); }
@@ -270,6 +269,19 @@ function fmtMoney(n) {
   return n.toLocaleString("ru-RU");
 }
 
+async function refreshPlayer() {
+  try {
+    const d = await api("me");
+    if (d.registered) {
+      state.player = d.player;
+      renderPlayer();
+      renderCharacterInto("#character-view");
+      if (typeof loadWork === 'function') loadWork();
+      if (typeof loadBusinesses === 'function') loadBusinesses();
+    }
+  } catch(e) { console.error("refreshPlayer error:", e); }
+}
+
 async function boot() {
   if (!initData) {
     document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#fff;">Открой через Telegram-бота</div>';
@@ -293,21 +305,32 @@ async function boot() {
   }
 }
 
-function setupRegister() {
+let registerSetup = false;
+function renderRegister() {
   const nick = $("#nickname"), btn = $("#btn-register");
-  nick.addEventListener("input", ()=>btn.disabled = nick.value.trim().length < 2);
-  btn.addEventListener("click", async () => {
-    btn.disabled = true;
-    try {
-      const startParam = tg?.initDataUnsafe?.start_param;
-      const d = await api("register", {nickname: nick.value.trim(), referrer_id: startParam});
-      state.player = d.player;
-      renderPlayer(); renderCharacterInto("#character-view");
-      show("main"); showTab("home");
-      if (tg) tg.HapticFeedback?.notificationOccurred("success");
-      toast("🎉 Добро пожаловать! Ты голый — загляни в Шмот", "success");
-    } catch(e) { toast(e.message, "error"); btn.disabled = false; }
-  });
+  if (!nick || !btn) return;
+  
+  btn.disabled = nick.value.trim().length < 2;
+  
+  if (!registerSetup) {
+    nick.addEventListener("input", () => btn.disabled = nick.value.trim().length < 2);
+    btn.addEventListener("click", async () => {
+      btn.disabled = true;
+      try {
+        const startParam = tg?.initDataUnsafe?.start_param;
+        const d = await api("register", { nickname: nick.value.trim(), referrer_id: startParam });
+        state.player = d.player;
+        renderPlayer(); renderCharacterInto("#character-view");
+        show("main"); showTab("home");
+        if (tg) tg.HapticFeedback?.notificationOccurred("success");
+        toast("🎉 Добро пожаловать! Ты голый — загляни в Шмот", "success");
+      } catch (e) {
+        toast(e.message, "error");
+        btn.disabled = false;
+      }
+    });
+    registerSetup = true;
+  }
 }
 
 function renderPlayer() {
@@ -622,13 +645,7 @@ async function loadBusinesses() {
   } catch(e) { toast(e.message, "error"); }
 }
 
-async function loadBusinesses() {
-  try {
-    const d = await api("businesses", {});
-    state.businessesCache = d.businesses || d;
-    renderBusinesses(state.businessesCache);
-  } catch(e) { toast(e.message, "error"); }
-}
+
 const JOBS_DATA = {
   courier:{name:"Курьер",emoji:"🚴",salary:100,xp:5,cooldown:60},
   loader:{name:"Грузчик",emoji:"📦",salary:250,xp:10,cooldown:120},
@@ -780,15 +797,7 @@ async function upgradeBusiness(id) {
     } catch(_) {}
   }
 }
-async function buyBusiness(bid, canAfford) {
-  if (!canAfford) { toast("Не хватает денег", "error"); return; }
-  try {
-    const d = await api("buy_business", {business_id: bid});
-    state.player = d.player; renderPlayer(); loadWork();
-    toast("✅ Бизнес куплен!", "success");
-    if (d.new_achievements?.length) notifyAchievements(d.new_achievements);
-  } catch(e) { toast(e.message, "error"); }
-}
+
 async function collectBusiness() {
   try {
     const d = await api("collect_business", {});
@@ -1143,15 +1152,8 @@ async function payCredit() {
     toast(`✅ Кредит погашен (${fmtMoney(d.paid)}₽)`, "success");
   } catch(e) { toast(e.message, "error"); }
 }
-async function takeCredit() {
-  const amt = parseInt($("#credit-amt").value) || 0;
-  try { const d = await api("credit/take", {amount: amt}); state.player = d.player; renderPlayer(); closeModal(); updateMoreBadges(); toast(`💸 ${amt}₽`, "success"); }
-  catch(e) { toast(e.message, "error"); }
-}
-async function payCredit() {
-  try { const d = await api("credit/pay"); state.player = d.player; renderPlayer(); closeModal(); updateMoreBadges(); toast(`✅ Погашен`, "success"); }
-  catch(e) { toast(e.message, "error"); }
-}
+
+
 function showAchievements() {
   const p = state.player;
   const all = ["first_job","first_business","millionaire","billionaire","gambler","big_winner","criminal","in_debt","fashion","level10","rich_king","trader"];
