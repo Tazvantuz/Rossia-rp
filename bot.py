@@ -33,11 +33,24 @@ def _kb():
 async def cmd_start(message: Message):
     p = await db.fetchone("SELECT nickname FROM players WHERE user_id=?", (message.from_user.id,))
     greet = f"👋 С возвращением, <b>{p['nickname']}</b>!" if p else "🌟 Начни свой путь бомжа!"
+    args = message.text.split()
+    param = args[1] if len(args) > 1 else None
+    url = f"{WEBAPP_URL}/"
+    if param and param.startswith("ref_") and WEBAPP_URL:
+        url += f"?ref={param[4:]}"
+        if not p:
+            greet = "🎁 <b>Ты пришёл по приглашению!</b>\n" + greet
     text = (f"🇷🇺 <b>РП Россия</b>\n\n"
             f"Мир гопников, олигархов и шаурмы.\n\n"
             f"{greet}\n\n"
             f"💡 <i>Кнопка «🇷🇺 Играть» слева внизу — открывает игру в один тап.</i>")
-    await message.answer(text, reply_markup=_kb())
+    if WEBAPP_URL:
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="🇷🇺 Играть", web_app=WebAppInfo(url=url))]])
+    else:
+        kb = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="⚠️ URL не задан", callback_data="noop")]])
+    await message.answer(text, reply_markup=kb)
 
 @router.message(Command("menu"))
 async def cmd_menu(message: Message):

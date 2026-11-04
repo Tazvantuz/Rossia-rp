@@ -178,6 +178,7 @@ async def api_me(request):
 
 
 async def api_register(request):
+    await _ensure_ref_columns()
     ud = await _user(request); uid = ud["id"]
     if await _player(uid):
         return web.json_response({"error":"already registered"}, status=400)
@@ -1606,7 +1607,7 @@ async def api_referral_info(request):
         "count": count,
         "earned": earned,
         "claims": claims,
-        "link": f"https://t.me/newerarpgbot?startapp={uid}"
+        "link": f"https://t.me/newerarpgbot?start=ref_{uid}"
     })
 
 async def api_referral_claim(request):

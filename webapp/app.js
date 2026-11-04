@@ -329,7 +329,13 @@ function renderRegister() {
       btn.disabled = true;
       try {
         const startParam = tg?.initDataUnsafe?.start_param;
-        const d = await api("register", { nickname: nick.value.trim(), referrer_id: startParam });
+        const urlParams = new URLSearchParams(window.location.search);
+        const refFromUrl = urlParams.get('ref');
+        let referrer_id = startParam || refFromUrl;
+        if (referrer_id && String(referrer_id).startsWith("ref_")) {
+            referrer_id = String(referrer_id).slice(4);
+        }
+        const d = await api("register", { nickname: nick.value.trim(), referrer_id });
         state.player = d.player;
         renderPlayer(); renderCharacterInto("#character-view");
         show("main"); showTab("home");
