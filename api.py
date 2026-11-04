@@ -370,7 +370,7 @@ async def api_buy_business(request):
     if bid in [x["id"] for x in _json_biz(p)]:
         return web.json_response({"error":"Уже есть"}, status=400)
     if p["balance"] < b["price"]:
-        return web.json_response({"error": "Не хватает денег", "required": amount, "balance": p["balance"]}, status=400)
+        return web.json_response({"error": "Не хватает денег", "required": b["price"], "balance": p["balance"]}, status=400)
     now = int(time.time())
     biz = _json_biz(p)
     biz.append({"id":bid, "last_collect":now})
