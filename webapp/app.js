@@ -741,21 +741,44 @@ function renderBusinesses(data) {
 async function buyBusiness(id) {
   try {
     const d = await api("buy_business", { business_id: id });
-    if (d.error) throw new Error(d.error);
+    if (d.error) {
+      if (d.required !== undefined && d.balance !== undefined) {
+        throw new Error(`Не хватает денег! Цена: ${fmtMoney(d.required)}₽, у тебя: ${fmtMoney(d.balance)}₽`);
+      }
+      throw new Error(d.error);
+    }
     toast("🏢 Бизнес куплен!", "success");
     if (d.player) { state.player = d.player; renderPlayer(); }
     loadBusinesses();
-  } catch(e) { toast(e.message, "error"); }
+  } catch(e) { 
+    toast(e.message, "error"); 
+    // Синхронизируем баланс с сервером, чтобы на экране была правда
+    try { 
+      const me = await api("me"); 
+      if (me.player) { state.player = me.player; renderPlayer(); } 
+    } catch(_) {}
+  }
 }
 
 async function upgradeBusiness(id) {
   try {
     const d = await api("upgrade_business", { business_id: id });
-    if (d.error) throw new Error(d.error);
+    if (d.error) {
+      if (d.required !== undefined && d.balance !== undefined) {
+        throw new Error(`Не хватает денег! Цена: ${fmtMoney(d.required)}₽, у тебя: ${fmtMoney(d.balance)}₽`);
+      }
+      throw new Error(d.error);
+    }
     toast("⭐ Бизнес улучшен!", "success");
     if (d.player) { state.player = d.player; renderPlayer(); }
     loadBusinesses();
-  } catch(e) { toast(e.message, "error"); }
+  } catch(e) { 
+    toast(e.message, "error"); 
+    try { 
+      const me = await api("me"); 
+      if (me.player) { state.player = me.player; renderPlayer(); } 
+    } catch(_) {}
+  }
 }
 async function buyBusiness(bid, canAfford) {
   if (!canAfford) { toast("Не хватает денег", "error"); return; }

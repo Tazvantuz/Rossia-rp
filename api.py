@@ -365,10 +365,12 @@ async def api_buy_business(request):
     b = BUSINESSES.get(bid)
     if not b: return web.json_response({"error":"Нет"}, status=400)
     p = await _player(uid)
+    if p["balance"] < 0:
+        return web.json_response({"error": "У тебя отрицательный баланс (баг). Обратись к админу."}, status=400)
     if bid in [x["id"] for x in _json_biz(p)]:
         return web.json_response({"error":"Уже есть"}, status=400)
     if p["balance"] < b["price"]:
-        return web.json_response({"error": f"Не хватает денег. Цена: {b['price']}₽, у тебя: {p['balance']}₽"}, status=400)
+        return web.json_response({"error": "Не хватает денег", "required": amount, "balance": p["balance"]}, status=400)
     now = int(time.time())
     biz = _json_biz(p)
     biz.append({"id":bid, "last_collect":now})
@@ -614,7 +616,7 @@ async def api_crypto_buy(request):
     if amount <= 0: return web.json_response({"error":"Сумма"}, status=400)
     p = await _player(uid)
     if p["balance"] < amount:
-        return web.json_response({"error": f"Не хватает денег. Цена: {b['price']}₽, у тебя: {p['balance']}₽"}, status=400)
+        return web.json_response({"error": "Не хватает денег", "required": amount, "balance": p["balance"]}, status=400)
     coins = amount / price
     await db.execute("UPDATE players SET balance=balance-?, crypto_amount=crypto_amount+? WHERE user_id=?",
                      (amount, coins, uid))
@@ -1072,7 +1074,7 @@ async def api_gang_deposit(request):
     member = await db.fetchone("SELECT * FROM gang_members WHERE user_id=?", (uid,))
     if not member: return web.json_response({"error":"Не в банде"}, status=400)
     p = await _player(uid)
-    if p["balance"] < amount: return web.json_response({"error": f"Не хватает денег. Цена: {b['price']}₽, у тебя: {p['balance']}₽"}, status=400)
+    if p["balance"] < amount: return web.json_response({"error": "Не хватает денег", "required": amount, "balance": p["balance"]}, status=400)
     await db.execute("UPDATE players SET balance=balance-? WHERE user_id=?", (amount, uid))
     await db.execute("UPDATE gangs SET treasury=treasury+? WHERE gang_id=?", (amount, member["gang_id"]))
     return web.json_response({"ok":True})
@@ -1655,7 +1657,9 @@ async def api_upgrade_business(request):
     if lvl >= 3: return web.json_response({"error":"Максимальный уровень"}, status=400)
     
     cost = int(b["price"] * (1.3 if lvl == 1 else 1.7))
-    if p["balance"] < cost: return web.json_response({"error":"Не хватает денег"}, status=400)
+    if p["balance"] < 0:
+        return web.json_response({"error": "У тебя отрицательный баланс (баг). Обратись к админу."}, status=400)
+    if p["balance"] < cost: return web.json_response({"error": "Не хватает денег", "required": cost, "balance": p["balance"]}, status=400)
     
     target["level"] = lvl + 1
     await _save_biz(uid, biz)
