@@ -1,6 +1,8 @@
+import os
 import aiosqlite
 
-DB_PATH = "new_era_rpg.db"
+DATA_DIR = os.environ.get("RAILWAY_VOLUME_MOUNT_PATH", ".")
+DB_PATH = os.path.join(DATA_DIR, "new_era_rpg.db")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS players (
