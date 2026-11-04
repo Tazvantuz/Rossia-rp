@@ -40,6 +40,14 @@
       <div class="money-box">💰 <span id="money">0</span>₽</div>
     </header>
 
+    <div id="credit-banner" class="credit-banner hidden" onclick="showCredit()">
+      <div class="cb-icon">💸</div>
+      <div class="cb-info">
+        <div class="cb-title">Долг банку: <b id="cb-amount">0₽</b></div>
+        <div class="cb-timer" id="cb-timer"></div>
+      </div>
+    </div>
+
     <section class="tab-content active" data-tab="home">
       <div class="character-card">
         <div class="character-view" id="character-view"></div>
@@ -67,7 +75,7 @@
       </div>
 
       <h3 class="section-subtitle">⚡ Быстрые действия</h3>
-      <button class="btn btn-secondary" onclick="claimDaily()">🎁 Ежедневный бонус <span id="daily-badge" class="badge hidden">!</span></button>
+      <button class="btn btn-secondary" id="daily-btn" onclick="claimDaily()">🎁 Ежедневный бонус <span id="daily-timer" class="badge"></span></button>
       <button class="btn btn-secondary" onclick="claimRoulette()">🎡 Рулетка дня (6ч)</button>
     </section>
 

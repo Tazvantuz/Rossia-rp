@@ -7,6 +7,7 @@ from game import (
     LOCATIONS, ITEMS, JOBS, BUSINESSES, CASINO_GAMES, ACHIEVEMENTS,
     DAILY_REWARDS, SLOTS, SLOT_NAMES, SLOT_CATEGORY, SLOT_BY_CATEGORY,
     CATEGORY_NAMES, CATEGORY_EMOJI, RARITIES, MAX_LEVEL, START_LOCATION,
+    CREDIT_MAX, CREDIT_TERMS,
     START_BALANCE, xp_to_next, crypto_price, item_json, item_sell_price,
     get_outfit,
 )
@@ -86,6 +87,7 @@ def _player_json(p):
         "businesses": _json_biz(p),
         "achievements": _json_ach(p),
         "credit_amount": p.get("credit_amount", 0),
+        "credit_due": p.get("credit_due", 0),
         "crypto_amount": p.get("crypto_amount", 0),
         "crypto_price": crypto_price(),
         "daily_streak": p.get("daily_streak", 0),
@@ -136,9 +138,12 @@ async def api_me(request):
     p = await _player(uid)
     if not p:
         return web.json_response({"registered": False})
+    credit_paid = await _forced_credit_collect(uid)
+    if credit_paid:
+        p = await _player(uid)
     ach_new = await _check_achievements(uid, p)
     return web.json_response({"registered": True, "player": _player_json(p),
-                              "new_achievements": ach_new})
+                              "new_achievements": ach_new, "credit_paid": credit_paid})
 
 async def api_register(request):
     ud = await _user(request); uid = ud["id"]
@@ -270,6 +275,7 @@ async def api_work(request):
         return web.json_response({"error":f"Подожди {cd} сек"}, status=400)
     await db.execute("UPDATE players SET balance=balance+?, xp=xp+?, last_work=? WHERE user_id=?",
                      (job["salary"], job["xp"], now, uid))
+    credit_paid = await _forced_credit_collect(uid)
     p = await _player(uid)
     levels = await _check_levelup(uid, p)
     p = await _player(uid)
@@ -279,7 +285,7 @@ async def api_work(request):
         ach.append("first_job")
     return web.json_response({"player": _player_json(p), "earned": job["salary"],
                               "xp": job["xp"], "levels": levels,
-                              "new_achievements": ach})
+                              "new_achievements": ach, "credit_paid": credit_paid})
 
 async def api_businesses(request):
     ud = await _user(request); uid = ud["id"]
@@ -342,10 +348,11 @@ async def api_collect_business(request):
         return web.json_response({"error":"Нечего собирать"}, status=400)
     await _save_biz(uid, biz)
     await db.execute("UPDATE players SET balance=balance+? WHERE user_id=?", (total, uid))
+    credit_paid = await _forced_credit_collect(uid)
     p = await _player(uid)
     ach = await _check_achievements(uid, p)
     return web.json_response({"player": _player_json(p), "earned": total,
-                              "new_achievements": ach})
+                              "new_achievements": ach, "credit_paid": credit_paid})
 
 async def api_casino_play(request):
     ud = await _user(request); uid = ud["id"]
@@ -389,6 +396,7 @@ async def api_casino_play(request):
     now_upd = int(time.time())
     await db.execute("UPDATE players SET balance=balance+?, casino_plays=casino_plays+1, last_casino=? WHERE user_id=?",
                      (net, now_upd, uid))
+    credit_paid = await _forced_credit_collect(uid) if net > 0 else 0
     p = await _player(uid)
     ach = await _check_achievements(uid, p)
     if win_amount >= 100000 and "big_winner" not in _json_ach(p):
@@ -413,8 +421,10 @@ async def api_daily(request):
     await db.execute(
         "UPDATE players SET balance=balance+?, last_daily=?, daily_streak=? WHERE user_id=?",
         (reward, now, streak, uid))
+    credit_paid = await _forced_credit_collect(uid)
     p = await _player(uid)
-    return web.json_response({"player": _player_json(p), "reward": reward, "streak": streak})
+    return web.json_response({"player": _player_json(p), "reward": reward, "streak": streak,
+                              "credit_paid": credit_paid})
 
 async def api_roulette(request):
     ud = await _user(request); uid = ud["id"]
@@ -426,8 +436,9 @@ async def api_roulette(request):
     prize = random.choices(prizes, weights=[30,20,20,15,8,4,2,1])[0]
     await db.execute("UPDATE players SET balance=balance+?, last_roulette=? WHERE user_id=?",
                      (prize, now, uid))
+    credit_paid = await _forced_credit_collect(uid) if prize > 0 else 0
     p = await _player(uid)
-    return web.json_response({"player": _player_json(p), "prize": prize})
+    return web.json_response({"player": _player_json(p), "prize": prize, "credit_paid": credit_paid})
 
 async def api_crime(request):
     ud = await _user(request); uid = ud["id"]
@@ -454,30 +465,48 @@ async def api_crime(request):
 async def api_credit_take(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
-    amount = int(body.get("amount",0))
-    if amount <= 0 or amount > 50000:
-        return web.json_response({"error":"1-50000₽"}, status=400)
+    amount = int(body.get("amount", 0))
+    term_hours = int(body.get("term_hours", 0))
+    if amount <= 0 or amount > CREDIT_MAX:
+        return web.json_response({"error": f"Сумма 1-{CREDIT_MAX}₽"}, status=400)
+    term = next((t for t in CREDIT_TERMS if t["hours"] == term_hours), None)
+    if not term:
+        return web.json_response({"error": "Неверный срок"}, status=400)
     p = await _player(uid)
-    if p.get("credit_amount",0) > 0:
-        return web.json_response({"error":"Уже есть кредит"}, status=400)
-    await db.execute("UPDATE players SET balance=balance+?, credit_amount=? WHERE user_id=?",
-                     (amount, int(amount*1.15), uid))
+    if p.get("credit_amount", 0) > 0:
+        return web.json_response({"error": "Уже есть кредит"}, status=400)
+    total_debt = int(amount * (1 + term["pct"]/100))
+    now = int(time.time())
+    due = now + term_hours * 3600
+    await db.execute(
+        "UPDATE players SET balance=balance+?, credit_amount=?, credit_due=? WHERE user_id=?",
+        (amount, total_debt, due, uid))
     p = await _player(uid)
     ach = await _check_achievements(uid, p)
-    return web.json_response({"player": _player_json(p), "new_achievements": ach})
+    return web.json_response({
+        "player": _player_json(p),
+        "total_debt": total_debt,
+        "due_at": due,
+        "term_hours": term_hours,
+        "pct": term["pct"],
+        "new_achievements": ach,
+    })
+
 
 async def api_credit_pay(request):
     ud = await _user(request); uid = ud["id"]
     p = await _player(uid)
-    debt = p.get("credit_amount",0)
+    debt = p.get("credit_amount", 0)
     if debt <= 0:
-        return web.json_response({"error":"Нет кредита"}, status=400)
+        return web.json_response({"error": "Нет кредита"}, status=400)
     if p["balance"] < debt:
-        return web.json_response({"error":f"Нужно {debt}₽"}, status=400)
-    await db.execute("UPDATE players SET balance=balance-?, credit_amount=0 WHERE user_id=?",
-                     (debt, uid))
+        return web.json_response({"error": f"Нужно {debt}₽, у тебя {p['balance']}₽"}, status=400)
+    await db.execute(
+        "UPDATE players SET balance=balance-?, credit_amount=0, credit_due=0 WHERE user_id=?",
+        (debt, uid))
     p = await _player(uid)
     return web.json_response({"player": _player_json(p), "paid": debt})
+
 
 async def api_crypto_buy(request):
     ud = await _user(request); uid = ud["id"]
@@ -505,8 +534,10 @@ async def api_crypto_sell(request):
     rub = int(amount * price)
     await db.execute("UPDATE players SET balance=balance+?, crypto_amount=crypto_amount-? WHERE user_id=?",
                      (rub, amount, uid))
+    credit_paid = await _forced_credit_collect(uid)
     p = await _player(uid)
-    return web.json_response({"player": _player_json(p), "rub": rub, "price": price})
+    return web.json_response({"player": _player_json(p), "rub": rub, "price": price,
+                              "credit_paid": credit_paid})
 
 async def api_location(request):
     ud = await _user(request); uid = ud["id"]
@@ -677,6 +708,28 @@ async def api_leaderboard(request):
             "businesses_count": len(_json_biz(r)),
         })
     return web.json_response({"leaders": result})
+
+async def _forced_credit_collect(uid):
+    """Если кредит просрочен — списать всё что есть. Возвращает сколько списано."""
+    p = await _player(uid)
+    debt = p.get("credit_amount", 0) or 0
+    due = p.get("credit_due", 0) or 0
+    if debt <= 0 or due <= 0:
+        return 0
+    now = int(time.time())
+    if now < due:
+        return 0
+    if p["balance"] <= 0:
+        return 0
+    pay = min(p["balance"], debt)
+    await db.execute(
+        "UPDATE players SET balance = balance - ?, credit_amount = credit_amount - ? WHERE user_id = ?",
+        (pay, pay, uid))
+    p = await _player(uid)
+    if p["credit_amount"] <= 0:
+        await db.execute(
+            "UPDATE players SET credit_amount = 0, credit_due = 0 WHERE user_id = ?", (uid,))
+    return pay
 
 CHAT_COOLDOWN = 3
 USER_LAST_CHAT = {}

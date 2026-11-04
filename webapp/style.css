@@ -371,3 +371,34 @@ input[type=number]{-moz-appearance:textfield}
   flex-shrink: 0;
 }
 .chat-input-row button:active { transform: scale(0.92); }
+
+/* ═══════════ ДОЛГ БАНКУ ═══════════ */
+.credit-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 16px 12px;
+  padding: 12px 14px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(231,76,60,.85), rgba(192,57,43,.85));
+  color: #fff;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(231,76,60,.4);
+  animation: creditPulse 2s infinite;
+}
+@keyframes creditPulse {
+  0%,100% { box-shadow: 0 4px 16px rgba(231,76,60,.4); }
+  50% { box-shadow: 0 4px 24px rgba(231,76,60,.9); }
+}
+.credit-banner.overdue {
+  background: linear-gradient(135deg, rgba(139,0,0,.95), rgba(80,0,0,.95));
+  animation: creditPulseHard 1s infinite;
+}
+@keyframes creditPulseHard {
+  0%,100% { box-shadow: 0 4px 16px rgba(255,0,0,.6); }
+  50% { box-shadow: 0 4px 30px rgba(255,0,0,1); }
+}
+.credit-banner .cb-icon { font-size: 26px; }
+.credit-banner .cb-info { flex: 1; min-width: 0; }
+.credit-banner .cb-title { font-size: 13px; font-weight: 700; }
+.credit-banner .cb-timer { font-size: 12px; opacity: .9; margin-top: 2px; }

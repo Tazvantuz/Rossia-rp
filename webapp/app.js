@@ -237,6 +237,7 @@ async function boot() {
       renderPlayer(); renderCharacterInto("#character-view");
       show("main"); showTab("home");
       if (d.new_achievements?.length) notifyAchievements(d.new_achievements);
+      if (d.credit_paid) setTimeout(() => toast(`💸 Банк списал ${fmtMoney(d.credit_paid)}₽ в счёт долга`, "error"), 800);
     }
   } catch(e) {
     console.error(e);
@@ -273,10 +274,75 @@ function renderPlayer() {
   const pct = p.xp_next > 0 ? Math.min(100, p.xp/p.xp_next*100) : 0;
   $("#xp-fill").style.width = pct+"%";
   $("#xp-text").textContent = `${p.xp}/${p.xp_next} XP`;
-  const daily = p.last_daily ? 86400 - (Math.floor(Date.now()/1000) - p.last_daily) : 0;
-  const badge = $("#daily-badge");
-  if (daily <= 0) badge.classList.remove("hidden"); else badge.classList.add("hidden");
   $("#avatar").textContent = p.outfit.head_id.item_id ? p.outfit.head_id.emoji : "👤";
+  startTimers();
+  renderCreditBanner();
+}
+
+let timerInterval = null;
+function startTimers() {
+  if (timerInterval) clearInterval(timerInterval);
+  updateTimers();
+  timerInterval = setInterval(updateTimers, 1000);
+}
+
+function updateTimers() {
+  const p = state.player;
+  if (!p) return;
+  // Ежедневный бонус
+  const dailyBtn = $("#daily-btn");
+  const dailyTimer = $("#daily-timer");
+  if (dailyBtn && dailyTimer) {
+    const now = Math.floor(Date.now()/1000);
+    const cd = p.last_daily ? (p.last_daily + 86400) - now : 0;
+    if (cd <= 0) {
+      dailyBtn.style.opacity = "1";
+      dailyBtn.style.cursor = "pointer";
+      dailyTimer.textContent = "✅";
+      dailyTimer.classList.remove("hidden");
+    } else {
+      dailyBtn.style.opacity = "0.6";
+      dailyTimer.textContent = formatTime(cd);
+      dailyTimer.classList.remove("hidden");
+    }
+  }
+  // Кредит
+  renderCreditBanner();
+}
+
+function formatTime(sec) {
+  sec = Math.max(0, Math.floor(sec));
+  const d = Math.floor(sec / 86400);
+  const h = Math.floor((sec % 86400) / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (d > 0) return `${d}д ${h}ч`;
+  if (h > 0) return `${h}ч ${m}м`;
+  if (m > 0) return `${m}м ${s}с`;
+  return `${s}с`;
+}
+
+function renderCreditBanner() {
+  const p = state.player;
+  const banner = $("#credit-banner");
+  if (!banner || !p) return;
+  const debt = p.credit_amount || 0;
+  if (debt <= 0) {
+    banner.classList.add("hidden");
+    return;
+  }
+  banner.classList.remove("hidden");
+  const now = Math.floor(Date.now()/1000);
+  const due = p.credit_due || 0;
+  const left = due - now;
+  $("#cb-amount").textContent = fmtMoney(debt) + "₽";
+  if (left <= 0) {
+    banner.classList.add("overdue");
+    $("#cb-timer").textContent = "🔴 ПРОСРОЧЕН · списывается автоматически";
+  } else {
+    banner.classList.remove("overdue");
+    $("#cb-timer").textContent = `⏳ Вернуть через ${formatTime(left)}`;
+  }
 }
 
 function renderCharacterInto(selector) {
@@ -289,6 +355,12 @@ function flashCharacter() {
   el.classList.add("equip-flash");
   setTimeout(()=>el.classList.remove("equip-flash"), 600);
 }
+function checkCreditPaid(d) {
+  if (d && d.credit_paid && d.credit_paid > 0) {
+    setTimeout(() => toast(`💸 Банк списал ${fmtMoney(d.credit_paid)}₽ в счёт долга`, "error"), 600);
+  }
+}
+
 function notifyAchievements(list) {
   const names = list.map(id=>({first_job:"Работяга",first_business:"Бизнесмен",millionaire:"Миллионер",billionaire:"Миллиардер",gambler:"Азартный",big_winner:"Джекпот",criminal:"Авторитет",in_debt:"Должник",fashion:"Модник",level10:"Опытный",rich_king:"Император",trader:"Барыга"}[id]||id));
   toast("🏆 Достижение: "+names.join(", "), "success");
@@ -513,6 +585,7 @@ async function doWork() {
   try {
     const d = await api("work");
     state.player = d.player; renderPlayer(); loadWork();
+    checkCreditPaid(d);
     toast(`💼 +${d.earned}₽ · +${d.xp} XP`, "success");
     if (d.levels) toast(`🎉 Уровень ${d.player.level}!`, "success");
     if (d.new_achievements?.length) notifyAchievements(d.new_achievements);
@@ -551,6 +624,7 @@ async function collectBusiness() {
   try {
     const d = await api("collect_business");
     state.player = d.player; renderPlayer(); loadWork();
+    checkCreditPaid(d);
     toast(`💰 +${fmtMoney(d.earned)}₽`, "success");
     if (d.new_achievements?.length) notifyAchievements(d.new_achievements);
     if (tg) tg.HapticFeedback?.notificationOccurred("success");
@@ -773,6 +847,7 @@ function updateMoreBadges() {
   if (p.credit_amount > 0) { cb.textContent = `${fmtMoney(p.credit_amount)}₽`; cb.classList.remove("hidden"); }
   else cb.classList.add("hidden");
   $("#crypto-price-badge").textContent = `${p.crypto_price}₽`;
+  renderCreditBanner();
 }
 function showCrypto() {
   const p = state.player;
@@ -798,8 +873,114 @@ async function sellCrypto() {
 }
 function showCredit() {
   const p = state.player;
-  if (p.credit_amount > 0) openModal(`<h2>💸 Кредит</h2><p style="margin:16px 0">Долг: <b style="color:var(--danger)">${fmtMoney(p.credit_amount)}₽</b></p><button class="btn btn-primary" onclick="payCredit()">Погасить</button>`);
-  else openModal(`<h2>💸 Кредит</h2><p style="color:var(--hint);margin:16px 0">До 50 000₽ под 15%</p><input id="credit-amt" type="number" placeholder="Сумма" style="width:100%;padding:10px;background:var(--bg-3);border:none;border-radius:8px;color:#fff"><button class="btn btn-primary" onclick="takeCredit()" style="margin-top:12px">Взять</button>`);
+  if (p.credit_amount > 0) {
+    const now = Math.floor(Date.now()/1000);
+    const left = (p.credit_due || 0) - now;
+    const overdue = left <= 0;
+    const timerText = overdue
+      ? `🔴 <b style="color:var(--danger)">ПРОСРОЧЕН</b> · банк списывает всё автоматически`
+      : `⏳ Осталось: <b>${formatTime(left)}</b>`;
+    openModal(`
+      <h2>💸 Кредит банку</h2>
+      <div style="margin:16px 0;padding:16px;background:var(--bg-3);border-radius:12px;text-align:center">
+        <div style="font-size:12px;color:var(--hint);text-transform:uppercase;letter-spacing:.5px">Долг</div>
+        <div style="font-size:32px;font-weight:900;color:var(--danger);margin:6px 0">${fmtMoney(p.credit_amount)}₽</div>
+        <div style="font-size:13px;margin-top:8px">${timerText}</div>
+      </div>
+      <button class="btn btn-primary" onclick="payCredit()">💰 Погасить полностью</button>
+    `);
+    return;
+  }
+  // Форма взятия нового кредита
+  let termsHtml = "";
+  for (const t of [
+    {hours:1, pct:5, label:"1 час"},
+    {hours:3, pct:8, label:"3 часа"},
+    {hours:6, pct:12, label:"6 часов"},
+    {hours:12, pct:18, label:"12 часов"},
+    {hours:24, pct:25, label:"1 день"},
+    {hours:48, pct:35, label:"2 дня"},
+  ]) {
+    termsHtml += `<div class="credit-term" data-hours="${t.hours}" data-pct="${t.pct}" onclick="selectCreditTerm(this)">
+      <div style="flex:1">
+        <div style="font-weight:700;font-size:13px">${t.label}</div>
+        <div style="font-size:11px;color:var(--hint);margin-top:2px">процент ${t.pct}%</div>
+      </div>
+      <div class="credit-term-check" style="color:var(--success);font-weight:900;font-size:20px;display:none">✓</div>
+    </div>`;
+  }
+  openModal(`
+    <h2>💸 Взять кредит</h2>
+    <p style="color:var(--hint);margin:12px 0;font-size:13px">Лимит: <b style="color:var(--money)">15 000₽</b></p>
+    <label style="font-size:12px;color:var(--hint)">Сумма (₽)</label>
+    <input id="credit-amt" type="number" min="1" max="15000" placeholder="Например 5000" style="width:100%;padding:12px;background:var(--bg-3);border:none;border-radius:10px;color:#fff;margin-top:4px;font-size:16px" oninput="updateCreditPreview()">
+    <label style="font-size:12px;color:var(--hint);display:block;margin-top:16px;margin-bottom:6px">Срок возврата</label>
+    <div style="display:flex;flex-direction:column;gap:6px">${termsHtml}</div>
+    <div id="credit-preview" style="margin-top:16px;padding:14px;background:var(--bg-3);border-radius:12px;text-align:center;display:none">
+      <div style="font-size:12px;color:var(--hint)">К возврату через <span id="cp-term">—</span></div>
+      <div style="font-size:24px;font-weight:900;color:var(--danger);margin-top:4px" id="cp-total">0₽</div>
+      <div style="font-size:11px;color:var(--hint);margin-top:4px">(проценты: <span id="cp-pct">0₽</span>)</div>
+    </div>
+    <button class="btn btn-primary" id="credit-take-btn" disabled onclick="takeCredit()" style="margin-top:16px">💸 Взять кредит</button>
+  `);
+  // Стилизовать карточки сроков
+  document.querySelectorAll(".credit-term").forEach(el => {
+    el.style.cssText = "display:flex;align-items:center;gap:8px;padding:12px;background:var(--bg-3);border-radius:10px;cursor:pointer;border:2px solid transparent;transition:all .2s";
+  });
+}
+
+let creditSelectedTerm = null;
+function selectCreditTerm(el) {
+  document.querySelectorAll(".credit-term").forEach(x => {
+    x.style.borderColor = "transparent";
+    x.style.background = "var(--bg-3)";
+    x.querySelector(".credit-term-check").style.display = "none";
+  });
+  el.style.borderColor = "var(--success)";
+  el.style.background = "rgba(46,204,113,.1)";
+  el.querySelector(".credit-term-check").style.display = "block";
+  creditSelectedTerm = {hours: parseInt(el.dataset.hours), pct: parseInt(el.dataset.pct)};
+  updateCreditPreview();
+}
+
+function updateCreditPreview() {
+  const amt = parseInt($("#credit-amt")?.value) || 0;
+  const preview = $("#credit-preview");
+  const btn = $("#credit-take-btn");
+  if (!preview || !btn) return;
+  if (!creditSelectedTerm || amt < 1 || amt > 15000) {
+    preview.style.display = "none";
+    btn.disabled = true;
+    return;
+  }
+  preview.style.display = "block";
+  const total = Math.floor(amt * (1 + creditSelectedTerm.pct/100));
+  const pct = total - amt;
+  $("#cp-term").textContent = creditSelectedTerm.hours + (creditSelectedTerm.hours === 1 ? " час" : creditSelectedTerm.hours < 5 ? " часа" : " часов");
+  $("#cp-total").textContent = fmtMoney(total) + "₽";
+  $("#cp-pct").textContent = fmtMoney(pct) + "₽";
+  btn.disabled = false;
+}
+
+async function takeCredit() {
+  const amt = parseInt($("#credit-amt")?.value) || 0;
+  if (!creditSelectedTerm) { toast("Выбери срок", "error"); return; }
+  try {
+    const d = await api("credit/take", {amount: amt, term_hours: creditSelectedTerm.hours});
+    state.player = d.player;
+    renderPlayer(); closeModal(); updateMoreBadges();
+    toast(`💸 Взято ${amt}₽. Вернуть ${fmtMoney(d.total_debt)}₽ через ${creditSelectedTerm.hours}ч`, "success");
+    creditSelectedTerm = null;
+  } catch(e) { toast(e.message, "error"); }
+}
+
+async function payCredit() {
+  try {
+    const d = await api("credit/pay");
+    state.player = d.player;
+    renderPlayer(); closeModal(); updateMoreBadges();
+    toast(`✅ Кредит погашен (${fmtMoney(d.paid)}₽)`, "success");
+  } catch(e) { toast(e.message, "error"); }
 }
 async function takeCredit() {
   const amt = parseInt($("#credit-amt").value) || 0;

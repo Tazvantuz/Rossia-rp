@@ -243,3 +243,14 @@ ITEMS.update({
     "lh_teddy": {"name":"Мишка","emoji":"🧸","slot":"left_hand","price":80000,"rarity":"legendary","desc":"Милый"},
 })
 print("✅ Загружено предметов:", len(ITEMS))
+
+# ═══════ КРЕДИТ ═══════
+CREDIT_MAX = 15000
+CREDIT_TERMS = [
+    {"hours": 1,  "pct": 5,  "label": "1 час"},
+    {"hours": 3,  "pct": 8,  "label": "3 часа"},
+    {"hours": 6,  "pct": 12, "label": "6 часов"},
+    {"hours": 12, "pct": 18, "label": "12 часов"},
+    {"hours": 24, "pct": 25, "label": "1 день"},
+    {"hours": 48, "pct": 35, "label": "2 дня"},
+]
