@@ -196,7 +196,7 @@ function renderCharacterSVG(outfit, opts = {}) {
 }
 
 // ══════════════════════════════════════════════════════════════
-async function api(method, body = {}) {
+async function api(method, body = {}, retry = true) {
   let res;
   try {
     res = await fetch(`/api/${method}`, {
@@ -206,7 +206,22 @@ async function api(method, body = {}) {
     });
   } catch(e) { throw new Error("Нет связи"); }
   if (res.status === 511) throw new Error("Туннель требует пароль");
-  if (!res.ok) { const err = await res.json().catch(()=>({})); throw new Error(err.error||`HTTP ${res.status}`); }
+  if (!res.ok) {
+    const err = await res.json().catch(()=>({}));
+    const errMsg = err.error || `HTTP ${res.status}`;
+    if (retry && method === "register" && errMsg.toLowerCase().includes("already registered")) {
+      console.log("Найден битый персонаж — авто-reset");
+      try {
+        await fetch(`/api/reset`, {
+          method: "POST",
+          headers: {"Content-Type":"application/json", "X-Init-Data": initData},
+          body: JSON.stringify({}),
+        });
+        return await api(method, body, false);
+      } catch(e) { console.warn("Reset failed:", e); }
+    }
+    throw new Error(errMsg);
+  }
   return res.json();
 }
 
@@ -249,22 +264,25 @@ function fmtMoney(n) {
 }
 
 async function boot() {
-  if (!initData) { document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#fff;">Открой через Telegram</div>'; return; }
+  if (!initData) {
+    document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#fff;">Открой через Telegram-бота</div>';
+    return;
+  }
   try {
     const d = await api("me");
-    if (!d.registered) { show("register"); setupRegister(); }
+    if (!d.registered) { show("register"); renderRegister(); }
     else {
       state.player = d.player;
-      renderPlayer(); renderCharacterInto("#character-view");
-      show("main"); showTab("home");
+      state.classInfo = d.class || { name: d.player.class_name, emoji: d.player.class_emoji };
+      show("main"); renderPlayer(); showCharacter();
+      showTab("home");
       if (d.new_achievements?.length) notifyAchievements(d.new_achievements);
-      if (d.credit_paid) setTimeout(() => toast(`💸 Банк списал ${fmtMoney(d.credit_paid)}₽ в счёт долга`, "error"), 800);
+      if (d.credit_paid) setTimeout(() => toast(`💸 Банк списал ${fmtMoney(d.credit_paid)}₽`, "error"), 800);
     }
   } catch(e) {
-    console.error(e);
-    if (e.message.includes("511") || e.message.includes("Туннель")) {
-      document.body.innerHTML = '<div style="padding:40px;text-align:center;color:#fff;">Туннель требует пароль. Смени на localhost.run</div>';
-    } else { show("register"); setupRegister(); }
+    console.error("boot error:", e);
+    toast("Ошибка загрузки: " + e.message, "error");
+    show("register"); renderRegister();
   }
 }
 

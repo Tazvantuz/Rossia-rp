@@ -137,15 +137,28 @@ async def _check_achievements(uid, p):
 
 async def api_me(request):
     ud = await _user(request); uid = ud["id"]
-    p = await _player(uid)
-    if not p:
-        return web.json_response({"registered": False})
-    credit_paid = await _forced_credit_collect(uid)
-    if credit_paid:
+    try:
         p = await _player(uid)
-    ach_new = await _check_achievements(uid, p)
-    return web.json_response({"registered": True, "player": _player_json(p),
-                              "new_achievements": ach_new, "credit_paid": credit_paid})
+        if not p:
+            return web.json_response({"registered": False})
+        # Защита от битой старой записи
+        if p.get("class_id") not in CLASSES:
+            print(f"⚠️ Битый игрок user_id={uid} class_id={p.get('class_id')} — удаляю")
+            await db.execute("DELETE FROM players WHERE user_id=?", (uid,))
+            await db.execute("DELETE FROM inventory WHERE user_id=?", (uid,))
+            return web.json_response({"registered": False})
+        credit_paid = await _forced_credit_collect(uid)
+        if credit_paid:
+            p = await _player(uid)
+        ach_new = await _check_achievements(uid, p)
+        return web.json_response({"registered": True, "player": _player_json(p),
+                                  "new_achievements": ach_new, "credit_paid": credit_paid})
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        print(f"❌ ОШИБКА /api/me для user_id={uid}: {e}")
+        return web.json_response({"registered": False, "error": str(e)}, status=500)
+
 
 async def api_register(request):
     ud = await _user(request); uid = ud["id"]
@@ -1128,10 +1141,21 @@ async def api_pvp_respond(request):
                      (int(time.time()), bid))
     return web.json_response({"ok":True})
 
+
+async def api_reset(request):
+    ud = await _user(request); uid = ud["id"]
+    await db.execute("DELETE FROM players WHERE user_id=?", (uid,))
+    await db.execute("DELETE FROM inventory WHERE user_id=?", (uid,))
+    await db.execute("DELETE FROM party_members WHERE user_id=?", (uid,))
+    await db.execute("DELETE FROM gang_members WHERE user_id=?", (uid,))
+    return web.json_response({"ok": True, "message": "Персонаж сброшен"})
+
+
 def setup_routes(app):
     R = app.router
     R.add_post("/api/me", api_me)
     R.add_post("/api/register", api_register)
+    R.add_post("/api/reset", api_reset)
     R.add_post("/api/shop", api_shop)
     R.add_post("/api/inventory", api_inventory)
     R.add_post("/api/buy", api_buy)
