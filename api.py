@@ -678,6 +678,10 @@ async def api_player_view(request):
     target_id = int(body.get("user_id",0))
     t = await _player(target_id)
     if not t: return web.json_response({"error":"Нет"}, status=404)
+    is_friend = bool(await db.fetchone("SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status='accepted'", (uid, target_id)))
+    friend_pending = bool(await db.fetchone("SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status='pending'", (uid, target_id)))
+    target_gang = await db.fetchone("SELECT gang_id FROM gang_members WHERE user_id=?", (target_id,))
+    my_gang = await db.fetchone("SELECT gang_id, role FROM gang_members WHERE user_id=?", (uid,))
     return web.json_response({
         "user_id": t["user_id"], "nickname": t["nickname"],
         "level": t["level"], "balance": t["balance"],
@@ -685,7 +689,12 @@ async def api_player_view(request):
         "businesses_count": len(_json_biz(t)),
         "achievements": _json_ach(t),
         "combat_stats": get_combat_stats(t),
+        "is_friend": is_friend,
+        "friend_pending": friend_pending,
+        "target_in_gang": bool(target_gang),
+        "my_role": my_gang["role"] if my_gang else None,
     })
+
 
 async def api_trade_send(request):
     ud = await _user(request); uid = ud["id"]
@@ -1115,6 +1124,55 @@ async def api_gang_captures(request):
         })
     return web.json_response({"captures": result})
 
+async def api_gang_invite(request):
+    ud = await _user(request); uid = ud["id"]
+    body = await request.json()
+    target_id = int(body.get("target_id", 0))
+    if target_id == uid: return web.json_response({"error": "Себя нельзя"}, status=400)
+    my = await db.fetchone("SELECT gang_id, role FROM gang_members WHERE user_id=?", (uid,))
+    if not my or my["role"] not in ("leader", "deputy"):
+        return web.json_response({"error": "Только лидер или зам"}, status=403)
+    if not await _player(target_id): return web.json_response({"error": "Игрок не найден"}, status=404)
+    if await db.fetchone("SELECT 1 FROM gang_members WHERE user_id=?", (target_id,)):
+        return web.json_response({"error": "Игрок уже в банде"}, status=400)
+    cnt = await db.fetchone("SELECT COUNT(*) as c FROM gang_members WHERE gang_id=?", (my["gang_id"],))
+    if cnt["c"] >= GANG_MAX_MEMBERS:
+        return web.json_response({"error": "Банда заполнена"}, status=400)
+    gang = await db.fetchone("SELECT name, emoji FROM gangs WHERE gang_id=?", (my["gang_id"],))
+    me = await _player(uid)
+    await db.execute(
+        "INSERT INTO notifications (user_id, type, text, data) VALUES (?, 'gang_invite', ?, ?)",
+        (target_id, f"Приглашение в банду {gang['emoji']} {gang['name']} от {me['nickname']}", json.dumps({"gang_id": my["gang_id"]}))
+    )
+    return web.json_response({"ok": True})
+
+async def api_gang_invite_accept(request):
+    ud = await _user(request); uid = ud["id"]
+    body = await request.json()
+    notif_id = int(body.get("notification_id", 0))
+    notif = await db.fetchone("SELECT * FROM notifications WHERE id=? AND user_id=? AND type='gang_invite'", (notif_id, uid))
+    if not notif: return web.json_response({"error": "Приглашение не найдено"}, status=404)
+    if await db.fetchone("SELECT 1 FROM gang_members WHERE user_id=?", (uid,)):
+        return web.json_response({"error": "Ты уже в банде"}, status=400)
+    try:
+        gid = int(json.loads(notif.get("data") or "{}").get("gang_id", 0))
+    except: gid = 0
+    gang = await db.fetchone("SELECT * FROM gangs WHERE gang_id=?", (gid,))
+    if not gang: return web.json_response({"error": "Банда не существует"}, status=404)
+    cnt = await db.fetchone("SELECT COUNT(*) as c FROM gang_members WHERE gang_id=?", (gid,))
+    if cnt["c"] >= GANG_MAX_MEMBERS:
+        return web.json_response({"error": "Банда уже заполнена"}, status=400)
+    await db.execute("INSERT INTO gang_members (gang_id, user_id, role) VALUES (?, ?, 'member')", (gid, uid))
+    await db.execute("DELETE FROM notifications WHERE id=?", (notif_id,))
+    return web.json_response({"ok": True})
+
+async def api_gang_invite_decline(request):
+    ud = await _user(request); uid = ud["id"]
+    body = await request.json()
+    notif_id = int(body.get("notification_id", 0))
+    await db.execute("DELETE FROM notifications WHERE id=? AND user_id=? AND type='gang_invite'", (notif_id, uid))
+    return web.json_response({"ok": True})
+
 async def api_gang_get(request):
     await _process_territories()
     ud = await _user(request); uid = ud["id"]
@@ -1252,8 +1310,9 @@ async def api_notifications_get(request):
 
 async def api_notifications_read(request):
     ud = await _user(request); uid = ud["id"]
-    await db.execute("UPDATE notifications SET is_read=1 WHERE user_id=?", (uid,))
+    await db.execute("UPDATE notifications SET is_read=1 WHERE user_id=? AND type != 'gang_invite'", (uid,))
     return web.json_response({"ok": True})
+
 
 async def api_friend_search(request):
     ud = await _user(request); uid = ud["id"]
@@ -2009,6 +2068,9 @@ def setup_routes(app):
     R.add_post("/api/gang/capture", api_gang_capture)
     R.add_post("/api/gang/set_deputy", api_gang_set_deputy)
     R.add_post("/api/gang/captures", api_gang_captures)
+    R.add_post("/api/gang/invite", api_gang_invite)
+    R.add_post("/api/gang/invite/accept", api_gang_invite_accept)
+    R.add_post("/api/gang/invite/decline", api_gang_invite_decline)
     R.add_post("/api/chat/send", api_chat_send)
     R.add_post("/api/notifications/get", api_notifications_get)
     R.add_post("/api/notifications/read", api_notifications_read)

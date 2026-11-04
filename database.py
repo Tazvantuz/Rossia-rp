@@ -135,6 +135,9 @@ class Database:
                 await self.conn.execute(f"ALTER TABLE players ADD COLUMN {m}")
                 await self.conn.commit()
             except: pass
+        # Миграция notifications.data
+        try: await self.conn.execute("ALTER TABLE notifications ADD COLUMN data TEXT DEFAULT NULL"); await self.conn.commit()
+        except: pass
         # Миграция pvp_battles.turn_started_at
         try:
             await self.conn.execute("ALTER TABLE pvp_battles ADD COLUMN turn_started_at INTEGER DEFAULT 0")

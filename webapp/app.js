@@ -939,6 +939,10 @@ async function viewPlayer(uid) {
       </div>
       ${!isMe ? `<button class="btn btn-primary" style="background:linear-gradient(135deg,#c0392b,#e74c3c);margin-bottom:8px" onclick="challengePvP(${uid}, '${d.nickname}')">⚔️ Гоп-стоп</button>` : ''}
       ${!isMe ? `<button class="btn btn-primary" onclick="showTradeOffer(${uid}, '${d.nickname}')">🤝 Трейд</button>` : ''}
+      ${!isMe && !d.is_friend && !d.friend_pending ? `<button class="btn btn-secondary" onclick="sendFriendRequest(${uid})">➕ В друзья</button>` : ''}
+      ${!isMe && d.friend_pending ? `<button class="btn btn-secondary" disabled>⏳ Заявка отправлена</button>` : ''}
+      ${!isMe && d.is_friend ? `<button class="btn btn-secondary" onclick="openPM(${uid}, '${d.nickname}')">✉️ Написать ЛС</button>` : ''}
+      ${!isMe && d.my_role && ['leader','deputy'].includes(d.my_role) && !d.target_in_gang ? `<button class="btn btn-secondary" onclick="inviteToGang(${uid}, '${d.nickname}')">📨 Пригласить в банду</button>` : ''}
     `);
   } catch(e) { toast(e.message, "error"); }
 }
@@ -2288,12 +2292,48 @@ function showNotifications() {
   api("notifications/get").then(d => {
     let html = '<h2>🔔 Уведомления</h2>';
     if (d.notifications.length === 0) html += '<p style="color:var(--hint);text-align:center;">Пусто</p>';
-    else html += d.notifications.map(n => `<div style="padding:8px; background:var(--bg-3); border-radius:8px; margin-bottom:6px; font-size:13px; ${n.is_read ? 'opacity:0.6' : ''}">${n.text}</div>`).join("");
+    else {
+      html += d.notifications.map(n => {
+        let actions = "";
+        if (n.type === 'gang_invite' && !n.is_read) {
+          actions = `<div style="display:flex;gap:6px;margin-top:8px;">
+            <button class="btn btn-primary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="acceptGangInvite(${n.id})">✅ Принять</button>
+            <button class="btn btn-secondary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="declineGangInvite(${n.id})">❌ Отклонить</button>
+          </div>`;
+        }
+        return `<div style="padding:10px; background:var(--bg-3); border-radius:8px; margin-bottom:6px; font-size:13px; ${n.is_read ? 'opacity:0.6' : ''}">${n.text}${actions}</div>`;
+      }).join("");
+    }
     openModal(html);
     api("notifications/read");
     const badge = document.getElementById("bell-badge");
     if (badge) badge.classList.add("hidden");
   });
+}
+
+async function acceptGangInvite(nid) {
+  try {
+    await api("gang/invite/accept", {notification_id: nid});
+    toast("✅ Вступил в банду!", "success");
+    closeModal();
+    refreshPlayer();
+  } catch(e) { toast(e.message, "error"); }
+}
+
+async function declineGangInvite(nid) {
+  try {
+    await api("gang/invite/decline", {notification_id: nid});
+    toast("❌ Приглашение отклонено");
+    showNotifications();
+  } catch(e) { toast(e.message, "error"); }
+}
+
+async function inviteToGang(uid, nickname) {
+  try {
+    await api("gang/invite", {target_id: uid});
+    toast(`✅ Приглашение отправлено ${nickname}`, "success");
+    closeModal();
+  } catch(e) { toast(e.message, "error"); }
 }
 
 // ═══ ДРУЗЬЯ ═══
