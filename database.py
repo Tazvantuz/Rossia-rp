@@ -118,6 +118,11 @@ class Database:
                 await self.conn.execute(f"ALTER TABLE players ADD COLUMN {m}")
                 await self.conn.commit()
             except: pass
+        # Миграция pvp_battles.turn_started_at
+        try:
+            await self.conn.execute("ALTER TABLE pvp_battles ADD COLUMN turn_started_at INTEGER DEFAULT 0")
+            await self.conn.commit()
+        except: pass
     async def fetchone(self, q, p=()):
         async with self.conn.execute(q, p) as cur:
             r = await cur.fetchone()

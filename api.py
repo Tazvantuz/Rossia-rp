@@ -699,294 +699,181 @@ async def api_player_items(request):
     return web.json_response({"items": items})
 
 async def api_leaderboard(request):
-    await _user(request)
-    rows = await db.fetchall(
-        "SELECT nickname, balance, level, businesses FROM players ORDER BY balance DESC LIMIT 20")
-    result = []
-    for i, r in enumerate(rows):
-        result.append({
-            "rank": i+1, "nickname": r["nickname"],
-            "balance": r["balance"], "level": r["level"],
-            "businesses_count": len(_json_biz(r)),
-        })
-    return web.json_response({"leaders": result})
+    ud = await _user(request)
+    try:
+        body = await request.json()
+    except:
+        body = {}
+    category = body.get("category", "money")
 
-async def _forced_credit_collect(uid):
-    """Если кредит просрочен — списать всё что есть. Возвращает сколько списано."""
-    p = await _player(uid)
-    debt = p.get("credit_amount", 0) or 0
-    due = p.get("credit_due", 0) or 0
-    if debt <= 0 or due <= 0:
-        return 0
+    if category == "money":
+        rows = await db.fetchall(
+            "SELECT nickname, balance, level, businesses FROM players ORDER BY balance DESC LIMIT 20")
+        result = [{"rank":i+1,"nickname":r["nickname"],"balance":r["balance"],
+                   "level":r["level"],"businesses_count":len(_json_biz(r))}
+                  for i,r in enumerate(rows)]
+    elif category == "level":
+        rows = await db.fetchall(
+            "SELECT nickname, balance, level, xp FROM players ORDER BY level DESC, xp DESC LIMIT 20")
+        result = [{"rank":i+1,"nickname":r["nickname"],"level":r["level"],
+                   "xp":r["xp"],"balance":r["balance"]}
+                  for i,r in enumerate(rows)]
+    elif category == "gang":
+        rows = await db.fetchall(
+            "SELECT g.gang_id, g.name, g.emoji, g.treasury, "
+            "(SELECT COUNT(*) FROM gang_territories WHERE gang_id=g.gang_id) as terr_count "
+            "FROM gangs g ORDER BY terr_count DESC, g.treasury DESC LIMIT 20")
+        terr_incomes = {t["id"]: t["income"] for t in GANG_TERRITORIES}
+        terr_rows = await db.fetchall(
+            "SELECT territory_id, gang_id FROM gang_territories WHERE gang_id IS NOT NULL")
+        income_by_gang = {}
+        for r in terr_rows:
+            gid = r["gang_id"]
+            income_by_gang[gid] = income_by_gang.get(gid,0) + terr_incomes.get(r["territory_id"],0)
+        result = [{"rank":i+1,"gang_id":r["gang_id"],"name":r["name"],"emoji":r["emoji"],
+                   "treasury":r["treasury"],"territories_count":r["terr_count"],
+                   "income":income_by_gang.get(r["gang_id"],0)}
+                  for i,r in enumerate(rows)]
+    else:
+        result = []
+
+    return web.json_response({"leaders": result, "category": category})
+
+
+
+async def _pvp_state_response(bid, uid):
+    b = await db.fetchone("SELECT * FROM pvp_battles WHERE battle_id=?", (bid,))
+    if not b or uid not in (b["attacker_id"], b["defender_id"]):
+        return None
+    att = await _player(b["attacker_id"]); dfn = await _player(b["defender_id"])
+    import json as _j
     now = int(time.time())
-    if now < due:
-        return 0
-    if p["balance"] <= 0:
-        return 0
-    pay = min(p["balance"], debt)
-    await db.execute(
-        "UPDATE players SET balance = balance - ?, credit_amount = credit_amount - ? WHERE user_id = ?",
-        (pay, pay, uid))
-    p = await _player(uid)
-    if p["credit_amount"] <= 0:
-        await db.execute(
-            "UPDATE players SET credit_amount = 0, credit_due = 0 WHERE user_id = ?", (uid,))
-    return pay
+    turn_started = b.get("turn_started_at") or now
+    secs_left = max(0, PVP_TURN_TIMEOUT - (now - turn_started))
+    return {
+        "battle_id": bid, "status": b["status"], "turn": b["turn"],
+        "attacker": {"user_id":att["user_id"],"nickname":att["nickname"],
+                     "hp":b["attacker_hp"],"max_hp":b["attacker_max_hp"]},
+        "defender": {"user_id":dfn["user_id"],"nickname":dfn["nickname"],
+                     "hp":b["defender_hp"],"max_hp":b["defender_max_hp"]},
+        "log": _j.loads(b["log"] or "[]"),
+        "is_attacker": uid == b["attacker_id"],
+        "seconds_left": secs_left,
+        "timeout": PVP_TURN_TIMEOUT,
+    }
 
-CHAT_COOLDOWN = 3
-USER_LAST_CHAT = {}
-
-async def api_chat_send(request):
-    ud = await _user(request); uid = ud["id"]
-    p = await _player(uid)
-    if not p: return web.json_response({"error":"no player"}, status=400)
-    body = await request.json()
-    msg = (body.get("message") or "").strip()
-    if not msg: return web.json_response({"error":"Пустое сообщение"}, status=400)
-    if len(msg) > 200: msg = msg[:200]
-    now = int(time.time())
-    last = USER_LAST_CHAT.get(uid, 0)
-    if now - last < CHAT_COOLDOWN:
-        return web.json_response({"error": f"Кд {CHAT_COOLDOWN-(now-last)}с"}, status=400)
-    USER_LAST_CHAT[uid] = now
-    await db.execute(
-        "INSERT INTO chat_messages (user_id, nickname, level, message) VALUES (?,?,?,?)",
-        (uid, p["nickname"], p["level"], msg))
-    await db.execute(
-        "DELETE FROM chat_messages WHERE id NOT IN "
-        "(SELECT id FROM chat_messages ORDER BY id DESC LIMIT 500)")
-    return web.json_response({"ok": True})
-
-async def api_chat_get(request):
-    await _user(request)
-    rows = await db.fetchall(
-        "SELECT user_id, nickname, level, message, created_at FROM chat_messages "
-        "ORDER BY id DESC LIMIT 50")
-    rows.reverse()
-    return web.json_response({"messages": rows})
-
-
-# ══════════════════════════════════════════════════════════════
-#  КЕЙСЫ
-# ══════════════════════════════════════════════════════════════
-async def api_cases_list(request):
-    ud = await _user(request); uid = ud["id"]
-    p = await _player(uid)
-    result = []
-    for cid, c in CASES.items():
-        items = []
-        for it in c["items"]:
-            ij = item_json(it["iid"])
-            if ij:
-                ij["chance"] = it["chance"]
-                items.append(ij)
-        result.append({"case_id":cid,"name":c["name"],"emoji":c["emoji"],
-                       "price":c["price"],"items":items})
-    return web.json_response({"cases": result, "balance": p["balance"]})
-
-async def api_cases_open(request):
-    ud = await _user(request); uid = ud["id"]
-    body = await request.json()
-    cid = body.get("case_id")
-    c = CASES.get(cid)
-    if not c: return web.json_response({"error":"Кейс не найден"}, status=400)
-    p = await _player(uid)
-    if p["balance"] < c["price"]:
-        return web.json_response({"error":"Не хватает денег"}, status=400)
+async def _pvp_do_action(bid, uid, action, part):
+    b = await db.fetchone("SELECT * FROM pvp_battles WHERE battle_id=? AND status='active'", (bid,))
+    if not b: return {"error":"Бой не активен"}
+    if uid not in (b["attacker_id"], b["defender_id"]):
+        return {"error":"Не участник"}
+    if b["turn"] != uid:
+        return {"error":"Не твой ход"}
+    if part not in PVP_PARTS:
+        return {"error":"Неверная часть"}
+    import json as _j
     import random as _r
-    total = sum(it["chance"] for it in c["items"])
-    roll = _r.uniform(0, total)
-    acc = 0; won = None
-    for it in c["items"]:
-        acc += it["chance"]
-        if roll <= acc: won = it["iid"]; break
-    if not won: won = c["items"][0]["iid"]
-    await db.execute("UPDATE players SET balance=balance-? WHERE user_id=?", (c["price"], uid))
-    await _add_inv(uid, won, 1)
-    p = await _player(uid)
-    return web.json_response({"player":_player_json(p), "won":item_json(won)})
+    log = _j.loads(b["log"] or "[]")
+    key = f"pvp_turn_{bid}"
+    is_attacker = uid == b["attacker_id"]
 
-# ══════════════════════════════════════════════════════════════
-#  PVP (гоп-стоп с защитой частей тела)
-# ══════════════════════════════════════════════════════════════
-async def api_pvp_challenge(request):
-    ud = await _user(request); uid = ud["id"]
-    body = await request.json()
-    target_id = int(body.get("user_id", 0))
-    if target_id == uid: return web.json_response({"error":"На себя нельзя"}, status=400)
-    p1 = await _player(uid); p2 = await _player(target_id)
-    if not p1 or not p2: return web.json_response({"error":"Нет игрока"}, status=400)
-    if p1["location_id"] != p2["location_id"]:
-        return web.json_response({"error":"Не на одной локации"}, status=400)
-    existing = await db.fetchone(
-        "SELECT * FROM pvp_battles WHERE (attacker_id=? OR defender_id=?) AND status IN ('pending','active')",
-        (uid, uid))
-    if existing: return web.json_response({"error":"Уже есть бой"}, status=400)
-    existing2 = await db.fetchone(
-        "SELECT * FROM pvp_battles WHERE (attacker_id=? OR defender_id=?) AND status IN ('pending','active')",
-        (target_id, target_id))
-    if existing2: return web.json_response({"error":"У игрока уже бой"}, status=400)
-    s1 = get_combat_stats(p1); s2 = get_combat_stats(p2)
-    bid = await db.execute(
-        """INSERT INTO pvp_battles
-        (attacker_id,defender_id,attacker_hp,defender_hp,attacker_max_hp,defender_max_hp,
-         attacker_damage,defender_damage,turn,status)
-        VALUES (?,?,?,?,?,?,?,?,?,'pending')""",
-        (uid, target_id, s1["hp"], s2["hp"], s1["hp"], s2["hp"],
-         s1["damage"], s2["damage"], uid))
-    return web.json_response({"ok":True,"battle_id":bid,"attacker":p1["nickname"],
-                              "defender":p2["nickname"]})
+    if key not in _PENDING_MOVES:
+        _PENDING_MOVES[key] = {"first": {"uid":uid, "action":action, "part":part}}
+        next_turn = b["defender_id"] if is_attacker else b["attacker_id"]
+        await db.execute("UPDATE pvp_battles SET turn=?, turn_started_at=? WHERE battle_id=?",
+                         (next_turn, int(time.time()), bid))
+        return {"waiting": True}
 
-async def api_pvp_incoming(request):
-    ud = await _user(request); uid = ud["id"]
-    rows = await db.fetchall(
-        "SELECT b.*, p.nickname as attacker_name FROM pvp_battles b "
-        "JOIN players p ON b.attacker_id = p.user_id "
-        "WHERE b.defender_id=? AND b.status='pending'", (uid,))
-    return web.json_response({"challenges": rows})
+    first = _PENDING_MOVES.pop(key)["first"]
+    second = {"uid":uid, "action":action, "part":part}
+    attacker_move = first if first["uid"] == b["attacker_id"] else second
+    defender_move = second if second["uid"] == b["defender_id"] else first
+    p1 = await _player(b["attacker_id"])
+    p2 = await _player(b["defender_id"])
 
-async def api_pvp_respond(request):
-    ud = await _user(request); uid = ud["id"]
-    body = await request.json()
-    bid = int(body.get("battle_id",0))
-    accept = bool(body.get("accept"))
-    b = await db.fetchone(
-        "SELECT * FROM pvp_battles WHERE battle_id=? AND defender_id=? AND status='pending'",
-        (bid, uid))
-    if not b: return web.json_response({"error":"Бой не найден"}, status=400)
-    if not accept:
-        await db.execute("UPDATE pvp_battles SET status='declined' WHERE battle_id=?", (bid,))
-        return web.json_response({"ok":True,"declined":True})
-    await db.execute("UPDATE pvp_battles SET status='active' WHERE battle_id=?", (bid,))
-    return web.json_response({"ok":True})
+    async def exchange(atk_move, def_move, atk_player):
+        atk_uid = atk_move["uid"]
+        is_atk = atk_uid == b["attacker_id"]
+        b2 = await db.fetchone("SELECT * FROM pvp_battles WHERE battle_id=?", (bid,))
+        def_hp_col = "defender_hp" if is_atk else "attacker_hp"
+        atk_damage = b2["attacker_damage"] if is_atk else b2["defender_damage"]
+        def_hp = b2[def_hp_col]
+        if atk_move["action"] == "attack":
+            if def_move["action"] == "defend" and def_move["part"] == atk_move["part"]:
+                return {"type":"block","attacker":atk_player["nickname"],
+                        "part":PVP_PARTS_NAMES[atk_move["part"]]}, def_hp
+            dmg = max(1, atk_damage + _r.randint(-3, 3))
+            new_hp = max(0, def_hp - dmg)
+            await db.execute(f"UPDATE pvp_battles SET {def_hp_col}=? WHERE battle_id=?", (new_hp, bid))
+            return {"type":"hit","attacker":atk_player["nickname"],
+                    "part":PVP_PARTS_NAMES[atk_move["part"]],
+                    "damage":dmg,"target_hp":new_hp}, new_hp
+        return {"type":"defend","player":atk_player["nickname"],
+                "part":PVP_PARTS_NAMES[atk_move["part"]]}, def_hp
+
+    r1, _ = await exchange(attacker_move, defender_move, p1)
+    log.append(r1)
+    b2 = await db.fetchone("SELECT * FROM pvp_battles WHERE battle_id=?", (bid,))
+    if b2["attacker_hp"] <= 0 or b2["defender_hp"] <= 0:
+        winner_id = b2["attacker_id"] if b2["attacker_hp"] > 0 else b2["defender_id"]
+        loser_id = b2["defender_id"] if winner_id == b2["attacker_id"] else b2["attacker_id"]
+        await db.execute("UPDATE pvp_battles SET status='finished', log=? WHERE battle_id=?",
+                         (_j.dumps(log), bid))
+        return await _pvp_finish(winner_id, loser_id, bid)
+
+    r2, _ = await exchange(defender_move, attacker_move, p2)
+    log.append(r2)
+    b2 = await db.fetchone("SELECT * FROM pvp_battles WHERE battle_id=?", (bid,))
+    if b2["attacker_hp"] <= 0 or b2["defender_hp"] <= 0:
+        winner_id = b2["attacker_id"] if b2["attacker_hp"] > 0 else b2["defender_id"]
+        loser_id = b2["defender_id"] if winner_id == b2["attacker_id"] else b2["attacker_id"]
+        await db.execute("UPDATE pvp_battles SET status='finished', log=? WHERE battle_id=?",
+                         (_j.dumps(log), bid))
+        return await _pvp_finish(winner_id, loser_id, bid)
+
+    await db.execute("UPDATE pvp_battles SET log=?, turn=?, turn_started_at=? WHERE battle_id=?",
+                     (_j.dumps(log), b["attacker_id"], int(time.time()), bid))
+    return {"round_done": True}
 
 async def api_pvp_state(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     bid = int(body.get("battle_id",0))
     b = await db.fetchone("SELECT * FROM pvp_battles WHERE battle_id=?", (bid,))
-    if not b or uid not in (b["attacker_id"], b["defender_id"]):
+    if b and b["status"] == "active":
+        now = int(time.time())
+        turn_started = b.get("turn_started_at") or now
+        if now - turn_started > PVP_TURN_TIMEOUT:
+            await _pvp_do_action(bid, b["turn"], "defend", "torso")
+            b = await db.fetchone("SELECT * FROM pvp_battles WHERE battle_id=?", (bid,))
+            if b and b["status"] == "active":
+                import json as _j
+                log = _j.loads(b["log"] or "[]")
+                log.append({"type":"timeout","player":"система","part":"Торс"})
+                await db.execute("UPDATE pvp_battles SET log=?, turn_started_at=? WHERE battle_id=?",
+                                 (_j.dumps(log), int(time.time()), bid))
+    state = await _pvp_state_response(bid, uid)
+    if not state:
         return web.json_response({"error":"Бой не найден"}, status=400)
-    att = await _player(b["attacker_id"]); dfn = await _player(b["defender_id"])
-    import json as _j
-    return web.json_response({
-        "battle_id":bid,"status":b["status"],"turn":b["turn"],
-        "attacker":{"user_id":att["user_id"],"nickname":att["nickname"],
-                    "hp":b["attacker_hp"],"max_hp":b["attacker_max_hp"]},
-        "defender":{"user_id":dfn["user_id"],"nickname":dfn["nickname"],
-                    "hp":b["defender_hp"],"max_hp":b["defender_max_hp"]},
-        "log":_j.loads(b["log"] or "[]"),
-        "is_attacker":uid == b["attacker_id"],
-    })
+    return web.json_response(state)
 
 async def api_pvp_action(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     bid = int(body.get("battle_id",0))
-    action = body.get("action")   # "attack" или "defend"
-    part = body.get("part")       # head/torso/legs
-    if part not in PVP_PARTS:
-        return web.json_response({"error":"Часть тела"}, status=400)
-    b = await db.fetchone("SELECT * FROM pvp_battles WHERE battle_id=? AND status='active'", (bid,))
-    if not b: return web.json_response({"error":"Бой не активен"}, status=400)
-    if uid not in (b["attacker_id"], b["defender_id"]):
-        return web.json_response({"error":"Не участник"}, status=400)
-    if b["turn"] != uid:
-        return web.json_response({"error":"Не твой ход"}, status=400)
-    import json as _j
-    import random as _r
-    log = _j.loads(b["log"] or "[]")
-    is_attacker = uid == b["attacker_id"]
-    # сохраняем выбор хода
-    turn_data_key = f"pvp_turn_{bid}"
-    if turn_data_key not in _PENDING_MOVES:
-        _PENDING_MOVES[turn_data_key] = {"first": {"uid":uid,"action":action,"part":part}}
-        # переключаем ход второму игроку
-        next_turn = b["defender_id"] if is_attacker else b["attacker_id"]
-        await db.execute("UPDATE pvp_battles SET turn=? WHERE battle_id=?", (next_turn, bid))
-        return web.json_response({"ok":True,"waiting":True})
-    else:
-        first = _PENDING_MOVES.pop(turn_data_key)["first"]
-        second = {"uid":uid,"action":action,"part":part}
-        # Определяем результат
-        attacker_move = first if first["uid"] == b["attacker_id"] else second
-        defender_move = second if second["uid"] == b["defender_id"] else first
-        first_player = await _player(first["uid"])
-        second_player = await _player(second["uid"])
-        # Разыгрываем: сначала атака первого, потом второго
-        async def do_exchange(atk_move, def_move, atk_player):
-            atk_uid = atk_move["uid"]
-            is_atk = atk_uid == b["attacker_id"]
-            atk_hp = b["attacker_hp"] if is_atk else b["defender_hp"]
-            def_hp = b["defender_hp"] if is_atk else b["attacker_hp"]
-            atk_max = b["attacker_max_hp"] if is_atk else b["defender_max_hp"]
-            atk_damage = b["attacker_damage"] if is_atk else b["defender_damage"]
-            result_log = []
-            if atk_move["action"] == "attack":
-                if def_move["action"] == "defend" and def_move["part"] == atk_move["part"]:
-                    result_log.append({"type":"block","attacker":atk_player["nickname"],
-                                       "part":PVP_PARTS_NAMES[atk_move["part"]]})
-                else:
-                    dmg = atk_damage + _r.randint(-3, 3)
-                    dmg = max(1, dmg)
-                    def_hp = max(0, def_hp - dmg)
-                    result_log.append({"type":"hit","attacker":atk_player["nickname"],
-                                       "part":PVP_PARTS_NAMES[atk_move["part"]],
-                                       "damage":dmg,"target_hp":def_hp})
-            else:
-                result_log.append({"type":"defend","player":atk_player["nickname"],
-                                   "part":PVP_PARTS_NAMES[atk_move["part"]]})
-            # сохранить в БД
-            if is_atk:
-                await db.execute("UPDATE pvp_battles SET defender_hp=? WHERE battle_id=?", (def_hp, bid))
-            else:
-                await db.execute("UPDATE pvp_battles SET attacker_hp=? WHERE battle_id=?", (def_hp, bid))
-            return result_log, def_hp
-        log1, new_def_hp = await do_exchange(attacker_move, defender_move, first_player)
-        log.extend(log1)
-        b = await db.fetchone("SELECT * FROM pvp_battles WHERE battle_id=?", (bid,))
-        if b["attacker_hp"] <= 0 or b["defender_hp"] <= 0:
-            # Победитель
-            winner_id = b["attacker_id"] if b["attacker_hp"] > 0 else b["defender_id"]
-            loser_id = b["defender_id"] if winner_id == b["attacker_id"] else b["attacker_id"]
-            await db.execute("UPDATE pvp_battles SET status='finished', log=? WHERE battle_id=?",
-                             (_j.dumps(log), bid))
-            return await _pvp_finish(winner_id, loser_id, bid)
-        log2, _ = await do_exchange(defender_move, attacker_move, second_player)
-        log.extend(log2)
-        b = await db.fetchone("SELECT * FROM pvp_battles WHERE battle_id=?", (bid,))
-        if b["attacker_hp"] <= 0 or b["defender_hp"] <= 0:
-            winner_id = b["attacker_id"] if b["attacker_hp"] > 0 else b["defender_id"]
-            loser_id = b["defender_id"] if winner_id == b["attacker_id"] else b["attacker_id"]
-            await db.execute("UPDATE pvp_battles SET status='finished', log=? WHERE battle_id=?",
-                             (_j.dumps(log), bid))
-            return await _pvp_finish(winner_id, loser_id, bid)
-        await db.execute("UPDATE pvp_battles SET log=?, turn=? WHERE battle_id=?",
-                         (_j.dumps(log), b["attacker_id"], bid))
-        return web.json_response({"ok":True,"round_done":True})
+    action = body.get("action")
+    part = body.get("part")
+    result = await _pvp_do_action(bid, uid, action, part)
+    if isinstance(result, dict) and "error" in result:
+        return web.json_response({"error":result["error"]}, status=400)
+    return result
 
-async def _pvp_finish(winner_id, loser_id, bid):
-    _PENDING_MOVES.pop(f"pvp_turn_{bid}", None)
-    winner = await _player(winner_id)
-    loser = await _player(loser_id)
-    if not winner or not loser: return web.json_response({"error":"Нет игрока"}, status=400)
-    steal = int(loser["balance"] * 0.10)
-    await db.execute("UPDATE players SET balance=balance-? WHERE user_id=?", (steal, loser_id))
-    await db.execute("UPDATE players SET balance=balance+? WHERE user_id=?", (steal, winner_id))
-    return web.json_response({"ok":True,"finished":True,
-                              "winner_id":winner_id,"winner_name":winner["nickname"],
-                              "loser_name":loser["nickname"],"steal":steal})
 
-_PENDING_MOVES = {}
-
-# ══════════════════════════════════════════════════════════════
-#  БАНДЫ
-# ══════════════════════════════════════════════════════════════
 async def api_gang_create(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     name = (body.get("name") or "").strip()
-    emoji = body.get("emoji") or "🚬"
+    emoji = body.get("emoji") or "\U0001F6AC"
     if not (2 <= len(name) <= 20):
         return web.json_response({"error":"Название 2-20 символов"}, status=400)
     p = await _player(uid)
@@ -1009,7 +896,6 @@ async def api_gang_get(request):
     ud = await _user(request); uid = ud["id"]
     member = await db.fetchone("SELECT * FROM gang_members WHERE user_id=?", (uid,))
     if not member:
-        # Вернуть список банд для вступления
         gangs = await db.fetchall(
             "SELECT g.*, (SELECT COUNT(*) FROM gang_members WHERE gang_id=g.gang_id) as members_count "
             "FROM gangs g ORDER BY g.treasury DESC LIMIT 20")
@@ -1035,22 +921,25 @@ async def api_gang_get(request):
             info["capture_end"] = None
             info["capture_left"] = 0
         terr_status.append(info)
-    # Применить готовые захваты
+    notifications = []
     for t in terr_status:
         if t["capture_left"] == 0 and t["capturing_gang_id"] and t["capture_end"]:
+            capturing = t["capturing_gang_id"]
+            was_mine = t["gang_id"] == gang["gang_id"]
+            if capturing == gang["gang_id"]:
+                notifications.append({"type":"captured","name":t["name"],"income":t["income"],"good":True})
+            elif was_mine:
+                notifications.append({"type":"lost","name":t["name"],"income":t["income"],"good":False})
             await db.execute(
                 "UPDATE gang_territories SET gang_id=?, capturing_gang_id=NULL, capture_end=NULL "
-                "WHERE territory_id=?", (t["capturing_gang_id"], t["id"]))
-            t["gang_id"] = t["capturing_gang_id"]
+                "WHERE territory_id=?", (capturing, t["id"]))
+            t["gang_id"] = capturing
             t["capturing_gang_id"] = None
             t["capture_end"] = None
     return web.json_response({
-        "in_gang":True,
-        "gang":gang,
-        "members":members,
-        "my_role":member["role"],
+        "in_gang":True, "gang":gang, "members":members, "my_role":member["role"],
         "is_leader_or_deputy": member["role"] in ("leader","deputy"),
-        "territories":terr_status,
+        "territories":terr_status, "notifications":notifications,
     })
 
 async def api_gang_join(request):
@@ -1074,7 +963,7 @@ async def api_gang_leave(request):
     member = await db.fetchone("SELECT * FROM gang_members WHERE user_id=?", (uid,))
     if not member: return web.json_response({"error":"Не в банде"}, status=400)
     if member["role"] == "leader":
-        return web.json_response({"error":"Лидер не может выйти (распусти банду)"}, status=400)
+        return web.json_response({"error":"Лидер не может выйти"}, status=400)
     await db.execute("DELETE FROM gang_members WHERE user_id=?", (uid,))
     return web.json_response({"ok":True})
 
@@ -1126,6 +1015,7 @@ async def api_gang_capture(request):
                          (tid, member["gang_id"], end))
     return web.json_response({"ok":True,"ends_at":end})
 
+
 def setup_routes(app):
     R = app.router
     R.add_post("/api/me", api_me)
@@ -1159,6 +1049,13 @@ def setup_routes(app):
     R.add_post("/api/trade/accept", api_trade_accept)
     R.add_post("/api/trade/decline", api_trade_decline)
     R.add_post("/api/leaderboard", api_leaderboard)
+    R.add_post("/api/gang/create", api_gang_create)
+    R.add_post("/api/gang/get", api_gang_get)
+    R.add_post("/api/gang/join", api_gang_join)
+    R.add_post("/api/gang/leave", api_gang_leave)
+    R.add_post("/api/gang/deposit", api_gang_deposit)
+    R.add_post("/api/gang/withdraw", api_gang_withdraw)
+    R.add_post("/api/gang/capture", api_gang_capture)
     R.add_post("/api/chat/send", api_chat_send)
     R.add_post("/api/chat/get", api_chat_get)
     R.add_post("/api/cases/list", api_cases_list)
@@ -1168,10 +1065,3 @@ def setup_routes(app):
     R.add_post("/api/pvp/respond", api_pvp_respond)
     R.add_post("/api/pvp/state", api_pvp_state)
     R.add_post("/api/pvp/action", api_pvp_action)
-    R.add_post("/api/gang/create", api_gang_create)
-    R.add_post("/api/gang/get", api_gang_get)
-    R.add_post("/api/gang/join", api_gang_join)
-    R.add_post("/api/gang/leave", api_gang_leave)
-    R.add_post("/api/gang/deposit", api_gang_deposit)
-    R.add_post("/api/gang/withdraw", api_gang_withdraw)
-    R.add_post("/api/gang/capture", api_gang_capture)

@@ -235,7 +235,10 @@ function toast(msg, type="") {
   el._t = setTimeout(()=>el.classList.add("hidden"), 2500);
 }
 function openModal(html) { $("#modal-body").innerHTML=html; $("#modal").classList.remove("hidden"); }
-function closeModal() { $("#modal").classList.add("hidden"); }
+function closeModal() {
+  $("#modal").classList.add("hidden");
+  if (pvpTimerInterval && !pvpCurrentBattle) { clearInterval(pvpTimerInterval); pvpTimerInterval = null; }
+}
 $("#modal-close").addEventListener("click", closeModal);
 $("#modal").addEventListener("click", e=>{if(e.target.id==="modal")closeModal();});
 function fmtMoney(n) {
@@ -1119,16 +1122,43 @@ function showAchievements() {
       </div>`; }).join("")}
   </div>`);
 }
-async function showLeaderboard() {
+let lbCategory = "money";
+async function showLeaderboard(category = null) {
+  if (category) lbCategory = category;
   try {
-    const d = await api("leaderboard");
-    openModal(`<h2>📊 Топ-20</h2><div style="margin-top:16px">
-      ${d.leaders.map(l=>`<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg-3);border-radius:8px;margin-bottom:6px">
-        <div style="font-size:18px;font-weight:800;width:36px">#${l.rank}</div>
-        <div style="flex:1"><div style="font-weight:700">${l.nickname}</div><div style="font-size:11px;color:var(--hint)">Ур. ${l.level} · Бизнесов: ${l.businesses_count}</div></div>
-        <div style="color:var(--money);font-weight:800">${fmtMoney(l.balance)}₽</div>
-      </div>`).join("")}
-    </div>`);
+    const d = await api("leaderboard", {category: lbCategory});
+    const tabsHtml = `
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:16px">
+        <button class="lb-cat ${lbCategory==='money'?'active':''}" onclick="showLeaderboard('money')">💰 Деньги</button>
+        <button class="lb-cat ${lbCategory==='level'?'active':''}" onclick="showLeaderboard('level')">⭐ Уровень</button>
+        <button class="lb-cat ${lbCategory==='gang'?'active':''}" onclick="showLeaderboard('gang')">🚬 Банды</button>
+      </div>`;
+    let listHtml = "";
+    if (d.leaders.length === 0) {
+      listHtml = '<p style="color:var(--hint);text-align:center;padding:30px">Пусто</p>';
+    } else if (lbCategory === "money") {
+      listHtml = d.leaders.map(l => `
+        <div class="lb-row ${l.rank<=3?'top-'+l.rank:''}">
+          <div class="lb-rank">${l.rank===1?'🥇':l.rank===2?'🥈':l.rank===3?'🥉':'#'+l.rank}</div>
+          <div class="lb-info"><div class="lb-name">${l.nickname}</div><div class="lb-meta">Ур. ${l.level} · ${l.businesses_count} бизнесов</div></div>
+          <div class="lb-level">${fmtMoney(l.balance)}₽</div>
+        </div>`).join("");
+    } else if (lbCategory === "level") {
+      listHtml = d.leaders.map(l => `
+        <div class="lb-row ${l.rank<=3?'top-'+l.rank:''}">
+          <div class="lb-rank">${l.rank===1?'🥇':l.rank===2?'🥈':l.rank===3?'🥉':'#'+l.rank}</div>
+          <div class="lb-info"><div class="lb-name">${l.nickname}</div><div class="lb-meta">${fmtMoney(l.balance)}₽ · ${l.xp} XP</div></div>
+          <div class="lb-level">Ур. ${l.level}</div>
+        </div>`).join("");
+    } else {
+      listHtml = d.leaders.map(l => `
+        <div class="lb-row ${l.rank<=3?'top-'+l.rank:''}">
+          <div class="lb-rank">${l.rank===1?'🥇':l.rank===2?'🥈':l.rank===3?'🥉':'#'+l.rank}</div>
+          <div class="lb-info"><div class="lb-name">${l.emoji} ${l.name}</div><div class="lb-meta">${l.territories_count} территорий · ${fmtMoney(l.treasury)}₽ в казне</div></div>
+          <div class="lb-level">+${fmtMoney(l.income)}₽/ч</div>
+        </div>`).join("");
+    }
+    openModal(`<h2>📊 Лидерборд</h2>${tabsHtml}<div class="lb-list">${listHtml}</div>`);
   } catch(e) { toast(e.message, "error"); }
 }
 
@@ -1237,31 +1267,59 @@ async function respondPvP(bid, accept) {
 }
 
 let pvpCurrentBattle = null;
+let pvpTimerInterval = null;
 let pvpMyTurnPart = null;
 let pvpMyTurnAction = null;
 
 async function startPvPUI(bid) {
+  if (pvpTimerInterval) { clearInterval(pvpTimerInterval); pvpTimerInterval = null; }
   pvpCurrentBattle = bid;
   pvpMyTurnPart = null;
   pvpMyTurnAction = null;
   loadPvPState(bid);
+  // Авто-обновление каждые 3 сек (для синхронизации)
+  pvpTimerInterval = setInterval(() => {
+    if (pvpCurrentBattle) loadPvPState(pvpCurrentBattle, true);
+    else { clearInterval(pvpTimerInterval); pvpTimerInterval = null; }
+  }, 3000);
 }
 
-async function loadPvPState(bid) {
+async function loadPvPState(bid, silent = false) {
   try {
     const d = await api("pvp/state", {battle_id: bid});
-    if (d.status === "finished") { closeModal(); toast("Бой окончен!", "success"); return; }
-    if (d.status === "pending") { closeModal(); toast("Ждём ответа соперника..."); return; }
+    if (d.status === "finished") {
+      if (pvpTimerInterval) { clearInterval(pvpTimerInterval); pvpTimerInterval = null; }
+      pvpCurrentBattle = null;
+      closeModal();
+      toast("⚔️ Бой окончен!", "success");
+      refreshPlayer();
+      return;
+    }
+    if (d.status === "pending") {
+      if (!silent) toast("Ждём ответа соперника...");
+      return;
+    }
     const isMyTurn = d.turn === state.player.user_id;
     const logHtml = (d.log || []).slice(-5).map(l => {
-      if (l.type === "hit") return `💥 ${l.attacker} попал в ${l.part} на ${l.damage}`;
-      if (l.type === "block") return `🛡 ${l.attacker} блокировал ${l.part}`;
-      if (l.type === "defend") return `🛡 ${l.player} защищал ${l.part}`;
+      if (l.type === "hit") return `💥 ${l.attacker} → ${l.part}: -${l.damage}`;
+      if (l.type === "block") return `🛡 ${l.attacker}: блок ${l.part}`;
+      if (l.type === "defend") return `🛡 ${l.player}: защита ${l.part}`;
+      if (l.type === "timeout") return `⏰ ${l.player}: таймаут (защита ${l.part})`;
       return "";
     }).join("<br>");
     const myPart = d.is_attacker ? "attacker" : "defender";
     const enemyPart = d.is_attacker ? "defender" : "attacker";
     const me = d[myPart]; const enemy = d[enemyPart];
+
+    // Таймер
+    let timerHtml = "";
+    if (isMyTurn) {
+      timerHtml = `<div style="text-align:center;padding:8px;background:rgba(46,204,113,.15);border-radius:10px;margin:12px 0;font-weight:700;color:var(--success)">🎯 Твой ход (${d.seconds_left}с)</div>`;
+    } else {
+      const color = d.seconds_left < 10 ? "var(--danger)" : "var(--hint)";
+      timerHtml = `<div style="text-align:center;padding:8px;background:rgba(0,0,0,.3);border-radius:10px;margin:12px 0;font-weight:700;color:${color}">⏳ Ход ${enemy.nickname} (${d.seconds_left}с)</div>`;
+    }
+
     openModal(`
       <h2 style="text-align:center;margin-bottom:12px">⚔️ Гоп-стоп</h2>
       <div class="pvp-card">
@@ -1270,15 +1328,16 @@ async function loadPvPState(bid) {
         <div class="pvp-hp-row" style="margin-top:12px"><span>${me.nickname} (ты)</span><span>${me.hp}/${me.max_hp}</span></div>
         <div class="pvp-hp-bar"><div class="pvp-hp-fill" style="width:${me.hp/me.max_hp*100}%"></div></div>
       </div>
+      ${timerHtml}
       ${logHtml ? `<div class="pvp-log">${logHtml}</div>` : ''}
       ${isMyTurn ? `
-        <p style="font-weight:700;margin:16px 0 8px">Твой ход — выбери действие:</p>
         <button class="pvp-part-btn" onclick="pvpChooseAction('attack')">⚔️ Атаковать</button>
         <button class="pvp-part-btn" onclick="pvpChooseAction('defend')">🛡 Защищаться</button>
-      ` : `<p style="text-align:center;padding:20px;color:var(--hint)">⏳ Ход противника...</p>`}
+      ` : `<p style="text-align:center;padding:12px;color:var(--hint);font-size:13px">Если противник не ответит за ${d.timeout}с — сработает авто-защита</p>`}
     `);
-    if (!isMyTurn) setTimeout(() => loadPvPState(bid), 2000);
-  } catch(e) { toast(e.message, "error"); }
+  } catch(e) {
+    if (!silent) toast(e.message, "error");
+  }
 }
 
 function pvpChooseAction(action) {
@@ -1622,10 +1681,16 @@ async function respondPvP(bid, accept) {
 }
 
 async function startPvPUI(bid) {
+  if (pvpTimerInterval) { clearInterval(pvpTimerInterval); pvpTimerInterval = null; }
   pvpCurrentBattle = bid;
   pvpMyTurnPart = null;
   pvpMyTurnAction = null;
   loadPvPState(bid);
+  // Авто-обновление каждые 3 сек (для синхронизации)
+  pvpTimerInterval = setInterval(() => {
+    if (pvpCurrentBattle) loadPvPState(pvpCurrentBattle, true);
+    else { clearInterval(pvpTimerInterval); pvpTimerInterval = null; }
+  }, 3000);
 }
 
 async function loadPvPState(bid) {
@@ -1721,6 +1786,13 @@ async function loadGang() {
         <h3 class="section-subtitle">Существующие банды</h3>
         ${listHtml}`;
       return;
+    }
+    // Уведомления о захватах
+    if (d.notifications && d.notifications.length > 0) {
+      for (const n of d.notifications) {
+        if (n.type === "captured") toast(`🎉 Захвачена: ${n.name} (+${n.income}₽/ч)`, "success");
+        if (n.type === "lost") toast(`💀 Потеряна: ${n.name}`, "error");
+      }
     }
     const g = d.gang;
     const terrHtml = d.territories.map(t => {
