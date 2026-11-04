@@ -1220,13 +1220,18 @@ $$(".nav-btn").forEach(btn=>{
 let chatInterval = null;
 function startChatPolling() {
   if (chatInterval) clearInterval(chatInterval);
-  loadChat();
-  chatInterval = setInterval(loadChat, 3000);
+  const tick = () => {
+    if (!state.chatWith || state.chatWith === 'global') loadChat();
+    else loadPM();
+  };
+  tick();
+  chatInterval = setInterval(tick, 3000);
 }
 function stopChatPolling() {
   if (chatInterval) { clearInterval(chatInterval); chatInterval = null; }
 }
 async function loadChat() {
+  if (state.chatWith && state.chatWith !== 'global') return;
   try {
     const d = await api("chat/get");
     const el = $("#chat-messages");
@@ -2243,7 +2248,7 @@ async function sendChat() {
   const msg = inp.value.trim();
   if (!msg) return;
   try {
-    if (state.chatWith === 'global') {
+    if (!state.chatWith || state.chatWith === 'global') {
       await api("chat/send", { message: msg });
       loadChat();
     } else {
