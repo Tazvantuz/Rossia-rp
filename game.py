@@ -172,7 +172,7 @@ def item_json(iid):
             "slot":it["slot"],"price":it["price"],"rarity":it["rarity"],
             "rarity_name":RARITIES[it["rarity"]]["name"],
             "rarity_color":RARITIES[it["rarity"]]["color"],
-            "desc":it["desc"]}
+            "desc":it["desc"],"hp":it.get("hp",0),"damage":it.get("damage",0)}
 
 def item_sell_price(iid):
     return max(1, int(ITEMS.get(iid, {}).get("price", 10) * 0.5))
