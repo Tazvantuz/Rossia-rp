@@ -78,7 +78,7 @@ async def main():
     api.set_token(BOT_TOKEN)
     runner = web.AppRunner(make_app())
     await runner.setup()
-    await web.TCPSite(runner, "localhost", PORT).start()
+    await web.TCPSite(runner, "0.0.0.0", PORT).start()
     logging.info(f"🌐 Web: http://0.0.0.0:{PORT}")
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(); dp.include_router(router)
