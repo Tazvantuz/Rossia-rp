@@ -1256,7 +1256,20 @@ async function challengePvP(uid, name) {
     await api("pvp/challenge", {user_id: uid});
     closeModal();
     toast(`⚔️ Вызов отправлен ${name}`, "success");
-  } catch(e) { toast(e.message, "error"); }
+  } catch(e) {
+    if (e.message && (e.message.includes("Уже есть бой") || e.message.includes("Уже в бою"))) {
+      if (confirm("У тебя зависший бой. Сбросить и вызвать снова?")) {
+        try {
+          await api("pvp/force_cancel", {});
+          await api("pvp/challenge", {user_id: uid});
+          closeModal();
+          toast(`⚔️ Вызов отправлен ${name}`, "success");
+        } catch(e2) { toast(e2.message, "error"); }
+      }
+    } else {
+      toast(e.message, "error");
+    }
+  }
 }
 
 async function checkPvPChallenges() {

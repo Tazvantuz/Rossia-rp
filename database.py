@@ -137,7 +137,8 @@ class Database:
             except: pass
         # Автоочистка зависших PvP-вызовов при старте
         try:
-            await self.conn.execute("UPDATE pvp_battles SET status='expired' WHERE status='pending' AND (strftime('%s','now') - strftime('%s', created_at)) > 300")
+            await self.conn.execute("UPDATE pvp_battles SET status='expired' WHERE status='pending' AND (strftime('%s','now') - strftime('%s', created_at)) > 30")
+            await self.conn.execute("UPDATE pvp_battles SET status='expired' WHERE status='active' AND (turn_started_at IS NULL OR turn_started_at = 0 OR (strftime('%s','now') - turn_started_at) > 300)")
             await self.conn.commit()
         except: pass
         # Миграция notifications.data

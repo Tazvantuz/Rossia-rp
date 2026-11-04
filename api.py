@@ -163,6 +163,7 @@ async def _ensure_ref_columns():
 async def api_me(request):
     await _ensure_ref_columns()
     ud = await _user(request); uid = ud["id"]
+    await _expire_user_battles(uid)
     try:
         p = await _player(uid)
         if not p:
@@ -1483,14 +1484,48 @@ async def api_cases_open(request):
     p = await _player(uid)
     return web.json_response({"player":_player_json(p), "won":item_json(won)})
 async def _cleanup_stale_pvp():
-    """Помечает все pending-бои старше 5 минут как expired."""
+    """Помечает зависшие бои как expired (pending > 30 сек, active > 5 мин без хода)."""
     try:
         await db.execute(
             "UPDATE pvp_battles SET status='expired' WHERE status='pending' "
             "AND (strftime('%s','now') - strftime('%s', created_at)) > 30"
         )
+        await db.execute(
+            "UPDATE pvp_battles SET status='expired' WHERE status='active' "
+            "AND (turn_started_at IS NULL OR turn_started_at = 0 "
+            "OR (strftime('%s','now') - turn_started_at) > 300)"
+        )
     except Exception as e:
         print(f"⚠️ _cleanup_stale_pvp: {e}")
+
+async def _expire_user_battles(uid):
+    """Точечная чистка зависших боёв конкретного игрока."""
+    try:
+        await db.execute(
+            "UPDATE pvp_battles SET status='expired' "
+            "WHERE (attacker_id=? OR defender_id=?) AND status='pending' "
+            "AND (strftime('%s','now') - strftime('%s', created_at)) > 30",
+            (uid, uid))
+        await db.execute(
+            "UPDATE pvp_battles SET status='expired' "
+            "WHERE (attacker_id=? OR defender_id=?) AND status='active' "
+            "AND (turn_started_at IS NULL OR turn_started_at = 0 "
+            "OR (strftime('%s','now') - turn_started_at) > 300)",
+            (uid, uid))
+    except Exception as e:
+        print(f"⚠️ _expire_user_battles: {e}")
+
+
+async def api_pvp_force_cancel(request):
+    ud = await _user(request); uid = ud["id"]
+    try:
+        await db.execute(
+            "UPDATE pvp_battles SET status='cancelled' "
+            "WHERE (attacker_id=? OR defender_id=?) AND status IN ('pending','active')",
+            (uid, uid))
+        return web.json_response({"ok": True})
+    except Exception as e:
+        return web.json_response({"error": str(e)}, status=500)
 
 async def api_pvp_challenge(request):
     await _cleanup_stale_pvp()
@@ -1502,6 +1537,8 @@ async def api_pvp_challenge(request):
     if not p1 or not p2: return web.json_response({"error":"Нет игрока"}, status=400)
     if p1["location_id"] != p2["location_id"]:
         return web.json_response({"error":"Не на одной локации"}, status=400)
+    await _expire_user_battles(uid)
+    await _expire_user_battles(target_id)
     existing = await db.fetchone(
         "SELECT * FROM pvp_battles WHERE (attacker_id=? OR defender_id=?) AND status IN ('pending','active')",
         (uid, uid))
@@ -2156,6 +2193,7 @@ def setup_routes(app):
     R.add_post("/api/cases/list", api_cases_list)
     R.add_post("/api/cases/open", api_cases_open)
     R.add_post("/api/pvp/challenge", api_pvp_challenge)
+    R.add_post("/api/pvp/force_cancel", api_pvp_force_cancel)
 
 
 # ══════════════════════════════════════════════════════════════
