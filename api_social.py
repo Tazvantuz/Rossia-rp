@@ -23,6 +23,15 @@ async def api_location(request):
     if loc_id is None: loc_id = p["location_id"]
     if loc_id < 0 or loc_id >= len(LOCATIONS):
         return web.json_response({"error":"Локация"}, status=400)
+    
+    now_ts = int(time.time())
+    try:
+        await db.execute(
+            "UPDATE players SET last_seen=? WHERE is_bot=1 AND user_id IN (9900000001, 9900000005)",
+            (now_ts,)
+        )
+    except: pass
+    
     others = await db.fetchall(
         "SELECT p.user_id, p.nickname, p.level, p.balance, p.last_seen, p.tg_username, "
         "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
@@ -31,7 +40,6 @@ async def api_location(request):
         "LEFT JOIN gangs g ON g.gang_id = gm.gang_id "
         "WHERE p.location_id=? AND p.user_id!=?",
         (loc_id, uid))
-    now_ts = int(time.time())
     for _o in others:
         _o["is_online"] = (_o.get("last_seen") or 0) > now_ts - 120
     return web.json_response({
@@ -93,7 +101,6 @@ async def api_player_items(request):
             items.append(ij)
     return web.json_response({"items": items})
 
-# ═══════════ ТРЕЙДЫ ═══════════
 async def api_trade_send(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
@@ -124,7 +131,6 @@ async def api_trade_send(request):
     return web.json_response({"ok": True, "trade_id": tid})
 
 async def api_trade_details(request):
-    """Детали трейда — для модалки из уведомления."""
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     tid = int(body.get("trade_id", 0))
@@ -250,7 +256,6 @@ async def api_trade_decline(request):
     await _cleanup_trade_notifs(uid, tid)
     return web.json_response({"ok": True})
 
-# ═══════════ ЛИДЕРБОРД ═══════════
 async def api_leaderboard(request):
     ud = await _user(request)
     try: body = await request.json()
@@ -316,7 +321,6 @@ async def api_leaderboard(request):
         result = []
     return web.json_response({"leaders": result, "category": category})
 
-# ═══════════ ДРУЗЬЯ ═══════════
 async def api_friend_search(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json(); q = body.get("query", "").strip()
@@ -414,7 +418,6 @@ async def api_friend_list(request):
         r["is_online"] = (r.get("last_seen") or 0) > now - 120
     return web.json_response({"friends": friends, "requests": reqs})
 
-# ═══════════ ЛС ═══════════
 async def api_chat_pm_send(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json(); to_id = int(body.get("to_id", 0)); msg = (body.get("message") or "").strip()
@@ -490,7 +493,6 @@ async def api_chat_get(request):
     rows.reverse()
     return web.json_response({"messages": rows})
 
-# ═══════════ УВЕДОМЛЕНИЯ ═══════════
 async def api_notifications_get(request):
     from api_pvp import _cleanup_stale_pvp
     ud = await _user(request); uid = ud["id"]
@@ -517,7 +519,6 @@ async def api_notifications_get(request):
                     else:
                         continue
             except: pass
-        # Для trade: проверяем что трейд ещё pending (не показываем устаревшие)
         if r.get("type") == "trade" and r.get("data"):
             try:
                 tid = json.loads(r["data"]).get("trade_id")
@@ -526,7 +527,6 @@ async def api_notifications_get(request):
                     if not t or t["status"] != "pending":
                         continue
             except: pass
-        # Для friend: проверяем что заявка ещё pending
         if r.get("type") == "friend" and r.get("data"):
             try:
                 from_uid = json.loads(r["data"]).get("user_id")

@@ -94,10 +94,6 @@ async def _capture_processor():
         except Exception as e:
             logging.warning(f"capture processor: {e}")
 
-# ═══════════════════════════════════════════════════════════════
-#  БОТЫ-ИГРОКИ (фейковые NPC)
-# ═══════════════════════════════════════════════════════════════
-
 def _json_biz_for_bot(p):
     try:
         val = p.get("businesses")
@@ -108,76 +104,68 @@ def _json_biz_for_bot(p):
 
 async def _seed_bots():
     """Создаёт 5 ботов при первом запуске. Идемпотентно."""
-    existing = await db.fetchone("SELECT COUNT(*) as c FROM players WHERE is_bot=1")
-    if existing and existing["c"] >= 5:
-        return
-    BOTS = [
-        {"uid": 9900000001, "nickname": "Ксюха",  "balance": 1200, "level": 1, "xp": 30},
-        {"uid": 9900000002, "nickname": "Денчик", "balance": 800,  "level": 1, "xp": 10},
-        {"uid": 9900000003, "nickname": "Толик",  "balance": 1500, "level": 2, "xp": 50},
-        {"uid": 9900000004, "nickname": "Света",  "balance": 600,  "level": 1, "xp": 0},
-        {"uid": 9900000005, "nickname": "Санёк",  "balance": 2000, "level": 2, "xp": 80},
-    ]
-    created = 0
-    for b in BOTS:
-        existing_bot = await db.fetchone("SELECT 1 FROM players WHERE user_id=?", (b["uid"],))
-        if existing_bot: continue
-        await db.execute(
-            "INSERT INTO players (user_id, nickname, balance, level, xp, location_id, is_bot) "
-            "VALUES (?,?,?,?,?,0,1)",
-            (b["uid"], b["nickname"], b["balance"], b["level"], b["xp"]))
-        for iid in ["h_cig","b_alco","l_family"]:
+    try:
+        existing = await db.fetchone("SELECT COUNT(*) as c FROM players WHERE is_bot=1")
+        if existing and existing["c"] >= 5:
+            return
+        BOTS = [
+            {"uid": 9900000001, "nickname": "Ксюха",  "balance": 1200, "level": 1, "xp": 30},
+            {"uid": 9900000002, "nickname": "Денчик", "balance": 800,  "level": 1, "xp": 10},
+            {"uid": 9900000003, "nickname": "Толик",  "balance": 1500, "level": 2, "xp": 50},
+            {"uid": 9900000004, "nickname": "Света",  "balance": 600,  "level": 1, "xp": 0},
+            {"uid": 9900000005, "nickname": "Санёк",  "balance": 2000, "level": 2, "xp": 80},
+        ]
+        created = 0
+        now = int(time.time())
+        for b in BOTS:
+            existing_bot = await db.fetchone("SELECT 1 FROM players WHERE user_id=?", (b["uid"],))
+            if existing_bot: continue
             await db.execute(
-                "INSERT INTO inventory (user_id,item_id,quantity) VALUES (?,?,1) "
-                "ON CONFLICT(user_id,item_id) DO UPDATE SET quantity=quantity+1",
-                (b["uid"], iid))
-        created += 1
-    if created > 0:
-        print(f"🤖 Создано {created} ботов-игроков (фейковые NPC)")
+                "INSERT INTO players (user_id, nickname, balance, level, xp, location_id, is_bot) "
+                "VALUES (?,?,?,?,?,0,1)",
+                (b["uid"], b["nickname"], b["balance"], b["level"], b["xp"]))
+            # Безопасно ставим last_seen отдельно (если колонка есть)
+            try:
+                await db.execute("UPDATE players SET last_seen=? WHERE user_id=?", (now, b["uid"]))
+            except: pass
+            for iid in ["h_cig","b_alco","l_family"]:
+                await db.execute(
+                    "INSERT INTO inventory (user_id,item_id,quantity) VALUES (?,?,1) "
+                    "ON CONFLICT(user_id,item_id) DO UPDATE SET quantity=quantity+1",
+                    (b["uid"], iid))
+            created += 1
+        if created > 0:
+            print(f"🤖 Создано {created} ботов-игроков (фейковые NPC)")
+    except Exception as e:
+        print(f"⚠️ Ошибка при создании ботов: {e}")
 
 async def _bot_simulator():
-    """Симулирует активность 5 ботов.
-    Днём (МСК 9-23) — заходят, качаются, копят, покупают бизнесы.
-    Ночью — last_seen не обновляется → оффлайн.
-    """
-    # Темпы развития (разные у всех, чтобы не палились одинаковостью)
+    """2 бота всегда онлайн, остальные днём (МСК 9-23)."""
     TEMPO = {
-        9900000001: 1.2,  # Ксюха — быстрая
-        9900000002: 0.9,  # Денчик — ленивый
-        9900000003: 1.0,  # Толик — средний
-        9900000004: 0.8,  # Света — медленная
-        9900000005: 1.3,  # Санёк — самый быстрый
+        9900000001: 1.2, 9900000002: 0.9, 9900000003: 1.0, 9900000004: 0.8, 9900000005: 1.3,
     }
     BIZ_ORDER = ["shawarma", "drones", "pelmeni", "crypto_farm", "beauty",
                  "pawnshop", "restaurant", "bentley", "oil", "gazprom", "vtope"]
+    ALWAYS_ONLINE = {9900000001, 9900000005}
 
     while True:
-        await asyncio.sleep(60)  # тик раз в минуту
+        await asyncio.sleep(60)
         try:
-            # МСК-время: ночь = не играем
             msk = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(hours=3)
             hour = msk.hour
-            if hour >= 23 or hour < 9:
-                continue  # боты спят
-
+            is_night = hour >= 23 or hour < 9
             bots = await db.fetchall("SELECT * FROM players WHERE is_bot=1")
             now = int(time.time())
-
             for b in bots:
                 uid = b["user_id"]
-
-                # "Зашёл ли" бот в этот час — стабильный псевдосид
-                # (одно и то же значение в течение часа, меняется при смене часа)
+                is_forced_online = uid in ALWAYS_ONLINE
+                if is_night and not is_forced_online: continue
                 rng_seed = (uid + hour * 7) % 10
-                if rng_seed < 5:
-                    continue  # ~50% шанс онлайн в этот час
-
-                # Бот онлайн — обновляем last_seen
-                await db.execute("UPDATE players SET last_seen=? WHERE user_id=?", (now, uid))
-
+                if not is_forced_online and rng_seed < 5: continue
+                try:
+                    await db.execute("UPDATE players SET last_seen=? WHERE user_id=?", (now, uid))
+                except: pass
                 tempo = TEMPO.get(uid, 1.0)
-
-                # ═══ Зарплата раз в 5 минут ═══
                 last_work = b.get("last_work", 0) or 0
                 if now - last_work >= 300:
                     salary = int((100 + b["level"] * 60) * tempo)
@@ -193,35 +181,23 @@ async def _bot_simulator():
                     await db.execute(
                         "UPDATE players SET balance=?, xp=?, level=?, last_work=? WHERE user_id=?",
                         (new_bal, new_xp, new_lvl, now, uid))
-                    print(f"🤖 {b['nickname']}: +{salary}₽ +{xp_gain}xp (lvl {new_lvl})")
-                    b["balance"] = new_bal
-                    b["xp"] = new_xp
-                    b["level"] = new_lvl
-
-                # ═══ Сбор с бизнесов ═══
+                    b["balance"] = new_bal; b["xp"] = new_xp; b["level"] = new_lvl
                 biz = _json_biz_for_bot(b)
                 collected = 0
                 for business in biz:
                     info = BUSINESSES.get(business["id"])
                     if not info: continue
                     lvl = business.get("level", 1)
-                    mult = 1.0
-                    if lvl == 2: mult = 1.75
-                    elif lvl >= 3: mult = 3.0
+                    mult = 1.0 if lvl == 1 else (1.75 if lvl == 2 else 3.0)
                     real_income = int(info["income"] * mult)
                     last_c = business.get("last_collect", now)
                     elapsed = max(0, min(86400, now - last_c))
-                    earned = int(real_income * elapsed / 3600)
-                    collected += earned
+                    collected += int(real_income * elapsed / 3600)
                     business["last_collect"] = now
                 if collected > 0:
-                    await db.execute(
-                        "UPDATE players SET balance=balance+?, businesses=? WHERE user_id=?",
-                        (collected, json.dumps(biz), uid))
+                    await db.execute("UPDATE players SET balance=balance+?, businesses=? WHERE user_id=?",
+                                     (collected, json.dumps(biz), uid))
                     b["balance"] += collected
-                    print(f"🤖 {b['nickname']}: собрал {collected}₽ с бизнесов")
-
-                # ═══ Покупка бизнеса, если накопил ×1.3 ═══
                 owned_ids = {x["id"] for x in biz}
                 for bid in BIZ_ORDER:
                     if bid in owned_ids: continue
@@ -229,27 +205,18 @@ async def _bot_simulator():
                     if not info: continue
                     if b["balance"] >= info["price"] * 1.3:
                         biz.append({"id": bid, "last_collect": now})
-                        await db.execute(
-                            "UPDATE players SET balance=balance-?, businesses=? WHERE user_id=?",
-                            (info["price"], json.dumps(biz), uid))
+                        await db.execute("UPDATE players SET balance=balance-?, businesses=? WHERE user_id=?",
+                                         (info["price"], json.dumps(biz), uid))
                         b["balance"] -= info["price"]
-                        print(f"🤖 {b['nickname']}: купил {info['name']} за {info['price']}₽!")
                         break
-
-                # ═══ Иногда казино (10% шанс) ═══
                 if b["balance"] > 1000 and random.random() < 0.10:
                     bet = int(b["balance"] * 0.10)
-                    win = random.choice([0, 0, 0, bet * 2])  # 75% проигрыш, 25% x2
+                    win = random.choice([0, 0, 0, bet * 2])
                     net = win - bet
                     await db.execute("UPDATE players SET balance=balance+? WHERE user_id=?", (net, uid))
                     b["balance"] += net
-                    if net > 0:
-                        print(f"🤖 {b['nickname']}: выиграл в казино {net}₽")
-
         except Exception as e:
             print(f"⚠️ bot_simulator: {e}")
-
-# ═══════════════════════════════════════════════════════════════
 
 async def main():
     logging.basicConfig(level=logging.INFO)
@@ -259,12 +226,10 @@ async def main():
         await api.migrate_crypto_v1()
     except Exception as e:
         logging.warning(f"crypto migration: {e}")
-    # ═══ СИД БОТОВ ═══
     try:
         await _seed_bots()
     except Exception as e:
         logging.warning(f"seed bots: {e}")
-
     runner = web.AppRunner(make_app())
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", PORT).start()
@@ -276,10 +241,7 @@ async def main():
     logging.info(f"🎮 WebApp: {WEBAPP_URL}")
     await _set_menu_button(bot)
     asyncio.create_task(_capture_processor())
-    logging.info("⚔️ Background capture processor запущен")
-    # ═══ СИМУЛЯТОР БОТОВ ═══
     asyncio.create_task(_bot_simulator())
-    logging.info("🤖 Bot simulator запущен (5 NPC)")
     try:
         await dp.start_polling(bot)
     finally:
