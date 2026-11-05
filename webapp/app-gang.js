@@ -432,9 +432,8 @@ function showSetTag() {
   
   const gangs = document.querySelector(".gang-banner");
   if (gangs) {
-      // Пытаемся достать цвет из DOM (на баннере)
       const tagSpan = gangs.querySelector(".gang-tag");
-      if (tagSpan) currentColor = tagSpan.style.color || "#f39c12";
+      if (tagSpan && tagSpan.style.color) currentColor = tagSpan.style.color;
   }
   
   window._selectedTagColor = currentColor;

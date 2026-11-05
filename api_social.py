@@ -11,7 +11,14 @@ from api_core import (
     _user, _player, _add_inv, _remove_inv, _has_inv, _player_json,
     _json_biz, _json_ach, _nick_tag, _check_achievements,
     USER_LAST_CHAT, CHAT_COOLDOWN,
+    BOT_IDS_SET, bot_online_ids,
 )
+
+def _is_bot_online(uid, now, online_ids):
+    """Определяет статус: бот — по ротации, юзер — по last_seen."""
+    if uid in BOT_IDS_SET:
+        return uid in online_ids
+    return False  # юзеров считаем отдельно, у них есть last_seen
 
 async def api_location(request):
     ud = await _user(request); uid = ud["id"]
@@ -23,25 +30,21 @@ async def api_location(request):
     if loc_id is None: loc_id = p["location_id"]
     if loc_id < 0 or loc_id >= len(LOCATIONS):
         return web.json_response({"error":"Локация"}, status=400)
-    
-    now_ts = int(time.time())
-    try:
-        await db.execute(
-            "UPDATE players SET last_seen=? WHERE is_bot=1 AND user_id IN (9900000001, 9900000005)",
-            (now_ts,)
-        )
-    except: pass
-    
     others = await db.fetchall(
-        "SELECT p.user_id, p.nickname, p.level, p.balance, p.last_seen, p.tg_username, "
+        "SELECT p.user_id, p.nickname, p.level, p.balance, p.last_seen, p.tg_username, p.is_bot, "
         "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
         "FROM players p "
         "LEFT JOIN gang_members gm ON gm.user_id = p.user_id "
         "LEFT JOIN gangs g ON g.gang_id = gm.gang_id "
         "WHERE p.location_id=? AND p.user_id!=?",
         (loc_id, uid))
+    now_ts = int(time.time())
+    online_ids = bot_online_ids(now_ts)
     for _o in others:
-        _o["is_online"] = (_o.get("last_seen") or 0) > now_ts - 120
+        if _o.get("is_bot"):
+            _o["is_online"] = _o["user_id"] in online_ids
+        else:
+            _o["is_online"] = (_o.get("last_seen") or 0) > now_ts - 120
     return web.json_response({
         "location": LOCATIONS[loc_id],
         "locations": LOCATIONS,
@@ -68,6 +71,11 @@ async def api_player_view(request):
     friend_pending = bool(await db.fetchone("SELECT 1 FROM friends WHERE user_id=? AND friend_id=? AND status='pending'", (uid, target_id)))
     target_gang = await db.fetchone("SELECT gang_id FROM gang_members WHERE user_id=?", (target_id,))
     my_gang = await db.fetchone("SELECT gang_id, role FROM gang_members WHERE user_id=?", (uid,))
+    now_ts = int(time.time())
+    if t.get("is_bot"):
+        is_online = target_id in bot_online_ids(now_ts)
+    else:
+        is_online = (t.get("last_seen") or 0) > now_ts - 120
     return web.json_response({
         "user_id": t["user_id"], "nickname": t["nickname"],
         "gang_tag": t.get("gang_tag"),
@@ -83,7 +91,7 @@ async def api_player_view(request):
         "friend_pending": friend_pending,
         "target_in_gang": bool(target_gang),
         "my_role": my_gang["role"] if my_gang else None,
-        "is_online": (t.get("last_seen") or 0) > int(time.time()) - 120,
+        "is_online": is_online,
     })
 
 async def api_player_items(request):
@@ -326,13 +334,20 @@ async def api_friend_search(request):
     body = await request.json(); q = body.get("query", "").strip()
     if len(q) < 2: return web.json_response({"error": "Минимум 2 символа"}, status=400)
     rows = await db.fetchall(
-        "SELECT p.user_id, p.nickname, p.level, p.tg_username, "
+        "SELECT p.user_id, p.nickname, p.level, p.tg_username, p.is_bot, "
         "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
         "FROM players p "
         "LEFT JOIN gang_members gm ON gm.user_id = p.user_id "
         "LEFT JOIN gangs g ON g.gang_id = gm.gang_id "
         "WHERE p.nickname LIKE ? AND p.user_id != ? LIMIT 10",
         (f"%{q}%", uid))
+    now_ts = int(time.time())
+    online_ids = bot_online_ids(now_ts)
+    for r in rows:
+        if r.get("is_bot"):
+            r["is_online"] = r["user_id"] in online_ids
+        else:
+            r["is_online"] = False
     return web.json_response({"results": rows})
 
 async def api_friend_request(request):
@@ -396,8 +411,9 @@ async def api_friend_remove(request):
 async def api_friend_list(request):
     ud = await _user(request); uid = ud["id"]
     now = int(time.time())
+    online_ids = bot_online_ids(now)
     friends = await db.fetchall(
-        "SELECT f.friend_id as user_id, p.nickname, p.level, p.last_seen, p.tg_username, "
+        "SELECT f.friend_id as user_id, p.nickname, p.level, p.last_seen, p.tg_username, p.is_bot, "
         "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
         "FROM friends f "
         "JOIN players p ON p.user_id=f.friend_id "
@@ -405,9 +421,12 @@ async def api_friend_list(request):
         "LEFT JOIN gangs g ON g.gang_id = gm.gang_id "
         "WHERE f.user_id=? AND f.status='accepted'", (uid,))
     for f in friends:
-        f["is_online"] = (f.get("last_seen") or 0) > now - 120
+        if f.get("is_bot"):
+            f["is_online"] = f["user_id"] in online_ids
+        else:
+            f["is_online"] = (f.get("last_seen") or 0) > now - 120
     reqs = await db.fetchall(
-        "SELECT f.user_id, p.nickname, p.level, p.last_seen, p.tg_username, "
+        "SELECT f.user_id, p.nickname, p.level, p.last_seen, p.tg_username, p.is_bot, "
         "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
         "FROM friends f "
         "JOIN players p ON p.user_id=f.user_id "
@@ -415,7 +434,10 @@ async def api_friend_list(request):
         "LEFT JOIN gangs g ON g.gang_id = gm.gang_id "
         "WHERE f.friend_id=? AND f.status='pending'", (uid,))
     for r in reqs:
-        r["is_online"] = (r.get("last_seen") or 0) > now - 120
+        if r.get("is_bot"):
+            r["is_online"] = r["user_id"] in online_ids
+        else:
+            r["is_online"] = (r.get("last_seen") or 0) > now - 120
     return web.json_response({"friends": friends, "requests": reqs})
 
 async def api_chat_pm_send(request):
@@ -558,5 +580,9 @@ async def api_notifications_read(request):
 async def api_online_count(request):
     await _user(request)
     now = int(time.time())
-    row = await db.fetchone("SELECT COUNT(*) as c FROM players WHERE last_seen > ?", (now - 120,))
-    return web.json_response({"count": row["c"] if row else 0})
+    human_row = await db.fetchone(
+        "SELECT COUNT(*) as c FROM players WHERE last_seen > ? AND (is_bot=0 OR is_bot IS NULL)",
+        (now - 120,))
+    human = human_row["c"] if human_row else 0
+    total = human + BOTS_ONLINE_COUNT
+    return web.json_response({"count": total})

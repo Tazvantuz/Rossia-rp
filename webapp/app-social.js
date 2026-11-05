@@ -177,11 +177,8 @@ async function acceptTrade(tid) {
     closeModal();
     loadPeople(); 
     if (typeof showNotificationsSilent === 'function') showNotificationsSilent();
-    if (document.getElementById('bell-badge') && !document.getElementById('bell-badge').classList.contains('hidden')) {
-       // Refresh notifications modal if open
-       const modal = document.getElementById("modal");
-       if (modal && !modal.classList.contains("hidden")) showNotifications();
-    }
+    const modal = document.getElementById("modal");
+    if (modal && !modal.classList.contains("hidden")) showNotifications();
   }
   catch(e) { toast(e.message, "error"); }
 }

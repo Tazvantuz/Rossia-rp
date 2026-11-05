@@ -233,6 +233,8 @@ async def api_gang_get(request):
         return web.json_response({"in_gang":False,"gangs":gangs})
     await _process_gang_income(member["gang_id"])
     gang = await db.fetchone("SELECT * FROM gangs WHERE gang_id=?", (member["gang_id"],))
+    if not gang:
+        return web.json_response({"error": "Банда не найдена"}, status=404)
     members = await db.fetchall(
         "SELECT gm.user_id, gm.role, p.nickname, p.level FROM gang_members gm "
         "JOIN players p ON gm.user_id = p.user_id WHERE gm.gang_id=?", (gang["gang_id"],))
@@ -356,7 +358,6 @@ async def _process_territories():
                 g_a_id=cap["gang_id"], g_a_name=(ga["name"] if ga else "?"), g_a_dmg=dmg_a,
                 g_b_id=rival["gang_id"], g_b_name=(gb["name"] if gb else "?"), g_b_dmg=dmg_b,
                 winner_gid=winner["gang_id"])
-            print(f"⚔️ Битва за {tname}: gang {winner['gang_id']} ({dmg_a} vs {dmg_b})")
         else:
             await db.execute("UPDATE territory_captures SET status='won' WHERE capture_id=?", (cap["capture_id"],))
             await db.execute(
@@ -368,7 +369,6 @@ async def _process_territories():
                 g_a_id=cap["gang_id"], g_a_name=(ga["name"] if ga else "?"),
                 g_a_dmg=int(cap["total_damage"]),
                 winner_gid=cap["gang_id"])
-            print(f"✅ Захват {tname} завершён")
     try:
         all_gangs = await db.fetchall("SELECT gang_id FROM gangs")
         for g in all_gangs:
@@ -412,7 +412,6 @@ async def _process_gang_income(gid):
                 continue
             await db.execute("UPDATE players SET seeds=seeds+? WHERE user_id=?",
                              (seeds_per_member, m["user_id"]))
-        print(f"🌻 Семечки gang {gid}: +{seeds_per_member} каждому из {len(members)} ({count} терр × {hours}ч)")
 
 async def api_gang_capture(request):
     ud = await _user(request); uid = ud["id"]

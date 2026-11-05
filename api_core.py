@@ -18,9 +18,19 @@ def set_token(t):
     global BOT_TOKEN
     BOT_TOKEN = t
 
-# ID ботов, которых держим онлайн 24/7 (не зависят от is_bot)
-FORCED_ONLINE_BOTS = (9900000001, 9900000005)
-BOT_KEEPALIVE_SEC = 20
+# ═══ Ротация ботов: 3 онлайн / 2 оффлайн, сдвиг каждые 15 минут ═══
+BOT_IDS = (9900000001, 9900000002, 9900000003, 9900000004, 9900000005)
+BOT_IDS_SET = set(BOT_IDS)
+BOT_ROTATION_SEC = 900
+BOTS_ONLINE_COUNT = 3
+
+def bot_online_ids(now=None):
+    """Возвращает set из 3 ID ботов, которые онлайн в данный момент.
+    Ротация: каждые 15 мин состав меняется (2 выходят, 2 заходят, 1 остаётся)."""
+    if now is None: now = int(time.time())
+    slot = (now // BOT_ROTATION_SEC) % 5
+    start = (slot * 2) % 5
+    return {BOT_IDS[(start + i) % 5] for i in range(BOTS_ONLINE_COUNT)}
 
 def validate_init_data(init_data):
     if not init_data or not BOT_TOKEN: return None
@@ -48,27 +58,12 @@ async def _track_activity(uid, now):
     except Exception as e:
         print(f"⚠️ _track_activity: {e}")
 
-async def _bot_keepalive(now):
-    """Форсим last_seen двум ботам, чтобы они всегда были онлайн.
-    Не зависит от is_bot — только по user_id."""
-    if now - _last_seen_cache.get("__bots_ts__", 0) < BOT_KEEPALIVE_SEC:
-        return
-    _last_seen_cache["__bots_ts__"] = now
-    try:
-        await db.execute(
-            "UPDATE players SET last_seen=? WHERE user_id IN (?,?)",
-            (now, FORCED_ONLINE_BOTS[0], FORCED_ONLINE_BOTS[1]))
-    except Exception as e:
-        print(f"⚠️ _bot_keepalive: {e}")
-
 async def _user(request):
     ud = validate_init_data(request.headers.get("X-Init-Data",""))
     if not ud: raise web.HTTPUnauthorized(text="bad init")
     uid = ud.get("id")
     if uid:
         now = int(time.time())
-        # ═══ Боты онлайн 24/7 (проверка до user-throttle, чтобы всегда шло) ═══
-        await _bot_keepalive(now)
         uname = ud.get("username") or None
         if now - _last_seen_cache.get(uid, 0) >= 30:
             _last_seen_cache[uid] = now

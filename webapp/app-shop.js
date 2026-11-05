@@ -240,7 +240,7 @@ async function doWork() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  БИЗНЕСЫ (с инфо о следующем уровне)
+//  БИЗНЕСЫ (с инфо о следующем уровне + суммарный доход/ч)
 // ══════════════════════════════════════════════════════════════
 async function loadBusinesses() {
   try {
@@ -255,12 +255,15 @@ function renderBusinesses(data) {
   if (!list) return;
   const arr = Array.isArray(data) ? data : (data.businesses || []);
   let totalPending = 0;
+  let totalIncome = 0;
   list.innerHTML = "";
 
   if (arr.length === 0) {
     list.innerHTML = '<div style="color:var(--hint);text-align:center;padding:20px;">Нет доступных бизнесов</div>';
     const totalEl = document.getElementById("business-total-pending");
     if (totalEl) totalEl.textContent = "0₽";
+    const incomeEl = document.getElementById("business-total-income");
+    if (incomeEl) incomeEl.textContent = "0₽/ч";
     return;
   }
 
@@ -268,6 +271,7 @@ function renderBusinesses(data) {
     const pending = b.pending || 0;
     totalPending += pending;
     const income = b.income || 0;
+    if (b.owned) totalIncome += income;
     const name = b.name || 'Бизнес';
     const emoji = b.emoji || '🏢';
     const level = b.level || 1;
@@ -318,6 +322,8 @@ function renderBusinesses(data) {
 
   const totalEl = document.getElementById("business-total-pending");
   if (totalEl) totalEl.textContent = fmtMoney(totalPending) + "₽";
+  const incomeEl = document.getElementById("business-total-income");
+  if (incomeEl) incomeEl.textContent = fmtMoney(totalIncome) + "₽/ч";
 }
 
 async function buyBusiness(id) {

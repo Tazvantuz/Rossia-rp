@@ -106,10 +106,11 @@
 
     <section class="tab-content" data-tab="business">
       <h2 class="section-title">🏢 Бизнесы</h2>
-      <div class="business-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;background:var(--bg-2);padding:16px;border-radius:16px;">
-        <div>
+      <div class="business-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;background:var(--bg-2);padding:16px;border-radius:16px;gap:12px;">
+        <div style="flex:1;min-width:0;">
           <div style="font-size:12px;color:var(--hint);">Накоплено всего</div>
           <div style="font-size:24px;font-weight:900;color:#f39c12;" id="business-total-pending">0₽</div>
+          <div style="font-size:11px;color:var(--hint);margin-top:4px;">Доход: <span style="color:#2ecc71;font-weight:700;" id="business-total-income">0₽/ч</span></div>
         </div>
         <button class="btn btn-primary" onclick="collectBusiness()" style="width:auto;padding:10px 20px;">💰 Забрать всё</button>
       </div>
