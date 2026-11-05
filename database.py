@@ -190,6 +190,16 @@ class Database:
                 await self.conn.execute(f"ALTER TABLE pvp_battles ADD COLUMN {_col}")
                 await self.conn.commit()
             except: pass
+        # ═══ ФИКС: принудительно ставим is_bot=1 для известных ботов ═══
+        # Если боты были созданы до появления колонки is_bot — миграция их не тронула,
+        # и они остались с is_bot=0. Симулятор их не видит, api_location тоже.
+        try:
+            await self.conn.execute(
+                "UPDATE players SET is_bot=1 WHERE user_id IN "
+                "(9900000001, 9900000002, 9900000003, 9900000004, 9900000005)")
+            await self.conn.commit()
+        except Exception as e:
+            print(f"⚠️ bot is_bot migration: {e}")
     async def fetchone(self, q, p=()):
         async with self.conn.execute(q, p) as cur:
             r = await cur.fetchone()
