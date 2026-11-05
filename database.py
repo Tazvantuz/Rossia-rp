@@ -109,6 +109,20 @@ CREATE TABLE IF NOT EXISTS territory_captures (
     started_at INTEGER NOT NULL,
     total_damage INTEGER DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS territory_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    territory_id INTEGER NOT NULL,
+    territory_name TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    gang_a_id INTEGER,
+    gang_a_name TEXT,
+    gang_a_dmg INTEGER,
+    gang_b_id INTEGER,
+    gang_b_name TEXT,
+    gang_b_dmg INTEGER,
+    winner_gang_id INTEGER,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, type TEXT NOT NULL, text TEXT NOT NULL, is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS friends (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, friend_id INTEGER NOT NULL, status TEXT DEFAULT 'pending', UNIQUE(user_id, friend_id));
 CREATE TABLE IF NOT EXISTS private_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, from_id INTEGER NOT NULL, to_id INTEGER NOT NULL, message TEXT NOT NULL, is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP);

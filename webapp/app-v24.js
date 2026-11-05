@@ -1118,7 +1118,6 @@ async function showCrypto() {
     const trendSign = change >= 0 ? "+" : "";
 
     // ═══ МЕТКИ ВРЕМЕНИ ═══
-    // history[0] = 23 часа назад, history[23] = текущий час (правая точка)
     const nowHour = new Date().getHours();
     const hourLabels = [];
     for (let i = 0; i < history.length; i++) {
@@ -1126,7 +1125,6 @@ async function showCrypto() {
       hourLabels.push(hour);
     }
 
-    // Вертикальные линии сетки каждые 3 часа
     const gridLines = hourLabels.map((_, i) => {
       if (i === 0 || i === history.length - 1) return "";
       if (i % 3 !== 0) return "";
@@ -1134,7 +1132,6 @@ async function showCrypto() {
       return `<line x1="${x}" y1="${pad}" x2="${x}" y2="${h-pad}" stroke="rgba(255,255,255,0.07)" stroke-width="1" stroke-dasharray="2,2"/>`;
     }).join("");
 
-    // Подписи под графиком
     const timeLabelsHtml = hourLabels.map((hr, i) => {
       const xPercent = ((pad + (w - 2*pad) * i / (history.length - 1)) / w) * 100;
       const isNow = i === history.length - 1;
@@ -1408,13 +1405,29 @@ async function showLeaderboard(category = null) {
           <div class="lb-level">Ур. ${l.level}</div>
         </div>`).join("");
     } else {
+      // ═══ БАНДЫ: добавлена колонка ⚔️ Урон ═══
       listHtml = d.leaders.map(l => {
         const nameWithTag = l.tag ? `${l.emoji} <span class="gang-tag">[${escapeHtml(l.tag)}]</span> ${escapeHtml(l.name)}` : `${l.emoji} ${escapeHtml(l.name)}`;
         return `
-        <div class="lb-row ${l.rank<=3?'top-'+l.rank:''}">
-          <div class="lb-rank">${l.rank===1?'🥇':l.rank===2?'🥈':l.rank===3?'🥉':'#'+l.rank}</div>
-          <div class="lb-info"><div class="lb-name">${nameWithTag}</div><div class="lb-meta">${l.territories_count} территорий · ${fmtMoney(l.treasury)}₽ в казне</div></div>
-          <div class="lb-level">+${fmtMoney(l.income)}₽/ч</div>
+        <div class="lb-row ${l.rank<=3?'top-'+l.rank:''}" style="flex-direction:column;align-items:stretch;gap:6px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div class="lb-rank">${l.rank===1?'🥇':l.rank===2?'🥈':l.rank===3?'🥉':'#'+l.rank}</div>
+            <div class="lb-info">
+              <div class="lb-name">${nameWithTag}</div>
+              <div class="lb-meta">${l.members_count || 0} чел · ${l.territories_count} территорий</div>
+            </div>
+            <div class="lb-level">+${fmtMoney(l.income)}₽/ч</div>
+          </div>
+          <div style="display:flex;gap:8px;padding-left:44px;">
+            <div style="flex:1;background:rgba(231,76,60,0.12);border:1px solid rgba(231,76,60,0.3);border-radius:8px;padding:6px 10px;text-align:center;">
+              <div style="font-size:9px;color:var(--hint);text-transform:uppercase;letter-spacing:0.5px;">⚔️ Урон</div>
+              <div style="font-size:15px;font-weight:900;color:#e74c3c;">${l.total_damage || 0}</div>
+            </div>
+            <div style="flex:1;background:rgba(243,156,18,0.12);border:1px solid rgba(243,156,18,0.3);border-radius:8px;padding:6px 10px;text-align:center;">
+              <div style="font-size:9px;color:var(--hint);text-transform:uppercase;letter-spacing:0.5px;">💰 Казна</div>
+              <div style="font-size:14px;font-weight:900;color:#f39c12;">${fmtMoney(l.treasury)}</div>
+            </div>
+          </div>
         </div>`;
       }).join("");
     }
@@ -1758,28 +1771,108 @@ function showGangWithdraw() {
   }).catch(e => toast(e.message, "error"));
 }
 
-async function showTerritoryCapture(tid, name, income, gangId, capGangId) {
-  const d = await api("gang/get");
-  const isLeader = d.is_leader_or_deputy;
-  const canCapture = isLeader && !capGangId && gangId !== d.gang.gang_id;
-  let statusText = "Ничейная территория";
-  if (gangId === d.gang.gang_id) statusText = "🟢 Наша территория";
-  else if (gangId) statusText = "🔴 Чужая территория";
-  else if (capGangId === d.gang.gang_id) statusText = "⏳ Захватывается";
-  openModal(`
-    <h2>🗺 ${name}</h2>
-    <p style="margin:16px 0">Доход: <b style="color:var(--money)">+${income}₽/ч</b></p>
-    <p style="color:var(--hint);margin-bottom:16px">${statusText}</p>
-    ${canCapture ? `<button class="btn btn-primary" onclick="captureTerritory(${tid})">⚔️ Захватить (1 час)</button>` : ''}
-    <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal()">Закрыть</button>
-  `);
+// ═══ ФОРМАТИРОВАНИЕ ЛОГА ЗАХВАТОВ ═══
+function formatTerritoryLog(entry, myGid) {
+  const tname = entry.territory_name || "территория";
+  const etype = entry.event_type;
+  const aIsMe = entry.gang_a_id === myGid;
+  const bIsMe = entry.gang_b_id === myGid;
+
+  if (etype === "capture_started") {
+    if (aIsMe) return { icon: "⏳", text: `Мы начали захват «${tname}»`, color: "#f39c12" };
+    return { icon: "⚠️", text: `${entry.gang_a_name} начали захват «${tname}»`, color: "#e74c3c" };
+  }
+  if (etype === "defense_started") {
+    if (aIsMe) return { icon: "🛡", text: `Мы защищаем «${tname}» от ${entry.gang_b_name || "врага"}`, color: "#3498db" };
+    return { icon: "⚠️", text: `${entry.gang_a_name} атакуют нашу «${tname}»`, color: "#e74c3c" };
+  }
+  if (etype === "battle") {
+    const myDmg = aIsMe ? entry.gang_a_dmg : entry.gang_b_dmg;
+    const enemyDmg = aIsMe ? entry.gang_b_dmg : entry.gang_a_dmg;
+    const enemyName = aIsMe ? entry.gang_b_name : entry.gang_a_name;
+    const won = entry.winner_gang_id === myGid;
+    const result = won ? "ПОБЕДА" : "поражение";
+    const icon = won ? "🏆" : "💀";
+    const color = won ? "#2ecc71" : "#e74c3c";
+    return { icon, text: `Битва за «${tname}»: мы ${myDmg || 0} урона vs ${enemyName} ${enemyDmg || 0} — ${result}`, color };
+  }
+  if (etype === "capture_complete") {
+    if (aIsMe) return { icon: "✅", text: `Захват «${tname}» завершён без боя (урон: ${entry.gang_a_dmg || 0})`, color: "#2ecc71" };
+    return { icon: "⚠️", text: `${entry.gang_a_name} захватили «${tname}» без боя`, color: "#e74c3c" };
+  }
+  return { icon: "•", text: `${etype}: ${tname}`, color: "#8494a5" };
+}
+
+async function showTerritoryCapture(tid) {
+  try {
+    const d = await api("gang/get");
+    if (!d.in_gang) { toast("Ты не в банде", "error"); return; }
+    const t = d.territories.find(x => x.id === tid);
+    if (!t) { toast("Территория не найдена", "error"); return; }
+    const g = d.gang;
+    const myGid = g.gang_id;
+    const isLeader = d.is_leader_or_deputy;
+
+    // Статусы
+    let statusText = "Ничейная территория";
+    if (t.is_contested) statusText = "🔴 Идёт БИТВА (2 претендента)";
+    else if (t.capturing_by_us) statusText = "⏳ Мы захватываем";
+    else if (t.has_capture) statusText = `⏳ ${t.captures[0].gang_emoji} ${t.captures[0].gang_name} захватывают`;
+    else if (t.is_ours) statusText = "🟢 Наша территория";
+    else if (t.gang_id) statusText = "🔴 Чужая территория";
+
+    // Кнопки
+    let buttonsHtml = "";
+    if (!isLeader) {
+      buttonsHtml = `<p style="color:var(--hint);text-align:center;font-size:12px;margin-top:12px">Захват доступен только лидеру и замам</p>`;
+    } else if (t.is_contested) {
+      buttonsHtml = `<p style="color:var(--danger);text-align:center;font-weight:700;margin-top:12px">⚔️ Битва уже началась — 2 претендента</p>`;
+    } else if (t.capturing_by_us) {
+      buttonsHtml = `<p style="color:var(--success);text-align:center;font-weight:700;margin-top:12px">⏳ Вы уже захватываете</p>`;
+    } else if (t.has_capture && t.captures[0].gang_id !== myGid) {
+      // Кто-то захватывает — мы можем помешать (если это не наша территория) или защититься (если наша)
+      const rival = t.captures[0];
+      if (t.is_ours) {
+        buttonsHtml = `<button class="btn btn-primary" onclick="captureTerritory(${tid})" style="background:linear-gradient(135deg,#3498db,#2980b9)">🛡 Защитить территорию</button>
+          <p style="color:var(--hint);text-align:center;font-size:11px;margin-top:6px">Битва через ${formatTime(t.battle_left)}</p>`;
+      } else {
+        buttonsHtml = `<button class="btn btn-primary" onclick="captureTerritory(${tid})">⚔️ Помешать захвату</button>
+          <p style="color:var(--hint);text-align:center;font-size:11px;margin-top:6px">Битва через ${formatTime(t.battle_left)}</p>`;
+      }
+    } else if (t.is_ours) {
+      buttonsHtml = `<p style="color:var(--success);text-align:center;font-weight:700;margin-top:12px">🟢 Территория под контролем. Никто не атакует.</p>`;
+    } else {
+      buttonsHtml = `<button class="btn btn-primary" onclick="captureTerritory(${tid})">⚔️ Начать захват (1 час)</button>`;
+    }
+
+    openModal(`
+      <h2 style="text-align:center">${t.emoji} ${t.name}</h2>
+      <p style="margin:16px 0;text-align:center">Доход: <b style="color:var(--money)">+${t.income}₽/ч</b></p>
+      <p style="color:var(--hint);margin-bottom:8px;text-align:center">${statusText}</p>
+      ${t.has_capture ? `
+        <div style="background:rgba(243,156,18,0.1);border:1px solid rgba(243,156,18,0.3);border-radius:10px;padding:10px;margin-bottom:12px;">
+          <div style="font-size:11px;color:var(--hint);text-transform:uppercase;margin-bottom:6px;letter-spacing:0.5px;text-align:center">Активные претенденты</div>
+          ${t.captures.map(c => `
+            <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
+              <span>${c.gang_emoji} <b>${escapeHtml(c.gang_name)}</b>${c.gang_id === myGid ? ' (мы)' : ''}</span>
+              <span style="color:#f39c12;font-weight:700;">${c.total_damage} урона · ${formatTime(c.left)}</span>
+            </div>
+          `).join('')}
+          ${t.is_contested ? `<div style="text-align:center;font-size:11px;color:#e74c3c;font-weight:700;margin-top:8px;">⚔️ Битва через ${formatTime(t.battle_left)} — победит тот, у кого больше урона (шанс ~${Math.round(100 * Math.pow(Math.max(1,t.captures[0].total_damage),1.2) / (Math.pow(Math.max(1,t.captures[0].total_damage),1.2) + Math.pow(Math.max(1,t.captures[1].total_damage),1.2)))}% у первого)</div>` : ''}
+        </div>` : ''}
+      ${buttonsHtml}
+      <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal()">Закрыть</button>
+    `);
+  } catch(e) { toast(e.message, "error"); }
 }
 
 async function captureTerritory(tid) {
   try {
-    await api("gang/capture", {territory_id: tid});
+    const d = await api("gang/capture", {territory_id: tid});
     closeModal(); loadGang();
-    toast("⚔️ Захват начат! Жди 1 час", "success");
+    if (d.battle_pending) toast("⚔️ Битва! Твой урон зафиксирован", "success");
+    else if (d.is_defense) toast("🛡 Защита начата!", "success");
+    else toast("⚔️ Захват начат! Жди 1 час", "success");
   } catch(e) { toast(e.message, "error"); }
 }
 
@@ -2099,25 +2192,41 @@ async function loadGang() {
         ${listHtml}`;
       return;
     }
-    if (d.notifications && d.notifications.length > 0) {
-      for (const n of d.notifications) {
-        if (n.type === "captured") toast(`🎉 Захвачена: ${n.name} (+${n.income}₽/ч)`, "success");
-        if (n.type === "lost") toast(`💀 Потеряна: ${n.name}`, "error");
-      }
-    }
     const g = d.gang;
+    const myGid = g.gang_id;
+
+    // ═══ КАРТА ТЕРРИТОРИЙ ═══
     const terrHtml = d.territories.map(t => {
-      let cls = "neutral", label = "Ничейная";
-      if (t.capturing_gang_id === g.gang_id) { cls = "capturing"; label = `Захват ${formatTime(t.capture_left)}`; }
-      else if (t.gang_id === g.gang_id) { cls = "mine"; label = "Наша"; }
-      else if (t.gang_id) { cls = "enemy"; label = "Чужая"; }
-      return `<div class="territory ${cls}" onclick="showTerritoryCapture(${t.id},'${t.name}',${t.income},${t.gang_id||0},${t.capturing_gang_id||0})">
+      let cls = "neutral", label = "Ничейная", subLine = "";
+      if (t.is_contested) {
+        cls = "enemy";
+        label = "⚔️ БИТВА";
+        subLine = `<div style="font-size:9px;color:#f39c12;font-weight:900;margin-top:2px;" class="terr-timer" data-left="${t.battle_left}">${formatTime(t.battle_left)}</div>`;
+      } else if (t.capturing_by_us) {
+        cls = "capturing";
+        const left = t.captures[0].left;
+        label = "Наш захват";
+        subLine = `<div style="font-size:9px;color:#f39c12;font-weight:900;margin-top:2px;" class="terr-timer" data-left="${left}">${formatTime(left)}</div>`;
+      } else if (t.has_capture) {
+        cls = "capturing";
+        const c = t.captures[0];
+        label = `${c.gang_emoji} атакует`;
+        subLine = `<div style="font-size:9px;color:#f39c12;font-weight:900;margin-top:2px;" class="terr-timer" data-left="${c.left}">${formatTime(c.left)}</div>`;
+      } else if (t.is_ours) {
+        cls = "mine"; label = "Наша";
+      } else if (t.gang_id) {
+        cls = "enemy"; label = "Чужая";
+      }
+      return `<div class="territory ${cls}" onclick="showTerritoryCapture(${t.id})">
         <div class="territory-emoji">${t.emoji}</div>
         <div class="territory-name">${t.name}</div>
         <div class="territory-income">+${t.income}₽/ч</div>
-        <div style="font-size:9px;margin-top:2px">${label}</div>
+        <div style="font-size:9px;margin-top:2px;font-weight:700">${label}</div>
+        ${subLine}
       </div>`;
     }).join("");
+
+    // ═══ УЧАСТНИКИ ═══
     const membersHtml = d.members.map(m => {
       const roleClass = `role-${m.role}`;
       const roleName = {leader:"Лидер",deputy:"Зам",member:"Боец"}[m.role];
@@ -2132,12 +2241,37 @@ async function loadGang() {
         ${actionBtn}
       </div>`;
     }).join("");
+
+    // ═══ ЛОГ ЗАХВАТОВ ═══
+    const logs = d.territory_log || [];
+    let logHtml = "";
+    if (logs.length === 0) {
+      logHtml = `<div style="background:var(--bg-2);border-radius:12px;padding:16px;text-align:center;color:var(--hint);font-size:12px;">Пока нет событий</div>`;
+    } else {
+      logHtml = logs.slice(0, 15).map(entry => {
+        const f = formatTerritoryLog(entry, myGid);
+        let timeStr = "";
+        try {
+          const iso = entry.created_at.replace(" ", "T") + "Z";
+          timeStr = new Date(iso).toLocaleString("ru-RU", {day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit"});
+        } catch(_) {}
+        return `<div style="display:flex;gap:8px;padding:10px;background:var(--bg-2);border-radius:10px;margin-bottom:6px;border-left:3px solid ${f.color};">
+          <div style="font-size:18px;flex-shrink:0;">${f.icon}</div>
+          <div style="flex:1;min-width:0;">
+            <div style="font-size:12px;color:#fff;font-weight:600;line-height:1.3;">${f.text}</div>
+            <div style="font-size:10px;color:var(--hint);margin-top:3px;">${timeStr}</div>
+          </div>
+        </div>`;
+      }).join("");
+    }
+
     const tagBanner = g.tag
       ? `<div style="text-align:center;color:var(--money);font-weight:900;font-size:18px;margin-top:4px;">[${escapeHtml(g.tag)}]</div>`
       : '';
     const tagEditBtn = d.my_role === "leader"
       ? `<button class="btn btn-secondary" onclick="showSetTag()" style="margin:8px 0">🏷 ${g.tag ? `Изменить тег [${escapeHtml(g.tag)}]` : 'Установить тег банды'}</button>`
       : '';
+
     el.innerHTML = `
       <div class="gang-banner">
         <div style="font-size:64px">${g.emoji}</div>
@@ -2152,12 +2286,29 @@ async function loadGang() {
           <button class="btn btn-secondary" onclick="showGangWithdraw()" style="margin:0">💸 Вывести</button>
         </div>
       ` : ''}
+
       <h3 class="section-subtitle">🗺 Территории (ГЕТТО)</h3>
       <div class="gang-map">${terrHtml}</div>
+
+      <h3 class="section-subtitle">📜 Лог захватов</h3>
+      <div style="margin-bottom:16px;">${logHtml}</div>
+
       <h3 class="section-subtitle">👥 Участники (${d.members.length}/10)</h3>
       ${membersHtml}
       ${d.my_role !== "leader" ? `<button class="btn btn-secondary" style="margin-top:12px" onclick="leaveGang()">🚪 Покинуть банду</button>` : ''}
     `;
+
+    // Тикер таймеров на территориях
+    if (window._gangTimer) clearInterval(window._gangTimer);
+    window._gangTimer = setInterval(() => {
+      document.querySelectorAll('.terr-timer').forEach(el => {
+        let left = parseInt(el.dataset.left) - 1;
+        if (left < 0) left = 0;
+        el.dataset.left = left;
+        el.textContent = formatTime(left);
+      });
+    }, 1000);
+
   } catch(e) { toast(e.message, "error"); }
 }
 
