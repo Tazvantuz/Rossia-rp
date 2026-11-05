@@ -160,8 +160,7 @@ def total_xp_for_level(level):
     return sum(xp_to_next(i) for i in range(1, level))
 
 def crypto_price_at_hour(hour):
-    """НОВАЯ формула: цена 900-1099 (диапазон 20%).
-    Раньше было 500-1499 (диапазон 300%)."""
+    """Цена коина 900-1099 (диапазон 20%)."""
     import hashlib
     h = hashlib.md5(f"coin_{hour}".encode()).hexdigest()
     return 900 + (int(h[:4], 16) % 200)
@@ -351,9 +350,9 @@ CASE_ITEMS = {
 }
 ITEMS.update(CASE_ITEMS)
 
-# ═══════ КЕЙСЫ (ТОЛЬКО УНИКАЛЬНЫЕ ПРЕДМЕТЫ) ═══════
+# ═══════ КЕЙСЫ (ТОЛЬКО УНИКАЛЬНЫЕ ПРЕДМЕТЫ, НОВЫЕ ЦЕНЫ) ═══════
 CASES = {
-  "basic": {"name":"Кейс новичка","emoji":"📦","price":1000,
+  "basic": {"name":"Кейс новичка","emoji":"📦","price":2000,
     "items":[
       {"iid":"h_case_bandit","chance":35},
       {"iid":"b_case_tracksuit","chance":25},
@@ -361,7 +360,7 @@ CASES = {
       {"iid":"rh_case_knife","chance":15},
       {"iid":"b_case_chains","chance":5},
     ]},
-  "rare": {"name":"Кейс гопника","emoji":"🎁","price":5000,
+  "rare": {"name":"Кейс гопника","emoji":"🎁","price":12000,
     "items":[
       {"iid":"h_case_rooster","chance":35},
       {"iid":"h_case_crypto","chance":25},
@@ -369,7 +368,7 @@ CASES = {
       {"iid":"rh_case_uzi_gold","chance":15},
       {"iid":"l_case_gold_shorts","chance":5},
     ]},
-  "legendary": {"name":"Кейс олигарха","emoji":"💎","price":25000,
+  "legendary": {"name":"Кейс олигарха","emoji":"💎","price":60000,
     "items":[
       {"iid":"h_case_helmet_alpha","chance":40},
       {"iid":"lh_case_brilliant","chance":25},
