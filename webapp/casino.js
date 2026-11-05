@@ -6,6 +6,29 @@ state.diceChoice = 'Больше 3';
 state.rouletteChoice = 'red';
 state.rouletteNumber = null;
 
+// ═══════════ НЕДОСТАЮЩИЕ ФУНКЦИИ СТАВОК ═══════════
+function setBet(v) {
+  const inp = document.getElementById("bet-input");
+  if (!inp) return;
+  if (v === "max") inp.value = state.player.balance;
+  else inp.value = v;
+}
+
+function doubleBet() {
+  const inp = document.getElementById("bet-input");
+  if (!inp) return;
+  const cur = parseInt(inp.value) || 0;
+  inp.value = Math.max(1, cur * 2);
+}
+
+function halveBet() {
+  const inp = document.getElementById("bet-input");
+  if (!inp) return;
+  const cur = parseInt(inp.value) || 0;
+  inp.value = Math.max(1, Math.floor(cur / 2));
+}
+
+// ═══════════ ОСНОВНАЯ ЛОГИКА ═══════════
 function switchCasinoGame(game) {
   state.casinoGame = game;
   state.rouletteChoice = 'red';
@@ -104,10 +127,7 @@ async function playCasino() {
       payload.choice = state.diceChoice;
     }
 
-    // ═══ СНАЧАЛА получаем ответ сервера ═══
     const d = await api("casino_play", payload);
-
-    // ═══ ПОТОМ проигрываем анимацию с ПРАВИЛЬНЫМ результатом ═══
 
     if (game === 'coin') {
       const coin = document.getElementById('coin-el');
@@ -147,7 +167,6 @@ async function playCasino() {
       document.querySelectorAll('.slot-reel').forEach(r => r.classList.remove('spinning'));
     }
 
-    // ═══ Показываем текст результата ═══
     if (d.win > 0) {
       resEl.textContent = `🎉 ВЫИГРЫШ: ${fmtMoney(d.win)}₽`;
       resEl.style.color = "#2ecc71";
