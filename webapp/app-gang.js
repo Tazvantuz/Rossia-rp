@@ -39,6 +39,7 @@ function showCaseDetail(cid) {
       <div class="case-modal-item-stats">${stats.join("<br>")}</div>
     </div>`;
   }).join("");
+  
   openModal(`
     <div style="text-align:center;margin-bottom:16px">
       <div style="font-size:56px">${c.emoji}</div>
@@ -53,18 +54,94 @@ function showCaseDetail(cid) {
 }
 
 async function openCase(cid) {
+  const c = state.casesData.cases.find(x => x.case_id === cid);
+  if (!c) return;
+
   try {
+    // 1. Запрос к API
     const d = await api("cases/open", {case_id: cid});
-    state.player = d.player; renderPlayer();
+    state.player = d.player; 
+    renderPlayer();
+
+    const wonItem = d.won;
+    const allItems = c.items; 
+    const WIN_INDEX = 45; // Индекс выигрышного элемента в ленте
+    const ITEM_WIDTH = 100; // Ширина одного блока (должна совпадать с CSS)
+
+    // 2. Генерируем ленту (60 элементов)
+    let stripHtml = "";
+    for (let i = 0; i < 60; i++) {
+        let it;
+        if (i === WIN_INDEX) {
+            it = wonItem; // Вставляем выигрыш
+        } else {
+            // Выбираем случайный предмет с учетом шансов
+            let totalChance = allItems.reduce((sum, item) => sum + item.chance, 0);
+            let r = Math.random() * totalChance;
+            let acc = 0;
+            it = allItems[0];
+            for (let item of allItems) {
+                acc += item.chance;
+                if (r <= acc) { it = item; break; }
+            }
+        }
+        
+        const preview = {...emptyOutfit()};
+        preview[SLOT_KEY[it.slot]] = {item_id: it.item_id};
+        
+        stripHtml += `<div class="case-roll-item" style="border-bottom: 4px solid ${it.rarity_color}">
+            <div class="case-roll-svg">${renderCharacterSVG(preview, {width: 60, height: 120})}</div>
+        </div>`;
+    }
+
+    // 3. Рендерим модалку с рулеткой
     openModal(`
-      <div style="text-align:center;padding:24px 0">
-        <div style="font-size:80px;animation:bounce 1s">${d.won.emoji}</div>
-        <h2 style="color:${d.won.rarity_color};margin-top:16px">${d.won.name}</h2>
-        <div style="color:${d.won.rarity_color};font-size:13px;font-weight:800;margin-top:4px">${d.won.rarity_name}</div>
-        <p style="color:var(--hint);margin-top:12px">${d.won.desc || ''}</p>
-        <button class="btn btn-primary" onclick="closeModal();loadCases()" style="margin-top:16px">Забрать</button>
-      </div>`);
-    if (tg) tg.HapticFeedback?.notificationOccurred("success");
+        <div style="text-align:center; padding: 20px 0;">
+            <h2 style="margin-bottom: 20px;">🎁 Крутим ${c.name}...</h2>
+            <div class="case-roll-container" id="case-roll-container">
+                <div class="case-roll-marker"></div>
+                <div class="case-roll-strip" id="case-roll-strip">
+                    ${stripHtml}
+                </div>
+            </div>
+        </div>
+    `);
+
+    // 4. Запуск анимации
+    setTimeout(() => {
+        const containerWidth = document.getElementById("case-roll-container").offsetWidth;
+        const strip = document.getElementById("case-roll-strip");
+        
+        // Вычисляем позицию для центрирования выигрышного элемента
+        const targetOffset = (WIN_INDEX * ITEM_WIDTH) + (ITEM_WIDTH / 2) - (containerWidth / 2);
+        // Добавляем рандомный отступ (-30 до +30 px), чтобы стрелка не всегда была ровно в центре предмета
+        const randomOffset = Math.floor(Math.random() * 60) - 30;
+        const finalTranslate = -(targetOffset + randomOffset);
+
+        strip.style.transition = 'transform 5s cubic-bezier(0.1, 0.7, 0.1, 1)';
+        strip.style.transform = `translateX(${finalTranslate}px)`;
+
+        // 5. Показ финального результата через 5 секунд
+        setTimeout(() => {
+            if (tg) tg.HapticFeedback?.notificationOccurred("success");
+
+            const preview = {...emptyOutfit()};
+            preview[SLOT_KEY[wonItem.slot]] = {item_id: wonItem.item_id};
+
+            openModal(`
+              <div style="text-align:center;padding:24px 0">
+                <div style="font-size:80px;animation:bounce 1s;display:flex;justify-content:center;align-items:center;height:150px;">
+                    ${renderCharacterSVG(preview, {width: 100, height: 200})}
+                </div>
+                <h2 style="color:${wonItem.rarity_color};margin-top:16px">${wonItem.name}</h2>
+                <div style="color:${wonItem.rarity_color};font-size:13px;font-weight:800;margin-top:4px">${wonItem.rarity_name}</div>
+                <p style="color:var(--hint);margin-top:12px">${wonItem.desc || ''}</p>
+                ${_itemStatsHtml(wonItem, 'block')}
+                <button class="btn btn-primary" onclick="closeModal();loadCases()" style="margin-top:16px">Забрать</button>
+              </div>`);
+        }, 5200); // 5 сек анимация + 200мс запас
+    }, 50); // Небольшая задержка, чтобы DOM успел отрисоваться
+
   } catch(e) { toast(e.message, "error"); }
 }
 
