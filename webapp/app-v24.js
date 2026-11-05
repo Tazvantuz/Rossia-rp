@@ -1090,12 +1090,14 @@ async function showCrypto() {
 
   const p = state.player;
   const price = d.price;
-  const history = d.history || [];
+  // ═══ Берём последние 8 часов из истории ═══
+  const fullHistory = d.history || [];
+  const history = fullHistory.length > 8 ? fullHistory.slice(-8) : fullHistory;
   const feePct = d.fee_pct || 5;
   const coins = Number(p.crypto_amount || 0);
   const coinsRub = Math.floor(coins * price);
 
-  const w = 300, h = 120, pad = 10;
+  const w = 300, h = 120, pad = 16;
   let chartHtml = '<div style="color:var(--hint);text-align:center;padding:20px;">Нет данных</div>';
   if (history.length > 1) {
     const minP = Math.min(...history);
@@ -1117,38 +1119,34 @@ async function showCrypto() {
     const trendArrow = change >= 0 ? "▲" : "▼";
     const trendSign = change >= 0 ? "+" : "";
 
-    // ═══ МЕТКИ ВРЕМЕНИ ═══
+    // Метки времени: последние 8 часов, правый = текущий
     const nowHour = new Date().getHours();
     const hourLabels = [];
     for (let i = 0; i < history.length; i++) {
-      const hour = (nowHour - 23 + i + 24) % 24;
+      const hour = (nowHour - (history.length - 1) + i + 24) % 24;
       hourLabels.push(hour);
     }
 
+    // Сетка на каждом часе
     const gridLines = hourLabels.map((_, i) => {
       if (i === 0 || i === history.length - 1) return "";
-      if (i % 3 !== 0) return "";
       const x = pad + (w - 2*pad) * i / (history.length - 1);
-      return `<line x1="${x}" y1="${pad}" x2="${x}" y2="${h-pad}" stroke="rgba(255,255,255,0.07)" stroke-width="1" stroke-dasharray="2,2"/>`;
+      return `<line x1="${x}" y1="${pad}" x2="${x}" y2="${h-pad}" stroke="rgba(255,255,255,0.08)" stroke-width="1" stroke-dasharray="2,2"/>`;
     }).join("");
 
+    // Подписи под графиком — все 8 штук крупные
     const timeLabelsHtml = hourLabels.map((hr, i) => {
       const xPercent = ((pad + (w - 2*pad) * i / (history.length - 1)) / w) * 100;
       const isNow = i === history.length - 1;
-      const isMajor = i % 3 === 0 || isNow;
-      const text = isMajor
-        ? `${String(hr).padStart(2,'0')}:00`
-        : String(hr).padStart(2,'0');
+      const text = `${String(hr).padStart(2,'0')}:00`;
 
       let transform = 'translateX(-50%)';
       if (i === 0) transform = 'translateX(0)';
       if (i === history.length - 1) transform = 'translateX(-100%)';
 
       const style = isNow
-        ? `font-weight:900;color:${trendColor};font-size:10px;`
-        : isMajor
-          ? `font-weight:700;color:var(--text);font-size:9px;opacity:0.9;`
-          : `font-weight:600;color:var(--hint);font-size:7px;opacity:0.55;`;
+        ? `font-weight:900;color:${trendColor};font-size:11px;`
+        : `font-weight:700;color:var(--text);font-size:10px;opacity:0.85;`;
 
       return `<span style="position:absolute;left:${xPercent}%;transform:${transform};${style}white-space:nowrap;top:0;">${text}</span>`;
     }).join("");
@@ -1156,7 +1154,7 @@ async function showCrypto() {
     chartHtml = `
       <div style="background:var(--bg-3);border-radius:12px;padding:12px;margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-          <span style="font-size:11px;color:var(--hint);font-weight:700;">24 ЧАСА</span>
+          <span style="font-size:11px;color:var(--hint);font-weight:700;">8 ЧАСОВ</span>
           <span style="font-size:13px;font-weight:800;color:${trendColor};">${trendArrow} ${trendSign}${change}₽ (${trendSign}${changePct.toFixed(1)}%)</span>
         </div>
         <svg viewBox="0 0 ${w} ${h}" width="100%" height="120" preserveAspectRatio="none">
@@ -1405,7 +1403,6 @@ async function showLeaderboard(category = null) {
           <div class="lb-level">Ур. ${l.level}</div>
         </div>`).join("");
     } else {
-      // ═══ БАНДЫ: добавлена колонка ⚔️ Урон ═══
       listHtml = d.leaders.map(l => {
         const nameWithTag = l.tag ? `${l.emoji} <span class="gang-tag">[${escapeHtml(l.tag)}]</span> ${escapeHtml(l.name)}` : `${l.emoji} ${escapeHtml(l.name)}`;
         return `
@@ -1813,7 +1810,6 @@ async function showTerritoryCapture(tid) {
     const myGid = g.gang_id;
     const isLeader = d.is_leader_or_deputy;
 
-    // Статусы
     let statusText = "Ничейная территория";
     if (t.is_contested) statusText = "🔴 Идёт БИТВА (2 претендента)";
     else if (t.capturing_by_us) statusText = "⏳ Мы захватываем";
@@ -1821,7 +1817,6 @@ async function showTerritoryCapture(tid) {
     else if (t.is_ours) statusText = "🟢 Наша территория";
     else if (t.gang_id) statusText = "🔴 Чужая территория";
 
-    // Кнопки
     let buttonsHtml = "";
     if (!isLeader) {
       buttonsHtml = `<p style="color:var(--hint);text-align:center;font-size:12px;margin-top:12px">Захват доступен только лидеру и замам</p>`;
@@ -1830,7 +1825,6 @@ async function showTerritoryCapture(tid) {
     } else if (t.capturing_by_us) {
       buttonsHtml = `<p style="color:var(--success);text-align:center;font-weight:700;margin-top:12px">⏳ Вы уже захватываете</p>`;
     } else if (t.has_capture && t.captures[0].gang_id !== myGid) {
-      // Кто-то захватывает — мы можем помешать (если это не наша территория) или защититься (если наша)
       const rival = t.captures[0];
       if (t.is_ours) {
         buttonsHtml = `<button class="btn btn-primary" onclick="captureTerritory(${tid})" style="background:linear-gradient(135deg,#3498db,#2980b9)">🛡 Защитить территорию</button>
@@ -2166,7 +2160,7 @@ async function adminDeletePlayer(id, nick) {
     adminSearch();
 }
 
-// ═══ НОВЫЙ loadGang ═══
+// ═══ loadGang ═══
 async function loadGang() {
   try {
     const d = await api("gang/get");
@@ -2195,7 +2189,6 @@ async function loadGang() {
     const g = d.gang;
     const myGid = g.gang_id;
 
-    // ═══ КАРТА ТЕРРИТОРИЙ ═══
     const terrHtml = d.territories.map(t => {
       let cls = "neutral", label = "Ничейная", subLine = "";
       if (t.is_contested) {
@@ -2226,7 +2219,6 @@ async function loadGang() {
       </div>`;
     }).join("");
 
-    // ═══ УЧАСТНИКИ ═══
     const membersHtml = d.members.map(m => {
       const roleClass = `role-${m.role}`;
       const roleName = {leader:"Лидер",deputy:"Зам",member:"Боец"}[m.role];
@@ -2242,7 +2234,6 @@ async function loadGang() {
       </div>`;
     }).join("");
 
-    // ═══ ЛОГ ЗАХВАТОВ ═══
     const logs = d.territory_log || [];
     let logHtml = "";
     if (logs.length === 0) {
@@ -2298,7 +2289,6 @@ async function loadGang() {
       ${d.my_role !== "leader" ? `<button class="btn btn-secondary" style="margin-top:12px" onclick="leaveGang()">🚪 Покинуть банду</button>` : ''}
     `;
 
-    // Тикер таймеров на территориях
     if (window._gangTimer) clearInterval(window._gangTimer);
     window._gangTimer = setInterval(() => {
       document.querySelectorAll('.terr-timer').forEach(el => {

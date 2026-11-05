@@ -1,5 +1,5 @@
 // casino.js
-// ═══════════ КАЗИНО (НОВОЕ) ═══════════
+// ═══════════ КАЗИНО ═══════════
 state.casinoGame = 'coin';
 state.coinChoice = 'Орёл';
 state.diceChoice = 'Больше 3';
@@ -17,7 +17,6 @@ function renderCasino() {
   const stage = document.getElementById('casino-stage');
   if (!stage) return;
 
-  // Подсветка меню
   document.querySelectorAll('.casino-menu-item').forEach(el => {
     el.classList.toggle('active', el.dataset.game === state.casinoGame);
   });
@@ -41,7 +40,7 @@ function renderCasino() {
         <button class="btn ${state.diceChoice==='Больше 3'?'btn-primary':'btn-secondary'}" style="flex:1;" onclick="state.diceChoice='Больше 3';renderCasino()">Больше 3</button>
         <button class="btn ${state.diceChoice==='Меньше 4'?'btn-primary':'btn-secondary'}" style="flex:1;" onclick="state.diceChoice='Меньше 4';renderCasino()">Меньше 4</button>
       </div>
-      <div class="dice-container" id="dice-el">🎲</div>
+      <div class="dice-container" id="dice-el" style="width:110px;height:110px;background:linear-gradient(135deg,#fafafa,#c8c8c8);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:64px;font-weight:900;color:#1a1a1a;box-shadow:0 10px 28px rgba(0,0,0,0.5), inset 0 -5px 10px rgba(0,0,0,0.15), inset 0 3px 6px rgba(255,255,255,0.7);border:3px solid #f39c12;">?</div>
     `;
   } else if (state.casinoGame === 'roulette') {
     let html = `<div class="roulette-table" id="roulette-table">`;
@@ -94,26 +93,6 @@ async function playCasino() {
   const btn = document.getElementById('btn-play-casino');
   if (btn) btn.disabled = true;
 
-  // Анимация
-  if (game === 'coin') {
-    const coin = document.getElementById('coin-el');
-    if (coin) {
-      coin.classList.remove('flip-heads', 'flip-tails');
-      void coin.offsetWidth;
-      coin.classList.add(Math.random() > 0.5 ? 'flip-heads' : 'flip-tails');
-    }
-  } else if (game === 'dice') {
-    const d = document.getElementById('dice-el');
-    if (d) d.classList.add('rolling');
-  } else if (game === 'slots') {
-    document.querySelectorAll('.slot-reel').forEach(r => r.classList.add('spinning'));
-    ['reel1','reel2','reel3'].forEach(id => {
-      let html = '';
-      for (let j = 0; j < 10; j++) html += `<div class="slot-item">${['🍒','🍋','🍊','🔔','⭐','💎'][Math.floor(Math.random()*6)]}</div>`;
-      document.getElementById(id).innerHTML = html;
-    });
-  }
-
   try {
     const payload = { game, bet };
     if (game === 'roulette') {
@@ -124,18 +103,51 @@ async function playCasino() {
     } else if (game === 'dice') {
       payload.choice = state.diceChoice;
     }
+
+    // ═══ СНАЧАЛА получаем ответ сервера ═══
     const d = await api("casino_play", payload);
 
-    await new Promise(r => setTimeout(r, 2000));
+    // ═══ ПОТОМ проигрываем анимацию с ПРАВИЛЬНЫМ результатом ═══
 
-    if (game === 'dice') {
+    if (game === 'coin') {
+      const coin = document.getElementById('coin-el');
+      if (coin) {
+        coin.classList.remove('flip-heads', 'flip-tails');
+        void coin.offsetWidth;
+        const isHeads = d.result.includes("Орёл");
+        coin.classList.add(isHeads ? 'flip-heads' : 'flip-tails');
+      }
+      await new Promise(r => setTimeout(r, 2000));
+
+    } else if (game === 'dice') {
       const dEl = document.getElementById('dice-el');
-      if (dEl) dEl.classList.remove('rolling');
-    }
-    if (game === 'slots') {
+      if (dEl) {
+        dEl.classList.add('rolling');
+        const iv = setInterval(() => {
+          dEl.textContent = Math.floor(Math.random() * 6) + 1;
+        }, 80);
+        await new Promise(r => setTimeout(r, 1400));
+        clearInterval(iv);
+        dEl.classList.remove('rolling');
+        const m = d.result.match(/выпало\s+(\d)/);
+        const roll = m ? parseInt(m[1]) : 1;
+        dEl.textContent = roll;
+      } else {
+        await new Promise(r => setTimeout(r, 1400));
+      }
+
+    } else if (game === 'slots') {
+      document.querySelectorAll('.slot-reel').forEach(r => r.classList.add('spinning'));
+      ['reel1','reel2','reel3'].forEach(id => {
+        let html = '';
+        for (let j = 0; j < 10; j++) html += `<div class="slot-item">${['🍒','🍋','🍊','🔔','⭐','💎'][Math.floor(Math.random()*6)]}</div>`;
+        document.getElementById(id).innerHTML = html;
+      });
+      await new Promise(r => setTimeout(r, 2000));
       document.querySelectorAll('.slot-reel').forEach(r => r.classList.remove('spinning'));
     }
 
+    // ═══ Показываем текст результата ═══
     if (d.win > 0) {
       resEl.textContent = `🎉 ВЫИГРЫШ: ${fmtMoney(d.win)}₽`;
       resEl.style.color = "#2ecc71";
