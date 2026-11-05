@@ -1,3 +1,4 @@
+# bot.py
 import asyncio, logging, os
 from aiohttp import web
 from dotenv import load_dotenv
@@ -85,6 +86,15 @@ async def _set_menu_button(bot: Bot):
     except Exception as e:
         logging.warning(f"Menu Button error: {e}")
 
+async def _capture_processor():
+    """Каждые 60 сек обрабатывает завершённые захваты территорий."""
+    while True:
+        await asyncio.sleep(60)
+        try:
+            await api._process_territories()
+        except Exception as e:
+            logging.warning(f"capture processor: {e}")
+
 async def main():
     logging.basicConfig(level=logging.INFO)
     await db.init()
@@ -99,6 +109,9 @@ async def main():
     logging.info(f"🤖 @{me.username}")
     logging.info(f"🎮 WebApp: {WEBAPP_URL}")
     await _set_menu_button(bot)
+    # Фоновая обработка захватов гетто
+    asyncio.create_task(_capture_processor())
+    logging.info("⚔️ Background capture processor запущен")
     try:
         await dp.start_polling(bot)
     finally:

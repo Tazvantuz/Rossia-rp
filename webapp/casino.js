@@ -1,3 +1,4 @@
+// casino.js
 // ═══════════ КАЗИНО (НОВОЕ) ═══════════
 state.casinoGame = 'coin';
 state.coinChoice = 'Орёл';

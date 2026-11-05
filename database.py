@@ -1,3 +1,4 @@
+# database.py
 import os
 import aiosqlite
 
@@ -82,6 +83,7 @@ CREATE TABLE IF NOT EXISTS gangs (
     emoji TEXT NOT NULL,
     leader_id INTEGER NOT NULL UNIQUE,
     treasury INTEGER DEFAULT 0,
+    tag TEXT DEFAULT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS gang_members (
@@ -128,7 +130,7 @@ class Database:
             "achievements TEXT DEFAULT '[]'","casino_plays INTEGER DEFAULT 0",
             "crimes_won INTEGER DEFAULT 0","trades_done INTEGER DEFAULT 0",
             "owned_items_count INTEGER DEFAULT 0",
-        "last_seen INTEGER DEFAULT 0",
+            "last_seen INTEGER DEFAULT 0",
             "credit_due INTEGER DEFAULT 0","last_casino INTEGER DEFAULT 0",
         ]
         for m in migrations:
@@ -136,6 +138,11 @@ class Database:
                 await self.conn.execute(f"ALTER TABLE players ADD COLUMN {m}")
                 await self.conn.commit()
             except: pass
+        # Миграция: тег банды
+        try:
+            await self.conn.execute("ALTER TABLE gangs ADD COLUMN tag TEXT DEFAULT NULL")
+            await self.conn.commit()
+        except: pass
         # Автоочистка зависших PvP-вызовов при старте
         try:
             await self.conn.execute("UPDATE pvp_battles SET status='expired' WHERE status='pending' AND (strftime('%s','now') - strftime('%s', created_at)) > 30")

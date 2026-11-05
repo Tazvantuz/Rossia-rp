@@ -1,3 +1,4 @@
+/* style.css */
 :root {
   --bg: var(--tg-theme-bg-color, #17212b);
   --bg-2: var(--tg-theme-secondary-bg-color, #232e3c);
@@ -625,3 +626,36 @@ input[type=number]{-moz-appearance:textfield}
 .online-status.off { color: #8494a5; }
 
 .nav-badge { position: absolute; top: 0; right: 4px; background: #e74c3c; color: #fff; font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 8px; min-width: 14px; text-align: center; border: 1px solid var(--bg-2); }
+
+/* ══════════════════════════════════════════════════════════════
+   НОВОЕ (ЗАДАЧИ 2-3): ТЕГИ БАНД + LAST SEEN
+   ══════════════════════════════════════════════════════════════ */
+
+/* ═══════════ GANG TAGS (тег банды) ═══════════ */
+.gang-tag {
+  display: inline-block;
+  font-size: 0.85em;
+  font-weight: 800;
+  color: #f39c12;
+  background: rgba(243, 156, 18, 0.15);
+  padding: 0 4px;
+  border-radius: 4px;
+  margin-right: 3px;
+  letter-spacing: 0.3px;
+  vertical-align: baseline;
+  white-space: nowrap;
+}
+
+.nick .gang-tag { font-size: 0.9em; }
+.char-name .gang-tag { font-size: 0.85em; }
+.chat-nick .gang-tag { font-size: 0.9em; }
+
+/* ═══════════ LAST SEEN (был в сети) ═══════════ */
+.last-seen {
+  font-size: 11px;
+  color: var(--hint);
+  font-weight: 600;
+  opacity: 0.85;
+}
+
+.player-meta .last-seen { font-size: 10px; }

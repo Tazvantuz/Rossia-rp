@@ -1,3 +1,4 @@
+// app-v24.js
 const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); tg.setHeaderColor?.('#17212b'); tg.setBackgroundColor?.('#17212b'); }
 const initData = tg?.initData || "";
@@ -6,6 +7,27 @@ let state = {
   shopFilter: "head", appearanceMode: "shop", casinoGame: "coin",
   casinoLocked: false, casinoLockTime: 0, openPMs: [],
 };
+
+// ══════════════════════════════════════════════════════════════
+//  ХЕЛПЕРЫ: НИК С ТЕГОМ БАНДЫ, LAST SEEN
+// ══════════════════════════════════════════════════════════════
+function formatNickWithTag(name, tag) {
+  const safeName = escapeHtml(name || "");
+  if (!tag) return safeName;
+  return `<span class="gang-tag">[${escapeHtml(tag)}]</span> ${safeName}`;
+}
+
+function formatLastSeen(ts) {
+  if (!ts || Number(ts) === 0) return "давно";
+  const now = Math.floor(Date.now() / 1000);
+  const diff = now - Number(ts);
+  if (diff < 60) return "только что";
+  if (diff < 3600) return Math.floor(diff / 60) + " мин назад";
+  if (diff < 86400) return Math.floor(diff / 3600) + " ч назад";
+  if (diff < 604800) return Math.floor(diff / 86400) + " дн назад";
+  const d = new Date(Number(ts) * 1000);
+  return d.toLocaleDateString("ru-RU", {day:"numeric", month:"short"});
+}
 
 // ══════════════════════════════════════════════════════════════
 //  SVG ПЕРСОНАЖ
@@ -39,7 +61,7 @@ function renderBaseBody() {
 }
 
 const ITEMS_SVG = {
-  // ═══ ГОЛОВА — ИСПРАВЛЕНО ПОЗИЦИОНИРОВАНИЕ ═══
+  // ═══ ГОЛОВА ═══
   h_cig: `<line x1="115" y1="72" x2="144" y2="68" stroke="#fff" stroke-width="4" stroke-linecap="round"/><circle cx="144" cy="68" r="3" fill="#ff6600"/><circle cx="144" cy="68" r="1.5" fill="#ffcc00"/>`,
   h_cap: `<path d="M72 42 Q100 15 128 42 L128 48 L72 48 Z" fill="#1a1a1a"/><path d="M128 42 L158 48 L155 54 L128 48 Z" fill="#0a0a0a"/><circle cx="100" cy="15" r="2" fill="#333"/>`,
   h_ushanka: `<path d="M70 35 Q100 5 130 35 L130 42 Q125 38 120 42 Q110 38 100 42 Q90 38 80 42 Q75 38 70 42 Z" fill="#6b4a2a"/><path d="M70 35 L62 52 Q58 72 64 82 L74 82 Q70 68 72 52 L74 40 Z" fill="#5a3d20"/><path d="M130 35 L138 52 Q142 72 136 82 L126 82 Q130 68 128 52 L126 40 Z" fill="#5a3d20"/><circle cx="100" cy="12" r="3" fill="#5a3d20"/>`,
@@ -52,7 +74,6 @@ const ITEMS_SVG = {
   h_horns: `<path d="M76 35 Q70 20 65 8 Q72 15 80 30 Z" fill="#8b0000" stroke="#4a0000" stroke-width="1"/><path d="M124 35 Q130 20 135 8 Q128 15 120 30 Z" fill="#8b0000" stroke="#4a0000" stroke-width="1"/>`,
   h_moto: `<ellipse cx="100" cy="50" rx="33" ry="38" fill="#1a1a1a"/><ellipse cx="100" cy="42" rx="26" ry="10" fill="#0a0a0a" opacity="0.6"/><path d="M68 60 Q100 72 132 60" stroke="#333" stroke-width="1.5" fill="none"/><ellipse cx="88" cy="52" rx="7" ry="4" fill="#3498db" opacity="0.3"/><ellipse cx="112" cy="52" rx="7" ry="4" fill="#3498db" opacity="0.3"/>`,
   h_gold_crown: `<path d="M68 35 L72 10 L84 24 L100 4 L116 24 L128 10 L132 35 Z" fill="#ffd700" stroke="#b8860b" stroke-width="2"/><path d="M68 35 L132 35" stroke="#b8860b" stroke-width="2"/><circle cx="100" cy="20" r="3.5" fill="#e74c3c"/><circle cx="84" cy="20" r="2.5" fill="#3498db"/><circle cx="116" cy="20" r="2.5" fill="#3498db"/><circle cx="76" cy="28" r="1.5" fill="#fff"/><circle cx="124" cy="28" r="1.5" fill="#fff"/>`,
-  // NEW
   h_cheburashka: `<circle cx="76" cy="25" r="17" fill="#8b6914"/><circle cx="124" cy="25" r="17" fill="#8b6914"/><circle cx="76" cy="25" r="11" fill="#a07020"/><circle cx="124" cy="25" r="11" fill="#a07020"/><path d="M70 42 Q100 32 130 42 L130 48 L70 48 Z" fill="#6b4a2a"/>`,
   h_bandit: `<ellipse cx="100" cy="55" rx="30" ry="34" fill="#0a0a0a"/><ellipse cx="90" cy="50" rx="6" ry="5" fill="${SKIN}"/><ellipse cx="110" cy="50" rx="6" ry="5" fill="${SKIN}"/><circle cx="90" cy="50" r="2" fill="#000"/><circle cx="110" cy="50" r="2" fill="#000"/>`,
   h_pirate: `<path d="M68 42 Q100 20 132 42 L132 48 L68 48 Z" fill="#c0392b"/><path d="M68 45 L55 58 L62 56 L72 48 Z" fill="#a93226"/><circle cx="110" cy="52" r="7" fill="#000"/><line x1="103" y1="52" x2="70" y2="45" stroke="#000" stroke-width="1.5"/>`,
@@ -77,7 +98,6 @@ const ITEMS_SVG = {
   b_vest: `<rect x="72" y="105" width="56" height="90" rx="6" fill="#2c3e50"/><rect x="80" y="120" width="40" height="25" rx="2" fill="#1a252f"/><path d="M80 155 L120 155 M80 170 L120 170" stroke="#1a252f" stroke-width="1.5"/><rect x="90" y="108" width="20" height="6" rx="2" fill="#34495e"/>`,
   b_tuxedo: `<path d="M70 100 L70 205 L85 205 L100 175 L115 205 L130 205 L130 100 Q120 95 100 95 Q80 95 70 100 Z" fill="#000"/><rect x="52" y="100" width="20" height="95" rx="8" fill="#000"/><rect x="128" y="100" width="20" height="95" rx="8" fill="#000"/><path d="M88 95 L100 170 L112 95 Z" fill="#fff"/><path d="M90 100 L100 105 L110 100 L108 108 L100 105 L92 108 Z" fill="#000"/><circle cx="100" cy="155" r="1.5" fill="#fff"/><circle cx="100" cy="168" r="1.5" fill="#fff"/>`,
   b_santa: `<path d="M70 100 Q68 95 72 95 L128 95 Q132 95 130 100 L130 205 L70 205 Z" fill="#c0392b"/><rect x="52" y="100" width="20" height="95" rx="8" fill="#c0392b"/><rect x="128" y="100" width="20" height="95" rx="8" fill="#c0392b"/><path d="M70 100 Q100 90 130 100" stroke="#fff" stroke-width="4" fill="none"/><rect x="70" y="195" width="60" height="10" fill="#fff"/><circle cx="90" cy="130" r="2" fill="#fff"/><circle cx="110" cy="130" r="2" fill="#fff"/><circle cx="90" cy="160" r="2" fill="#fff"/><circle cx="110" cy="160" r="2" fill="#fff"/>`,
-  // NEW
   b_tank_usa: `<path d="M72 95 Q70 95 70 100 L70 205 L130 205 L130 100 Q130 95 128 95 L118 95 Q115 108 100 108 Q85 108 82 95 Z" fill="#f5f5f5"/><path d="M70 100 L62 105 L62 130 L72 130 L72 100 Z" fill="#f5f5f5"/><path d="M130 100 L138 105 L138 130 L128 130 L128 100 Z" fill="#f5f5f5"/><rect x="75" y="140" width="50" height="30" fill="#c0392b"/><rect x="75" y="140" width="25" height="15" fill="#1c3a7a"/><line x1="75" y1="145" x2="100" y2="145" stroke="#fff" stroke-width="1.5"/><line x1="75" y1="150" x2="100" y2="150" stroke="#fff" stroke-width="1.5"/>`,
   b_hoodie: `<path d="M66 98 Q66 92 72 92 L128 92 Q134 92 134 98 L134 205 L66 205 Z" fill="#1a1a1a"/><path d="M75 92 Q100 75 125 92 L125 98 L75 98 Z" fill="#0a0a0a"/><rect x="52" y="98" width="20" height="100" rx="8" fill="#1a1a1a"/><rect x="128" y="98" width="20" height="100" rx="8" fill="#1a1a1a"/><line x1="94" y1="105" x2="94" y2="130" stroke="#fff" stroke-width="1"/><line x1="106" y1="105" x2="106" y2="130" stroke="#fff" stroke-width="1"/><rect x="85" y="155" width="30" height="20" rx="3" fill="#0a0a0a"/>`,
   b_hawaii: `<path d="M70 95 Q68 95 68 100 L68 205 L132 205 L132 100 Q132 95 130 95 L118 95 Q115 108 100 108 Q85 108 82 95 Z" fill="#fff9e6"/><rect x="52" y="100" width="20" height="95" rx="8" fill="#fff9e6"/><rect x="128" y="100" width="20" height="95" rx="8" fill="#fff9e6"/><circle cx="82" cy="135" r="4" fill="#2ecc71"/><circle cx="120" cy="155" r="4" fill="#e91e63"/><circle cx="90" cy="185" r="4" fill="#f39c12"/><line x1="82" y1="139" x2="80" y2="147" stroke="#2ecc71" stroke-width="1.5"/><line x1="120" y1="159" x2="118" y2="167" stroke="#e91e63" stroke-width="1.5"/><line x1="90" y1="189" x2="88" y2="197" stroke="#f39c12" stroke-width="1.5"/>`,
@@ -100,7 +120,6 @@ const ITEMS_SVG = {
   l_classic: `<rect x="75" y="205" width="24" height="160" rx="4" fill="#2c3e50"/><rect x="101" y="205" width="24" height="160" rx="4" fill="#2c3e50"/><path d="M75 205 L125 205" stroke="#1a252f" stroke-width="2"/><path d="M87 215 L87 355 M113 215 L113 355" stroke="#1a252f" stroke-width="1"/>`,
   l_leather: `<rect x="75" y="205" width="24" height="160" rx="4" fill="#0a0a0a"/><rect x="101" y="205" width="24" height="160" rx="4" fill="#0a0a0a"/><path d="M80 230 L80 340" stroke="#333" stroke-width="1"/><path d="M106 230 L106 340" stroke="#333" stroke-width="1"/><path d="M87 215 L87 355 M113 215 L113 355" stroke="#555" stroke-width="1" stroke-dasharray="2,2"/>`,
   l_gold: `<rect x="75" y="205" width="24" height="160" rx="4" fill="#ffd700"/><rect x="101" y="205" width="24" height="160" rx="4" fill="#ffd700"/><path d="M80 220 L80 350" stroke="#fff" stroke-width="1.5" opacity="0.5"/><path d="M106 220 L106 350" stroke="#fff" stroke-width="1.5" opacity="0.5"/><path d="M75 205 L125 205" stroke="#b8860b" stroke-width="3"/><circle cx="100" cy="210" r="3" fill="#fff"/>`,
-  // NEW
   l_joggers: `<rect x="75" y="205" width="24" height="160" rx="4" fill="#34495e"/><rect x="101" y="205" width="24" height="160" rx="4" fill="#34495e"/><ellipse cx="87" cy="360" rx="12" ry="3" fill="#2c3e50"/><ellipse cx="113" cy="360" rx="12" ry="3" fill="#2c3e50"/>`,
   l_chinos: `<rect x="75" y="205" width="24" height="160" rx="4" fill="#d4a97a"/><rect x="101" y="205" width="24" height="160" rx="4" fill="#d4a97a"/><path d="M87 215 L87 355 M113 215 L113 355" stroke="#b8916a" stroke-width="1"/>`,
   l_skinny: `<rect x="75" y="205" width="22" height="160" rx="4" fill="#1a1a2e"/><rect x="103" y="205" width="22" height="160" rx="4" fill="#1a1a2e"/><path d="M86 220 L86 350 M113 220 L113 350" stroke="#2c3e50" stroke-width="0.8"/>`,
@@ -123,7 +142,6 @@ const ITEMS_SVG = {
   rh_nerf: `<rect x="138" y="185" width="26" height="9" rx="2" fill="#f39c12"/><rect x="138" y="194" width="9" height="12" fill="#e67e22"/><circle cx="158" cy="189" r="3" fill="#c0392b"/><rect x="156" y="181" width="7" height="5" fill="#e67e22"/>`,
   rh_flag_rus: `<line x1="148" y1="205" x2="148" y2="110" stroke="#888" stroke-width="2.5"/><rect x="148" y="110" width="42" height="10" fill="#fff"/><rect x="148" y="120" width="42" height="10" fill="#3498db"/><rect x="148" y="130" width="42" height="10" fill="#e74c3c"/>`,
   rh_case: `<rect x="130" y="172" width="32" height="28" rx="3" fill="#8b6914"/><rect x="130" y="182" width="32" height="3" fill="#b8860b"/><circle cx="146" cy="170" r="4" fill="none" stroke="#8b6914" stroke-width="2.5"/><text x="146" y="193" text-anchor="middle" font-size="9" fill="#ffd700" font-weight="900">$</text>`,
-  // NEW
   rh_knife: `<rect x="140" y="180" width="4" height="10" fill="#5a3a1e"/><path d="M140 180 L140 145 L144 145 L144 180 Z" fill="#c0c0c0"/><rect x="140" y="180" width="4" height="3" fill="#8b6914"/>`,
   rh_book: `<rect x="138" y="180" width="26" height="30" rx="2" fill="#c0392b"/><rect x="138" y="180" width="5" height="30" fill="#8b1a1a"/><line x1="146" y1="185" x2="160" y2="185" stroke="#fff" stroke-width="0.5" opacity="0.5"/><line x1="146" y1="195" x2="160" y2="195" stroke="#fff" stroke-width="0.5" opacity="0.5"/>`,
   rh_donut: `<circle cx="152" cy="195" r="13" fill="#e67e22"/><circle cx="152" cy="195" r="5" fill="#8b4513"/><path d="M145 190 Q147 185 152 185 Q157 185 159 190 Q157 188 152 188 Q147 188 145 190 Z" fill="#e74c3c"/><path d="M144 196 Q146 200 152 200 Q158 200 160 196" stroke="#f39c12" stroke-width="1.5" fill="none"/>`,
@@ -146,7 +164,6 @@ const ITEMS_SVG = {
   lh_flag_ussr: `<line x1="48" y1="208" x2="48" y2="120" stroke="#888" stroke-width="2.5"/><rect x="48" y="120" width="36" height="22" fill="#c0392b"/><text x="66" y="137" text-anchor="middle" font-size="12" fill="#f1c40f">☭</text>`,
   lh_briefcase: `<rect x="40" y="175" width="34" height="28" rx="3" fill="#2c3e50"/><rect x="40" y="183" width="34" height="3" fill="#34495e"/><circle cx="57" cy="172" r="4" fill="none" stroke="#2c3e50" stroke-width="2.5"/><text x="57" y="196" text-anchor="middle" font-size="10" fill="#fff" font-weight="900">❄</text>`,
   lh_cat: `<ellipse cx="55" cy="188" rx="14" ry="16" fill="#f39c12"/><path d="M44 178 L43 168 L50 175 Z" fill="#f39c12"/><path d="M66 178 L67 168 L60 175 Z" fill="#f39c12"/><circle cx="50" cy="184" r="2" fill="#222"/><circle cx="60" cy="184" r="2" fill="#222"/><path d="M52 194 Q55 197 58 194" stroke="#222" stroke-width="1" fill="none"/><line x1="50" y1="194" x2="44" y2="194" stroke="#222" stroke-width="0.5"/><line x1="60" y1="194" x2="66" y2="194" stroke="#222" stroke-width="0.5"/>`,
-  // NEW
   lh_coffee: `<path d="M46 178 L64 178 L62 202 L48 202 Z" fill="#fff"/><path d="M46 178 L64 178" stroke="#8b4513" stroke-width="2"/><ellipse cx="55" cy="180" rx="9" ry="2" fill="#3d1a05"/><path d="M64 185 Q70 185 70 192 Q70 199 64 199" stroke="#fff" stroke-width="2" fill="none"/>`,
   lh_hammer: `<g transform="translate(60, 190) rotate(-20)"><rect x="-3" y="-40" width="6" height="50" fill="#8b6914"/><rect x="-13" y="-45" width="26" height="12" rx="2" fill="#7f8c8d"/></g>`,
   lh_book2: `<rect x="36" y="175" width="32" height="38" rx="2" fill="#2c3e50"/><rect x="36" y="175" width="6" height="38" fill="#1a252f"/><line x1="46" y1="182" x2="62" y2="182" stroke="#fff" stroke-width="0.5" opacity="0.5"/><line x1="46" y1="192" x2="62" y2="192" stroke="#fff" stroke-width="0.5" opacity="0.5"/><line x1="46" y1="202" x2="62" y2="202" stroke="#fff" stroke-width="0.5" opacity="0.5"/><rect x="56" y="175" width="4" height="10" fill="#e74c3c"/>`,
@@ -158,7 +175,7 @@ const ITEMS_SVG = {
   lh_pizza: `<path d="M40 195 L70 195 L70 200 L40 200 Z" fill="#f39c12"/><path d="M40 195 L55 165 L70 195 Z" fill="#f39c12"/><circle cx="50" cy="188" r="3" fill="#c0392b"/><circle cx="60" cy="188" r="3" fill="#c0392b"/><circle cx="55" cy="178" r="2.5" fill="#c0392b"/><circle cx="48" cy="192" r="1.5" fill="#2ecc71"/>`,
   lh_teddy: `<ellipse cx="55" cy="195" rx="16" ry="18" fill="#8b6914"/><circle cx="55" cy="178" r="12" fill="#8b6914"/><circle cx="46" cy="170" r="5" fill="#8b6914"/><circle cx="64" cy="170" r="5" fill="#8b6914"/><circle cx="46" cy="170" r="2" fill="#5a3a1e"/><circle cx="64" cy="170" r="2" fill="#5a3a1e"/><circle cx="50" cy="176" r="2" fill="#1a1a1a"/><circle cx="60" cy="176" r="2" fill="#1a1a1a"/><ellipse cx="55" cy="184" rx="4" ry="3" fill="#5a3a1e"/><ellipse cx="55" cy="184" rx="2" ry="1" fill="#1a1a1a"/>`,
 
-  // ═══ КЕЙСОВЫЕ (уникальные) ═══
+  // ═══ КЕЙСОВЫЕ ═══
   h_case_bandit: `<path d="M72 42 Q100 15 128 42 L128 48 L72 48 Z" fill="#1a1a1a"/><path d="M128 42 L158 48 L155 54 L128 48 Z" fill="#0a0a0a"/><path d="M72 42 Q100 15 128 42 L128 48 L72 48 Z" fill="#1a1a1a" opacity="0.9"/><ellipse cx="100" cy="48" rx="30" ry="8" fill="#000" opacity="0.5"/>`,
   b_case_tracksuit: `<path d="M68 100 L68 205 L132 205 L132 100 Q120 95 100 95 Q80 95 68 100 Z" fill="#1a1a1a"/><rect x="52" y="100" width="20" height="95" rx="8" fill="#1a1a1a"/><rect x="128" y="100" width="20" height="95" rx="8" fill="#1a1a1a"/><path d="M75 115 L125 115 M75 125 L125 125" stroke="#fff" stroke-width="2"/><path d="M75 140 L75 205 M85 140 L85 205 M95 140 L95 205 M105 140 L105 205 M115 140 L115 205 M125 140 L125 205" stroke="#fff" stroke-width="1" opacity="0.4"/>`,
   h_case_rooster: `<ellipse cx="100" cy="55" rx="30" ry="35" fill="#ffd700"/><path d="M88 22 L95 5 L100 22 L105 5 L112 22 Z" fill="#e74c3c"/><circle cx="87" cy="48" r="6" fill="#fff"/><circle cx="87" cy="48" r="3" fill="#1a1a1a"/><circle cx="113" cy="48" r="6" fill="#fff"/><circle cx="113" cy="48" r="3" fill="#1a1a1a"/><path d="M90 65 L100 78 L110 65 L100 85 Z" fill="#e67e22" stroke="#8b0000" stroke-width="1.5"/><circle cx="75" cy="40" r="2" fill="#fff" opacity="0.7"/>`,
@@ -169,7 +186,7 @@ const ITEMS_SVG = {
   h_case_helmet_alpha: `<ellipse cx="100" cy="55" rx="34" ry="36" fill="#0a0a0a"/><path d="M66 50 Q100 40 134 50 L134 55 Q100 65 66 55 Z" fill="#1a1a1a"/><ellipse cx="88" cy="52" rx="9" ry="5" fill="#3498db" opacity="0.4"/><ellipse cx="112" cy="52" rx="9" ry="5" fill="#3498db" opacity="0.4"/><path d="M78 70 L122 70" stroke="#333" stroke-width="2"/><rect x="94" y="20" width="12" height="6" fill="#f39c12" rx="2"/><circle cx="88" cy="52" r="3" fill="#2ecc71"/><circle cx="112" cy="52" r="3" fill="#2ecc71"/>`,
   rh_case_uzi_gold: `<g transform="translate(140,197)"><rect x="-6" y="0" width="22" height="8" rx="1" fill="#ffd700"/><rect x="-4" y="8" width="8" height="14" fill="#d4ac0d"/><rect x="10" y="-4" width="4" height="10" fill="#d4ac0d"/><circle cx="16" cy="4" r="2" fill="#b8860b"/><rect x="-8" y="-4" width="18" height="3" fill="#ffd700"/></g>`,
   lh_case_brilliant: `<g transform="translate(45,190)"><rect x="0" y="0" width="30" height="22" rx="3" fill="#3498db"/><rect x="0" y="6" width="30" height="2" fill="#2874a6"/><circle cx="15" cy="-2" r="4" fill="none" stroke="#3498db" stroke-width="2"/><path d="M8 10 L12 16 L18 16 L22 10 Z" fill="#e74c3c"/><path d="M10 12 L14 14 L20 14 L22 12" stroke="#fff" stroke-width="0.5" fill="none"/><circle cx="15" cy="13" r="1" fill="#fff" opacity="0.9"/><circle cx="6" cy="18" r="1" fill="#f39c12"/><circle cx="24" cy="18" r="1" fill="#f39c12"/></g>`,
-    rh_case_knife: `<g transform="translate(140,197)"><rect x="-5" y="-3" width="10" height="20" rx="2" fill="#1a1a1a"/><path d="M-5 -3 L5 -3 L4 -25 L-4 -25 Z" fill="#d4d4d4"/><path d="M-4 -25 L4 -25 L4 -22 L-4 -22 Z" fill="#9a9a9a"/><circle cx="0" cy="-8" r="2" fill="#1a1a1a"/><rect x="-6" y="17" width="12" height="3" rx="1" fill="#333"/></g>`,
+  rh_case_knife: `<g transform="translate(140,197)"><rect x="-5" y="-3" width="10" height="20" rx="2" fill="#1a1a1a"/><path d="M-5 -3 L5 -3 L4 -25 L-4 -25 Z" fill="#d4d4d4"/><path d="M-4 -25 L4 -25 L4 -22 L-4 -22 Z" fill="#9a9a9a"/><circle cx="0" cy="-8" r="2" fill="#1a1a1a"/><rect x="-6" y="17" width="12" height="3" rx="1" fill="#333"/></g>`,
   l_case_adidas: `<rect x="75" y="205" width="24" height="160" rx="4" fill="#1a1a1a"/><rect x="101" y="205" width="24" height="160" rx="4" fill="#1a1a1a"/><path d="M80 215 L80 355 M84 215 L84 355 M88 215 L88 355" stroke="#fff" stroke-width="1.5"/><path d="M106 215 L106 355 M110 215 L110 355 M114 215 L114 355" stroke="#fff" stroke-width="1.5"/><path d="M75 355 L99 355 M101 355 L125 355" stroke="#fff" stroke-width="2"/><circle cx="87" cy="240" r="2" fill="#f39c12"/><circle cx="87" cy="280" r="2" fill="#f39c12"/><circle cx="113" cy="240" r="2" fill="#f39c12"/><circle cx="113" cy="280" r="2" fill="#f39c12"/>`,
   l_case_gold_shorts: `<path d="M72 200 L72 260 L100 260 L100 200 Z" fill="#ffd700"/><path d="M100 200 L100 260 L128 260 L128 200 Z" fill="#ffd700"/><path d="M72 200 L128 200 L128 215 L72 215 Z" fill="#d4ac0d"/><path d="M80 240 L92 240 M108 240 L120 240 M80 250 L92 250 M108 250 L120 250" stroke="#fff" stroke-width="1.5" opacity="0.7"/><circle cx="85" cy="225" r="2" fill="#fff"/><circle cx="115" cy="225" r="2" fill="#fff"/><circle cx="100" cy="235" r="2" fill="#fff"/>`,
   h_case_dragon: `<path d="M68 42 Q100 15 132 42 L132 52 Q100 62 68 52 Z" fill="#2c3e50"/><path d="M78 32 Q82 18 88 28 L88 35 Z" fill="#1a252f"/><path d="M112 32 Q118 18 122 28 L122 35 Z" fill="#1a252f"/><ellipse cx="88" cy="50" rx="8" ry="5" fill="#e74c3c"/><ellipse cx="112" cy="50" rx="8" ry="5" fill="#e74c3c"/><circle cx="88" cy="50" r="2" fill="#000"/><circle cx="112" cy="50" r="2" fill="#000"/><path d="M95 60 Q100 62 105 60" stroke="#e74c3c" stroke-width="2" fill="none"/><path d="M98 52 L96 62 L100 60 Z" fill="#f39c12"/>`,
@@ -296,10 +313,11 @@ async function loadConversations() {
     if (!state.openPMs) state.openPMs = [];
     for (const c of (d.conversations || [])) {
       if (!state.openPMs.find(x => Number(x.uid) === Number(c.user_id))) {
-        state.openPMs.push({uid: c.user_id, name: c.nickname, unread: c.unread});
+        state.openPMs.push({uid: c.user_id, name: c.nickname, tag: c.gang_tag, unread: c.unread});
       } else {
         const existing = state.openPMs.find(x => Number(x.uid) === Number(c.user_id));
         existing.unread = c.unread;
+        existing.tag = c.gang_tag;
       }
     }
     renderChatTabs();
@@ -374,9 +392,9 @@ let registerSetup = false;
 function renderRegister() {
   const nick = $("#nickname"), btn = $("#btn-register");
   if (!nick || !btn) return;
-  
+
   btn.disabled = nick.value.trim().length < 2;
-  
+
   if (!registerSetup) {
     nick.addEventListener("input", () => btn.disabled = nick.value.trim().length < 2);
     btn.addEventListener("click", async () => {
@@ -406,11 +424,15 @@ function renderRegister() {
 
 function renderPlayer() {
   const p = state.player; if (!p) return;
-  $("#nick").textContent = p.nickname;
+  $("#nick").innerHTML = p.gang_tag
+    ? `<span class="gang-tag">[${escapeHtml(p.gang_tag)}]</span> ${escapeHtml(p.nickname)}`
+    : escapeHtml(p.nickname);
   const hasClothes = p.outfit.head_id.item_id || p.outfit.body_id.item_id || p.outfit.legs_id.item_id;
   $("#subtitle").textContent = `Ур. ${p.level} · ${hasClothes ? "модник" : "голый бомж"}`;
   $("#money").textContent = fmtMoney(p.balance);
-  $("#char-name").textContent = p.nickname;
+  $("#char-name").innerHTML = p.gang_tag
+    ? `<span class="gang-tag">[${escapeHtml(p.gang_tag)}]</span> ${escapeHtml(p.nickname)}`
+    : escapeHtml(p.nickname);
   $("#char-level").textContent = p.level;
   (function(){
     const cs = p.combat_stats || {};
@@ -441,7 +463,6 @@ function updateTimers() {
   }
   const p = state.player;
   if (!p) return;
-  // Ежедневный бонус
   const dailyBtn = $("#daily-btn");
   const dailyTimer = $("#daily-timer");
   if (dailyBtn && dailyTimer) {
@@ -458,7 +479,6 @@ function updateTimers() {
       dailyTimer.classList.remove("hidden");
     }
   }
-  // Рулетка
   const rouletteTimer = $("#roulette-timer");
   if (rouletteTimer && p.last_roulette !== undefined) {
     const nowR = Math.floor(Date.now()/1000);
@@ -471,7 +491,6 @@ function updateTimers() {
       rouletteTimer.classList.remove("ready");
     }
   }
-  // Кредит
   renderCreditBanner();
 }
 
@@ -561,13 +580,11 @@ function renderAppearance() {
   const container = $("#appearance-list");
   const filterEl = $("#appearance-filter");
 
-  // Mode switch
   let modeHtml = `<div class="mode-switch">
     <button class="mode-btn ${state.appearanceMode==='shop'?'active':''}" onclick="setAppearanceMode('shop')">🛒 Магазин</button>
     <button class="mode-btn ${state.appearanceMode==='inventory'?'active':''}" onclick="setAppearanceMode('inventory')">🎒 Инвентарь</button>
   </div>`;
 
-  // Filters
   let filterHtml = SLOT_FILTERS.map(f=>`<button class="filter-btn ${state.shopFilter===f.id?'active':''}" onclick="setShopFilter('${f.id}')">${f.emoji} ${f.name}</button>`).join("");
 
   filterEl.innerHTML = modeHtml + filterHtml;
@@ -590,7 +607,6 @@ function renderAppearance() {
       </div>`;
     }).join("");
   } else {
-    // Inventory mode
     const equipped = [];
     for (const [slot, item] of Object.entries(p.outfit)) {
       if (item.item_id) equipped.push({slot, item});
@@ -758,11 +774,11 @@ async function doWork() {
 function renderBusinesses(data) {
   const list = document.getElementById("businesses-list");
   if (!list) return;
-  
+
   const arr = Array.isArray(data) ? data : (data.businesses || []);
   let totalPending = 0;
   list.innerHTML = "";
-  
+
   if (arr.length === 0) {
     list.innerHTML = '<div style="color:var(--hint);text-align:center;padding:20px;">Нет доступных бизнесов</div>';
     const totalEl = document.getElementById("business-total-pending");
@@ -777,7 +793,7 @@ function renderBusinesses(data) {
     const name = b.name || 'Бизнес';
     const emoji = b.emoji || '🏢';
     const level = b.level || 1;
-    
+
     let actionHtml = "";
     if (!b.owned) {
       actionHtml = `<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="buyBusiness('${b.id}')">Купить за ${fmtMoney(b.price)}₽</button>`;
@@ -789,7 +805,7 @@ function renderBusinesses(data) {
       } else {
         upgradeHtml = `<button class="btn btn-secondary" style="flex:1;margin-right:8px;font-size:12px;padding:8px;" disabled>⭐ Макс. уровень</button>`;
       }
-      
+
       actionHtml = `
         <div style="display:flex;margin-top:10px;">
           ${upgradeHtml}
@@ -833,12 +849,11 @@ async function buyBusiness(id) {
     toast("🏢 Бизнес куплен!", "success");
     if (d.player) { state.player = d.player; renderPlayer(); }
     loadBusinesses();
-  } catch(e) { 
-    toast(e.message, "error"); 
-    // Синхронизируем баланс с сервером, чтобы на экране была правда
-    try { 
-      const me = await api("me"); 
-      if (me.player) { state.player = me.player; renderPlayer(); } 
+  } catch(e) {
+    toast(e.message, "error");
+    try {
+      const me = await api("me");
+      if (me.player) { state.player = me.player; renderPlayer(); }
     } catch(_) {}
   }
 }
@@ -855,11 +870,11 @@ async function upgradeBusiness(id) {
     toast("⭐ Бизнес улучшен!", "success");
     if (d.player) { state.player = d.player; renderPlayer(); }
     loadBusinesses();
-  } catch(e) { 
-    toast(e.message, "error"); 
-    try { 
-      const me = await api("me"); 
-      if (me.player) { state.player = me.player; renderPlayer(); } 
+  } catch(e) {
+    toast(e.message, "error");
+    try {
+      const me = await api("me");
+      if (me.player) { state.player = me.player; renderPlayer(); }
     } catch(_) {}
   }
 }
@@ -868,11 +883,11 @@ async function collectBusiness() {
   try {
     const d = await api("collect_business", {});
     if (d.error) throw new Error(d.error);
-    
+
     const collected = d.collected || d.pending || 0;
     if (collected > 0) toast(`💰 Собрано: ${fmtMoney(collected)}₽`, "success");
     else toast("Нечего собирать", "error");
-    
+
     if (d.player) {
       state.player = d.player;
       document.getElementById("money").textContent = fmtMoney(state.player.balance);
@@ -953,8 +968,8 @@ function renderPlayersList(players) {
     <div class="player-card" onclick="viewPlayer(${p.user_id})">
       <div class="player-avatar">👤</div>
       <div class="player-info">
-        <div class="player-name">${p.nickname}</div>
-        <div class="player-meta">Ур. ${p.level} · ${_onlineHtml(p.is_online)}</div>
+        <div class="player-name">${formatNickWithTag(p.nickname, p.gang_tag)}</div>
+        <div class="player-meta">Ур. ${p.level} · ${_onlineHtml(p.is_online)}${!p.is_online && p.last_seen ? ` · <span class="last-seen">${formatLastSeen(p.last_seen)}</span>` : ''}</div>
       </div>
       <div class="player-money">${fmtMoney(p.balance)}₽</div>
     </div>`).join("");
@@ -969,10 +984,13 @@ async function viewPlayer(uid) {
     const ach = d.achievements.length > 0 ? d.achievements.map(id=>ACH_MAP[id]?.emoji||"🏆").join(" ") : "нет";
     const isMe = uid === state.player.user_id;
     const stats = d.combat_stats || {hp: 100, damage: 5};
+    const onlineInfo = d.is_online
+      ? _onlineHtml(true)
+      : `${_onlineHtml(false)}${d.last_seen ? ` · <span class="last-seen">🕐 Был(а) в сети: ${formatLastSeen(d.last_seen)}</span>` : ''}`;
     openModal(`
       <div class="shop-preview">${renderCharacterSVG(d.outfit, {width: 170, height: 340})}</div>
-      <h2 style="text-align:center;margin-bottom:4px">${d.nickname}</h2>
-      <div style="text-align:center;margin-bottom:8px;">${_onlineHtml(d.is_online)}</div>
+      <h2 style="text-align:center;margin-bottom:4px">${formatNickWithTag(d.nickname, d.gang_tag)}</h2>
+      <div style="text-align:center;margin-bottom:8px;">${onlineInfo}</div>
       <div style="text-align:center;margin:12px 0">
         <div style="font-size:16px;font-weight:700">Ур. ${d.level}</div>
         <div style="color:var(--money);font-weight:700;margin-top:4px">💰 ${fmtMoney(d.balance)}₽</div>
@@ -986,7 +1004,7 @@ async function viewPlayer(uid) {
       ${!isMe ? `<button class="btn btn-primary" onclick="showTradeOffer(${uid}, '${d.nickname}')">🤝 Трейд</button>` : ''}
       ${!isMe && !d.is_friend && !d.friend_pending ? `<button class="btn btn-secondary" onclick="sendFriendRequest(${uid})">➕ В друзья</button>` : ''}
       ${!isMe && d.friend_pending ? `<button class="btn btn-secondary" disabled>⏳ Заявка отправлена</button>` : ''}
-      ${!isMe && d.is_friend ? `<button class="btn btn-secondary" onclick="openPM(${uid}, '${d.nickname}')">✉️ Написать ЛС</button>` : ''}
+      ${!isMe && d.is_friend ? `<button class="btn btn-secondary" onclick="openPM(${uid}, '${d.nickname}', '${d.gang_tag || ''}')">✉️ Написать ЛС</button>` : ''}
       ${!isMe && d.is_friend ? `<button class="btn btn-secondary" style="background:rgba(231,76,60,.15);color:var(--danger);border:1px solid rgba(231,76,60,.3);" onclick="removeFriend(${uid}, '${d.nickname}')">❌ Удалить из друзей</button>` : ''}
       ${!isMe && d.my_role && ['leader','deputy'].includes(d.my_role) && !d.target_in_gang ? `<button class="btn btn-secondary" onclick="inviteToGang(${uid}, '${d.nickname}')">📨 Пригласить в банду</button>` : ''}
     `);
@@ -1012,7 +1030,7 @@ function renderTrades(trades) {
     const give = `${t.give_money>0?t.give_money+"₽ ":""}${t.give_items.length} шт.`;
     const want = `${t.want_money>0?t.want_money+"₽ ":""}${t.want_items.length} шт.`;
     return `<div class="trade-card">
-      <div class="trade-title">📥 От ${t.other_nickname}</div>
+      <div class="trade-title">📥 От ${formatNickWithTag(t.other_nickname, t.other_gang_tag)}</div>
       <div class="trade-content">Даёт: ${give}<br>Хочет: ${want}</div>
       <div class="trade-actions">
         <button class="trade-accept" onclick="acceptTrade(${t.trade_id})">✅</button>
@@ -1023,7 +1041,7 @@ function renderTrades(trades) {
   outEl.innerHTML = trades.outgoing.length > 0
     ? '<div style="font-size:12px;color:var(--hint);margin-top:8px;margin-bottom:4px">📤 Отправленные</div>'
       + trades.outgoing.map(t=>`<div class="trade-card" style="border-left-color:var(--hint)">
-        <div class="trade-title">К ${t.other_nickname}</div>
+        <div class="trade-title">К ${formatNickWithTag(t.other_nickname, t.other_gang_tag)}</div>
         <div class="trade-actions"><button class="trade-decline" onclick="declineTrade(${t.trade_id})">Отменить</button></div>
       </div>`).join("")
     : "";
@@ -1064,6 +1082,7 @@ function updateMoreBadges() {
   $("#crypto-price-badge").textContent = `${p.crypto_price}₽`;
   renderCreditBanner();
 }
+
 async function showCrypto() {
   let d;
   try { d = await api("crypto/price", {}); }
@@ -1076,7 +1095,6 @@ async function showCrypto() {
   const coins = Number(p.crypto_amount || 0);
   const coinsRub = Math.floor(coins * price);
 
-  // SVG график
   const w = 300, h = 120, pad = 10;
   let chartHtml = '<div style="color:var(--hint);text-align:center;padding:20px;">Нет данных</div>';
   if (history.length > 1) {
@@ -1099,6 +1117,45 @@ async function showCrypto() {
     const trendArrow = change >= 0 ? "▲" : "▼";
     const trendSign = change >= 0 ? "+" : "";
 
+    // ═══ МЕТКИ ВРЕМЕНИ ═══
+    // history[0] = 23 часа назад, history[23] = текущий час (правая точка)
+    const nowHour = new Date().getHours();
+    const hourLabels = [];
+    for (let i = 0; i < history.length; i++) {
+      const hour = (nowHour - 23 + i + 24) % 24;
+      hourLabels.push(hour);
+    }
+
+    // Вертикальные линии сетки каждые 3 часа
+    const gridLines = hourLabels.map((_, i) => {
+      if (i === 0 || i === history.length - 1) return "";
+      if (i % 3 !== 0) return "";
+      const x = pad + (w - 2*pad) * i / (history.length - 1);
+      return `<line x1="${x}" y1="${pad}" x2="${x}" y2="${h-pad}" stroke="rgba(255,255,255,0.07)" stroke-width="1" stroke-dasharray="2,2"/>`;
+    }).join("");
+
+    // Подписи под графиком
+    const timeLabelsHtml = hourLabels.map((hr, i) => {
+      const xPercent = ((pad + (w - 2*pad) * i / (history.length - 1)) / w) * 100;
+      const isNow = i === history.length - 1;
+      const isMajor = i % 3 === 0 || isNow;
+      const text = isMajor
+        ? `${String(hr).padStart(2,'0')}:00`
+        : String(hr).padStart(2,'0');
+
+      let transform = 'translateX(-50%)';
+      if (i === 0) transform = 'translateX(0)';
+      if (i === history.length - 1) transform = 'translateX(-100%)';
+
+      const style = isNow
+        ? `font-weight:900;color:${trendColor};font-size:10px;`
+        : isMajor
+          ? `font-weight:700;color:var(--text);font-size:9px;opacity:0.9;`
+          : `font-weight:600;color:var(--hint);font-size:7px;opacity:0.55;`;
+
+      return `<span style="position:absolute;left:${xPercent}%;transform:${transform};${style}white-space:nowrap;top:0;">${text}</span>`;
+    }).join("");
+
     chartHtml = `
       <div style="background:var(--bg-3);border-radius:12px;padding:12px;margin-bottom:12px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
@@ -1107,9 +1164,13 @@ async function showCrypto() {
         </div>
         <svg viewBox="0 0 ${w} ${h}" width="100%" height="120" preserveAspectRatio="none">
           <polygon points="${area}" fill="rgba(82,136,193,0.15)"/>
+          ${gridLines}
           <polyline points="${poly}" fill="none" stroke="${trendColor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
           <circle cx="${pts[pts.length-1].x}" cy="${pts[pts.length-1].y}" r="3.5" fill="${trendColor}"/>
         </svg>
+        <div style="position:relative;height:16px;margin-top:6px;">
+          ${timeLabelsHtml}
+        </div>
         <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--hint);margin-top:4px;">
           <span>Мин: ${minP}₽</span>
           <span>Макс: ${maxP}₽</span>
@@ -1216,7 +1277,6 @@ function showCredit() {
     `);
     return;
   }
-  // Форма взятия нового кредита
   let termsHtml = "";
   for (const t of [
     {hours:1, pct:5, label:"1 час"},
@@ -1248,7 +1308,6 @@ function showCredit() {
     </div>
     <button class="btn btn-primary" id="credit-take-btn" disabled onclick="takeCredit()" style="margin-top:16px">💸 Взять кредит</button>
   `);
-  // Стилизовать карточки сроков
   document.querySelectorAll(".credit-term").forEach(el => {
     el.style.cssText = "display:flex;align-items:center;gap:8px;padding:12px;background:var(--bg-3);border-radius:10px;cursor:pointer;border:2px solid transparent;transition:all .2s";
   });
@@ -1338,23 +1397,26 @@ async function showLeaderboard(category = null) {
       listHtml = d.leaders.map(l => `
         <div class="lb-row ${l.rank<=3?'top-'+l.rank:''}">
           <div class="lb-rank">${l.rank===1?'🥇':l.rank===2?'🥈':l.rank===3?'🥉':'#'+l.rank}</div>
-          <div class="lb-info"><div class="lb-name">${l.nickname}</div><div class="lb-meta">Ур. ${l.level} · ${l.businesses_count} бизнесов</div></div>
+          <div class="lb-info"><div class="lb-name">${formatNickWithTag(l.nickname, l.gang_tag)}</div><div class="lb-meta">Ур. ${l.level} · ${l.businesses_count} бизнесов</div></div>
           <div class="lb-level">${fmtMoney(l.balance)}₽</div>
         </div>`).join("");
     } else if (lbCategory === "level") {
       listHtml = d.leaders.map(l => `
         <div class="lb-row ${l.rank<=3?'top-'+l.rank:''}">
           <div class="lb-rank">${l.rank===1?'🥇':l.rank===2?'🥈':l.rank===3?'🥉':'#'+l.rank}</div>
-          <div class="lb-info"><div class="lb-name">${l.nickname}</div><div class="lb-meta">${fmtMoney(l.balance)}₽ · ${l.xp} XP</div></div>
+          <div class="lb-info"><div class="lb-name">${formatNickWithTag(l.nickname, l.gang_tag)}</div><div class="lb-meta">${fmtMoney(l.balance)}₽ · ${l.xp} XP</div></div>
           <div class="lb-level">Ур. ${l.level}</div>
         </div>`).join("");
     } else {
-      listHtml = d.leaders.map(l => `
+      listHtml = d.leaders.map(l => {
+        const nameWithTag = l.tag ? `${l.emoji} <span class="gang-tag">[${escapeHtml(l.tag)}]</span> ${escapeHtml(l.name)}` : `${l.emoji} ${escapeHtml(l.name)}`;
+        return `
         <div class="lb-row ${l.rank<=3?'top-'+l.rank:''}">
           <div class="lb-rank">${l.rank===1?'🥇':l.rank===2?'🥈':l.rank===3?'🥉':'#'+l.rank}</div>
-          <div class="lb-info"><div class="lb-name">${l.emoji} ${l.name}</div><div class="lb-meta">${l.territories_count} территорий · ${fmtMoney(l.treasury)}₽ в казне</div></div>
+          <div class="lb-info"><div class="lb-name">${nameWithTag}</div><div class="lb-meta">${l.territories_count} территорий · ${fmtMoney(l.treasury)}₽ в казне</div></div>
           <div class="lb-level">+${fmtMoney(l.income)}₽/ч</div>
-        </div>`).join("");
+        </div>`;
+      }).join("");
     }
     openModal(`<h2>📊 Лидерборд</h2>${tabsHtml}<div class="lb-list">${listHtml}</div>`);
   } catch(e) { toast(e.message, "error"); }
@@ -1403,7 +1465,7 @@ async function loadChat() {
         } catch(e) {}
         return `<div class="chat-msg">
           <div class="chat-msg-head">
-            <span class="chat-nick" onclick="viewPlayer(${m.user_id})">${escapeHtml(m.nickname)}</span>
+            <span class="chat-nick" onclick="viewPlayer(${m.user_id})">${formatNickWithTag(m.nickname, m.gang_tag)}</span>
             <span class="chat-lvl">Ур. ${m.level}</span>
             <span class="chat-time">${time}</span>
           </div>
@@ -1423,9 +1485,6 @@ function escapeHtml(text) {
 
 boot();
 
-// ══════════════════════════════════════════════════════════════
-//  КЕЙСЫ
-// ══════════════════════════════════════════════════════════════
 // ══════════════════════════════════════════════════════════════
 //  PVP
 // ══════════════════════════════════════════════════════════════
@@ -1483,7 +1542,7 @@ async function checkPvPChallenges() {
     const render = (sl) => {
       openModal(`
         <h2 style="text-align:center">⚔️ Гоп-стоп</h2>
-        <p style="margin:16px 0;text-align:center"><b>${c.attacker_name}</b> хочет напасть на тебя!</p>
+        <p style="margin:16px 0;text-align:center"><b>${formatNickWithTag(c.attacker_name, c.attacker_gang_tag)}</b> хочет напасть на тебя!</p>
         <p style="color:var(--danger);font-size:13px;margin-bottom:8px;text-align:center">При проигрыше отдашь 10% денег</p>
         <p style="text-align:center;font-size:18px;font-weight:800;color:${sl > 10 ? 'var(--success)' : 'var(--danger)'};margin:16px 0;">⏰ Осталось: ${sl} сек</p>
         <button class="btn btn-primary" style="padding:16px;font-size:16px;" onclick="respondPvP(${c.battle_id}, true)">⚔️ Принять бой</button>
@@ -1537,7 +1596,6 @@ async function startPvPUI(bid) {
   pvpMyTurnPart = null;
   pvpMyTurnAction = null;
   loadPvPState(bid);
-  // Авто-обновление каждые 3 сек (для синхронизации)
   pvpTimerInterval = setInterval(() => {
     if (pvpCurrentBattle) loadPvPState(pvpCurrentBattle, true);
     else { clearInterval(pvpTimerInterval); pvpTimerInterval = null; }
@@ -1559,22 +1617,11 @@ function pvpChooseAction(action) {
 
 
 // ══════════════════════════════════════════════════════════════
-//  БАНДЫ
-// ══════════════════════════════════════════════════════════════
-
-
-// ══════════════════════════════════════════════════════════════
 //  НОВЫЙ ТРЕЙД (визуальный)
 // ══════════════════════════════════════════════════════════════
 const SLOT_KEY_MAP = {head:"head_id", body:"body_id", legs:"legs_id", right_hand:"right_hand_id", left_hand:"left_hand_id"};
 let tradeGiveItems = new Set();
 let tradeWantItems = new Set();
-
-
-// Переопределить sendTradeOffer
-
-
-// Переопределить showInvItem — новое меню продажи
 
 
 // Отслеживание PvP-вызовов
@@ -1613,7 +1660,6 @@ function showCaseDetail(cid) {
   const c = state.casesData.cases.find(x => x.case_id === cid);
   if (!c) return;
   const bal = state.casesData.balance;
-  // Использовать пустой outfit для превью
   const itemsHtml = c.items.map(it => {
     const preview = {...emptyOutfit()};
     const slotKey = SLOT_KEY[it.slot];
@@ -1657,10 +1703,6 @@ async function openCase(cid) {
     if (tg) tg.HapticFeedback?.notificationOccurred("success");
   } catch(e) { toast(e.message, "error"); }
 }
-
-// ══════════════════════════════════════════════════════════════
-//  БАНДЫ
-// ══════════════════════════════════════════════════════════════
 
 
 function showCreateGang() {
@@ -1742,7 +1784,7 @@ async function captureTerritory(tid) {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  НОВЫЙ ТРЕЙД (визуальный)
+//  ТРЕЙД (визуальный)
 // ══════════════════════════════════════════════════════════════
 async function showTradeOffer(uid, name) {
   try {
@@ -1791,7 +1833,6 @@ function toggleTradeItem(el, kind) {
   `;
 }
 
-// Переопределить sendTradeOffer
 async function sendTradeOffer(uid) {
   const give_money = parseInt($("#give-money").value) || 0;
   const want_money = parseInt($("#want-money").value) || 0;
@@ -1810,7 +1851,6 @@ async function sendTradeOffer(uid) {
   } catch(e) { toast(e.message, "error"); }
 }
 
-// Переопределить showInvItem — новое меню продажи
 async function showInvItem(iid) {
   const it = state.invItems.find(x=>x.item_id===iid);
   if (!it) return;
@@ -1843,40 +1883,9 @@ function confirmSellItem(iid) {
   `);
 }
 
-// Отслеживание PvP-вызовов
-// Добавить loadCases/loadGang в showTab
-
 
 async function renderGhetto() {
-  const container = document.getElementById('ghetto-map-container');
-  if (!container) return;
-  container.innerHTML = '<div style="color:#aaa;text-align:center;grid-column:1/-1;">Загрузка...</div>';
-
-  try {
-    const d = await api("gang/territories", {});
-    container.innerHTML = '';
-    
-    if (!d.territories || d.territories.length === 0) {
-      container.innerHTML = '<div style="color:#aaa;text-align:center;grid-column:1/-1;">Территории не найдены</div>';
-      return;
-    }
-
-    d.territories.forEach(t => {
-      const ownerName = t.owner ? t.owner.name : "Свободна";
-      const ownerColor = t.owner ? "#e67e22" : "#2ecc71";
-      
-      container.innerHTML += `
-        <div class="territory-card" style="background:#1e2a38;border-radius:12px;padding:12px;text-align:center;border:2px solid ${ownerColor};box-shadow:0 4px 6px rgba(0,0,0,0.3);">
-          <div style="font-size:32px;margin-bottom:4px;">${t.emoji}</div>
-          <div style="font-size:14px;font-weight:bold;color:#fff;">${t.name}</div>
-          <div style="font-size:12px;color:${ownerColor};margin-top:4px;font-weight:bold;">${ownerName}</div>
-          <div style="font-size:11px;color:#8494a5;margin-top:4px;">💰 ${t.income}₽/ч</div>
-        </div>`;
-    });
-  } catch(e) {
-    console.error("Ghetto error:", e);
-    container.innerHTML = `<div style="color:#e74c3c;text-align:center;grid-column:1/-1;padding:20px;font-size:14px;word-break:break-word;">Ошибка загрузки: ${e.message || 'Сервер недоступен'}</div>`;
-  }
+  // Переопределяется в gang.js
 }
 
 
@@ -1887,12 +1896,12 @@ async function renderReferral() {
   const earnedEl = document.getElementById("ref-earned");
   const linkEl = document.getElementById("ref-link-input");
   const milestonesContainer = document.getElementById("ref-milestones");
-  
+
   if (!countEl) return;
 
   try {
     const d = await api("referral/info", {});
-    
+
     if (!d || d.error) throw new Error(d?.error || "Пустой ответ сервера");
 
     countEl.textContent = d.count;
@@ -1910,7 +1919,7 @@ async function renderReferral() {
     milestones.forEach(m => {
       const isClaimed = d.claims.includes(m.count);
       const isReady = d.count >= m.count;
-      
+
       let btnHtml = "";
       if (isClaimed) {
         btnHtml = `<button class="ref-mile-btn" disabled>✅ Получено</button>`;
@@ -1933,7 +1942,6 @@ async function renderReferral() {
     });
   } catch(e) {
     console.error("Referral error:", e);
-    // Выводим ошибку прямо на экран, чтобы не было вечной загрузки
     linkEl.value = "Ошибка сервера";
     milestonesContainer.innerHTML = `
       <div style="color:#e74c3c;text-align:center;padding:20px;background:rgba(231,76,60,0.1);border-radius:12px;">
@@ -1980,12 +1988,12 @@ async function adminSearch() {
     const list = document.getElementById("admin-results");
     list.innerHTML = "";
     document.getElementById("admin-player-details").style.display = "none";
-    
+
     if (res.players.length === 0) {
         list.innerHTML = "<div style='color:#888; text-align:center;'>Никого не найдено</div>";
         return;
     }
-    
+
     res.players.forEach(p => {
         list.innerHTML += `
             <div onclick="adminSelectPlayer(${p.user_id})" style="background:#222; padding:12px; border-radius:8px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
@@ -1999,12 +2007,12 @@ async function adminSearch() {
 async function adminSelectPlayer(id) {
     const res = await api("admin/player_info", { target_id: id });
     if (res.error) return toast(res.error, "error");
-    
+
     const p = res.player;
     const s = res.stats;
     const details = document.getElementById("admin-player-details");
     details.style.display = "block";
-    
+
     details.innerHTML = `
         <h4 style="color:#fff; margin-bottom:8px;">${p.nickname} (ID: ${p.user_id})</h4>
         <div style="font-size:13px; color:#aaa; margin-bottom:12px;">
@@ -2012,7 +2020,7 @@ async function adminSelectPlayer(id) {
             Банда: ${s.gang} | Казино: ${s.casino_plays} игр<br>
             Бизнесы: ${s.businesses}
         </div>
-        
+
         <div style="margin-bottom:12px;">
             <div style="font-size:12px; color:#aaa; margin-bottom:4px;">Изменить баланс:</div>
             <div style="display:flex; gap:8px;">
@@ -2029,7 +2037,7 @@ async function adminSelectPlayer(id) {
                 <button class="btn btn-primary" onclick="adminSetLevel(${p.user_id})">OK</button>
             </div>
         </div>
-        
+
         <button onclick="adminDeletePlayer(${p.user_id}, '${p.nickname}')" style="width:100%; background:#c0392b; color:#fff; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">
             🗑 УДАЛИТЬ АККАУНТ
         </button>
@@ -2040,18 +2048,18 @@ async function adminChangeBalance(id, sign) {
     const amount = parseInt(document.getElementById("admin-amount").value) * sign;
     await api("admin/change_balance", { target_id: id, amount: amount });
     toast(`Баланс изменен на ${amount > 0 ? '+' : ''}${amount}₽`, "success");
-    adminSelectPlayer(id); // Обновить инфу
+    adminSelectPlayer(id);
 }
 
 
 async function adminSetLevel(id) {
     const lvl = parseInt(document.getElementById("admin-level").value);
     if (!lvl || lvl < 1) return toast("Некорректный уровень", "error");
-    
+
     try {
         await api("admin/set_level", { target_id: id, level: lvl });
         toast(`Уровень изменен на ${lvl}`, "success");
-        adminSelectPlayer(id); // Обновляем карточку
+        adminSelectPlayer(id);
     } catch(e) {
         toast(e.message, "error");
     }
@@ -2062,22 +2070,25 @@ async function adminDeletePlayer(id, nick) {
     await api("admin/delete", { target_id: id });
     toast("Аккаунт удален", "success");
     document.getElementById("admin-player-details").style.display = "none";
-    adminSearch(); // Обновить список
+    adminSearch();
 }
 
-// ═══ НОВЫЙ КРАСИВЫЙ loadGang ═══
+// ═══ НОВЫЙ loadGang ═══
 async function loadGang() {
   try {
     const d = await api("gang/get");
     const el = $("#gang-content");
     if (!d.in_gang) {
-      let listHtml = d.gangs.length > 0 ? d.gangs.map(g => `
+      let listHtml = d.gangs.length > 0 ? d.gangs.map(g => {
+        const tagHtml = g.tag ? ` <span class="gang-tag">[${escapeHtml(g.tag)}]</span>` : '';
+        return `
         <div class="member-row">
           <div style="font-size:22px">${g.emoji}</div>
-          <div style="flex:1"><div style="font-weight:700">${g.name}</div>
+          <div style="flex:1"><div style="font-weight:700">${escapeHtml(g.name)}${tagHtml}</div>
           <div style="font-size:11px;color:var(--hint)">${g.members_count}/10 · казна ${fmtMoney(g.treasury)}₽</div></div>
           <button class="btn btn-secondary" style="width:auto;padding:8px 14px;margin:0" onclick="joinGang(${g.gang_id})">Вступить</button>
-        </div>`).join("") : '<p style="color:var(--hint);text-align:center;padding:20px">Банд пока нет</p>';
+        </div>`;
+      }).join("") : '<p style="color:var(--hint);text-align:center;padding:20px">Банд пока нет</p>';
       el.innerHTML = `
         <h2 class="section-title">🚬 Банды</h2>
         <div style="background:var(--bg-2);border-radius:16px;padding:16px;margin-bottom:16px">
@@ -2116,17 +2127,25 @@ async function loadGang() {
         else actionBtn = `<button class="btn btn-secondary" style="width:auto;padding:4px 8px;font-size:10px;margin:0" onclick="setDeputy(${m.user_id}, 'demote')">Снять зама</button>`;
       }
       return `<div class="member-row">
-        <div style="flex:1"><b>${m.nickname}</b> · ур. ${m.level}</div>
+        <div style="flex:1"><b>${formatNickWithTag(m.nickname, m.gang_tag)}</b> · ур. ${m.level}</div>
         <span class="member-role ${roleClass}">${roleName}</span>
         ${actionBtn}
       </div>`;
     }).join("");
+    const tagBanner = g.tag
+      ? `<div style="text-align:center;color:var(--money);font-weight:900;font-size:18px;margin-top:4px;">[${escapeHtml(g.tag)}]</div>`
+      : '';
+    const tagEditBtn = d.my_role === "leader"
+      ? `<button class="btn btn-secondary" onclick="showSetTag()" style="margin:8px 0">🏷 ${g.tag ? `Изменить тег [${escapeHtml(g.tag)}]` : 'Установить тег банды'}</button>`
+      : '';
     el.innerHTML = `
       <div class="gang-banner">
         <div style="font-size:64px">${g.emoji}</div>
-        <div class="gang-name">${g.name}</div>
+        <div class="gang-name">${escapeHtml(g.name)}</div>
+        ${tagBanner}
         <div class="gang-treasury">💰 Казна: ${fmtMoney(g.treasury)}₽</div>
       </div>
+      ${tagEditBtn}
       ${d.is_leader_or_deputy ? `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
           <button class="btn btn-primary" onclick="showGangDeposit()" style="margin:0">💰 Вложить</button>
@@ -2139,6 +2158,30 @@ async function loadGang() {
       ${membersHtml}
       ${d.my_role !== "leader" ? `<button class="btn btn-secondary" style="margin-top:12px" onclick="leaveGang()">🚪 Покинуть банду</button>` : ''}
     `;
+  } catch(e) { toast(e.message, "error"); }
+}
+
+function showSetTag() {
+  openModal(`
+    <h2>🏷 Тег банды</h2>
+    <p style="color:var(--hint);font-size:13px;margin:12px 0">Ровно 3 буквы (A-Z или А-Я). Будет отображаться как [XXX] возле ника всех участников.</p>
+    <input id="gang-tag-input" type="text" maxlength="3" placeholder="XXX" style="width:100%;padding:14px;background:var(--bg-3);border:none;border-radius:10px;color:#fff;font-size:22px;text-align:center;letter-spacing:8px;text-transform:uppercase;font-weight:900;">
+    <button class="btn btn-primary" onclick="setGangTag()" style="margin-top:12px">✅ Сохранить</button>
+  `);
+}
+
+async function setGangTag() {
+  const tag = document.getElementById("gang-tag-input").value.trim().toUpperCase();
+  if (!/^[A-ZА-ЯЁ]{3}$/.test(tag)) {
+    toast("Ровно 3 буквы (A-Z или А-Я)", "error");
+    return;
+  }
+  try {
+    await api("gang/set_tag", { tag });
+    closeModal();
+    loadGang();
+    toast(`🏷 Тег установлен: [${tag}]`, "success");
+    refreshPlayer();
   } catch(e) { toast(e.message, "error"); }
 }
 
@@ -2282,7 +2325,7 @@ async function searchFriends() {
       el.innerHTML = d.results.map(u => `
         <div class="player-card">
           <div class="player-avatar">👤</div>
-          <div class="player-info"><div class="player-name">${u.nickname}</div><div class="player-meta">Ур. ${u.level}</div></div>
+          <div class="player-info"><div class="player-name">${formatNickWithTag(u.nickname, u.gang_tag)}</div><div class="player-meta">Ур. ${u.level}</div></div>
           <button class="btn btn-primary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="sendFriendRequest(${u.user_id})">Добавить</button>
         </div>
       `).join("");
@@ -2304,15 +2347,15 @@ async function loadFriends() {
       reqBox.innerHTML = `<h3 class="section-subtitle" style="color:#f39c12">Запросы (${d.requests.length})</h3>` + sortedReqs.map(r => `
         <div class="player-card">
           <div class="player-info">
-            <div class="player-name">${r.nickname}</div>
-            <div class="player-meta">${_onlineHtml(r.is_online)}</div>
+            <div class="player-name">${formatNickWithTag(r.nickname, r.gang_tag)}</div>
+            <div class="player-meta">${_onlineHtml(r.is_online)}${!r.is_online && r.last_seen ? ` · <span class="last-seen">${formatLastSeen(r.last_seen)}</span>` : ''}</div>
           </div>
           <button class="btn btn-primary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="respondFriend(${r.user_id}, true)">✅</button>
           <button class="btn btn-secondary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;margin-left:4px;" onclick="respondFriend(${r.user_id}, false)">❌</button>
         </div>
       `).join("");
     } else reqBox.innerHTML = "";
-    
+
     const list = document.getElementById("friend-list");
     if (d.friends.length === 0) list.innerHTML = '<p style="color:var(--hint);text-align:center;">Пока нет друзей</p>';
     else {
@@ -2321,10 +2364,10 @@ async function loadFriends() {
         <div class="player-card" onclick="viewPlayer(${f.user_id})">
           <div class="player-avatar">👤</div>
           <div class="player-info">
-            <div class="player-name">${f.nickname}</div>
-            <div class="player-meta">Ур. ${f.level} · ${_onlineHtml(f.is_online)}</div>
+            <div class="player-name">${formatNickWithTag(f.nickname, f.gang_tag)}</div>
+            <div class="player-meta">Ур. ${f.level} · ${_onlineHtml(f.is_online)}${!f.is_online && f.last_seen ? ` · <span class="last-seen">${formatLastSeen(f.last_seen)}</span>` : ''}</div>
           </div>
-          <button class="btn btn-secondary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="event.stopPropagation(); openPM(${f.user_id}, '${f.nickname}')">✉️ ЛС</button>
+          <button class="btn btn-secondary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="event.stopPropagation(); openPM(${f.user_id}, '${f.nickname}', '${f.gang_tag || ''}')">✉️ ЛС</button>
           <button class="btn btn-secondary" style="width:auto;padding:6px 8px;margin:0 0 0 4px;font-size:12px;color:var(--danger);" onclick="event.stopPropagation(); removeFriend(${f.user_id}, '${f.nickname}')">✕</button>
         </div>
       `).join("");
@@ -2362,11 +2405,14 @@ function switchChat(mode) {
   renderChatTabs();
 }
 
-function openPM(uid, name) {
+function openPM(uid, name, tag) {
   uid = Number(uid);
   if (!state.openPMs) state.openPMs = [];
   if (!state.openPMs.find(x => Number(x.uid) === uid)) {
-    state.openPMs.push({uid: uid, name: name});
+    state.openPMs.push({uid: uid, name: name, tag: tag || null});
+  } else {
+    const p = state.openPMs.find(x => Number(x.uid) === uid);
+    if (tag) p.tag = tag;
   }
   state.chatWith = uid;
   const existing = state.openPMs.find(x => Number(x.uid) === uid);
@@ -2384,7 +2430,8 @@ function renderChatTabs() {
     for (const p of state.openPMs) {
       const isActive = Number(state.chatWith) === Number(p.uid);
       const unreadDot = (p.unread && p.unread > 0) ? `<span style="background:#e74c3c;color:#fff;border-radius:8px;padding:0 5px;font-size:10px;margin-left:4px;">${p.unread}</span>` : '';
-      html += `<button class="chat-tab ${isActive ? 'active' : ''}" data-chat="${p.uid}" onclick="switchChat(${p.uid})">👤 ${escapeHtml(p.name)}${unreadDot}</button>`;
+      const tagHtml = p.tag ? `<span class="gang-tag">[${escapeHtml(p.tag)}]</span> ` : '';
+      html += `<button class="chat-tab ${isActive ? 'active' : ''}" data-chat="${p.uid}" onclick="switchChat(${p.uid})">👤 ${tagHtml}${escapeHtml(p.name)}${unreadDot}</button>`;
     }
   }
   tabs.innerHTML = html;
@@ -2439,7 +2486,7 @@ showTab = function(tab) {
   if (tab === "home") loadNotifications();
 };
 
-// ═══ НОВЫЙ PVP UI ═══
+// ═══ PVP UI ═══
 async function loadPvPState(bid, silent = false) {
   try {
     const d = await api("pvp/state", {battle_id: bid});
@@ -2465,7 +2512,7 @@ async function loadPvPState(bid, silent = false) {
     const isMyTurn = Number(d.turn) === Number(state.player.user_id);
     const mustAttack = isMyTurn && !d.pending_attack_part;
     const mustDefend = isMyTurn && d.pending_attack_part;
-    
+
     const logHtml = (d.log || []).slice(-5).map(l => {
       if (l.type === "hit") return `💥 ${l.attacker} → ${l.part}: -${l.damage}`;
       if (l.type === "block") return `🛡 ${l.attacker}: блок ${l.part}`;
@@ -2478,9 +2525,9 @@ async function loadPvPState(bid, silent = false) {
     openModal(`
       <h2 style="text-align:center;margin-bottom:12px">⚔️ Гоп-стоп</h2>
       <div class="pvp-card">
-        <div class="pvp-hp-row"><span>${enemy.nickname}</span><span>${enemy.hp}/${enemy.max_hp}</span></div>
+        <div class="pvp-hp-row"><span>${formatNickWithTag(enemy.nickname, enemy.gang_tag)}</span><span>${enemy.hp}/${enemy.max_hp}</span></div>
         <div class="pvp-hp-bar"><div class="pvp-hp-fill" style="width:${enemy.hp/enemy.max_hp*100}%"></div></div>
-        <div class="pvp-hp-row" style="margin-top:12px"><span>${me.nickname} (ты)</span><span>${me.hp}/${me.max_hp}</span></div>
+        <div class="pvp-hp-row" style="margin-top:12px"><span>${formatNickWithTag(me.nickname, me.gang_tag)} (ты)</span><span>${me.hp}/${me.max_hp}</span></div>
         <div class="pvp-hp-bar"><div class="pvp-hp-fill" style="width:${me.hp/me.max_hp*100}%"></div></div>
       </div>
       ${logHtml ? `<div class="pvp-log">${logHtml}</div>` : ''}
@@ -2514,7 +2561,7 @@ async function pvpDoAction(action, part) {
   } catch(e) { toast(e.message, "error"); }
 }
 
-// Автообновление уведомлений раз в 15 секунд
+// Автообновление уведомлений
 setInterval(loadNotifications, 15000);
 setInterval(loadOnlineCount, 30000);
 setInterval(updateChatBadge, 15000);
