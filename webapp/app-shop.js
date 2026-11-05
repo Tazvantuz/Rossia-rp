@@ -66,7 +66,7 @@ function renderAppearance() {
         <div class="item-preview-mini">${renderCharacterSVG({...emptyOutfit(), [SLOT_KEY[it.slot]]: {item_id: it.item_id}}, {width: 40, height: 80})}</div>
         <div class="item-info">
           <div class="item-name" style="color:${it.rarity_color}">${it.name}</div>
-          <div class="item-meta" style="color:${it.rarity_color};font-size:10px;font-weight:700">${it.rarity_name}${it.is_gang_only ? ' · клан' : ''}</div>
+          <div class="item-meta" style="color:${it.rarity_color};font-size:10px;font-weight:700">${it.rarity_name}${it.is_gang_only ? ' · клан' : ''}${it.is_case_only ? ' · 🎁 кейс' : ''}</div>
           <div class="item-meta">${it.desc}</div>${_itemStatsHtml(it)}
         </div>
         <div class="item-price">×${it.quantity}</div>
@@ -152,19 +152,23 @@ async function showInvItem(iid) {
   const it = state.invItems.find(x=>x.item_id===iid);
   if (!it) return;
   const isGang = it.is_gang_only;
+  const isCase = it.is_case_only;
   openModal(`
     <div class="shop-preview">${renderCharacterSVG({...emptyOutfit(), [SLOT_KEY_MAP[it.slot]]: {item_id: iid}}, {width: 160, height: 320})}</div>
     <h2 style="color:${it.rarity_color};text-align:center">${it.name}</h2>
-    <div style="color:${it.rarity_color};font-size:12px;margin:8px 0 16px;font-weight:700;text-align:center">${it.rarity_name}${isGang ? ' · 🏰 клан' : ''} · ×${it.quantity}</div>
+    <div style="color:${it.rarity_color};font-size:12px;margin:8px 0 16px;font-weight:700;text-align:center">${it.rarity_name}${isGang ? ' · 🏰 клан' : ''}${isCase ? ' · 🎁 эксклюзив' : ''} · ×${it.quantity}</div>
     <p style="color:var(--hint);margin-bottom:16px;text-align:center">${it.desc}</p>${_itemStatsHtml(it, 'block')}
     <button class="btn btn-primary" onclick="equipItem('${iid}')">⚡ Надеть</button>
-    ${isGang ? `<p style="color:var(--hint);text-align:center;font-size:11px;margin-top:8px">Клановую шмотку нельзя продать</p>` : `<button class="btn btn-secondary" onclick="confirmSellItem('${iid}')">💰 Продать</button>`}
+    ${isGang ? `<p style="color:var(--hint);text-align:center;font-size:11px;margin-top:8px">Клановую шмотку нельзя продать</p>` : ''}
+    ${isCase ? `<p style="color:var(--hint);text-align:center;font-size:11px;margin-top:8px">🎁 Эксклюзив с кейса — продажа недоступна</p>` : ''}
+    ${(!isGang && !isCase) ? `<button class="btn btn-secondary" onclick="confirmSellItem('${iid}')">💰 Продать</button>` : ''}
   `);
 }
 
 function confirmSellItem(iid) {
   const it = state.invItems.find(x=>x.item_id===iid);
   if (!it) return;
+  if (it.is_gang_only || it.is_case_only) return;
   openModal(`
     <h2 style="text-align:center">💰 Продать?</h2>
     <div style="text-align:center;margin:24px 0;padding:20px;background:var(--bg-3);border-radius:12px">

@@ -9,6 +9,7 @@ from game import (
     CREDIT_MAX, CREDIT_TERMS, item_json, item_sell_price, roulette_color,
     crypto_price, crypto_history_24h, crypto_price_old_at_hour,
     START_BALANCE, xp_to_next,
+    is_case_item,
 )
 from api_core import (
     _user, _player, _add_inv, _remove_inv, _has_inv, _player_json,
@@ -77,6 +78,7 @@ async def api_shop(request):
     items = []
     for iid, it in sorted(ITEMS.items(), key=lambda kv: (rarity_order.get(kv[1].get("rarity","common"), 99), kv[1].get("price", 0))):
         if it.get("is_gang_only"): continue
+        if is_case_item(iid): continue
         items.append(item_json(iid))
     return web.json_response({"items": items})
 
@@ -102,6 +104,8 @@ async def api_buy(request):
     if not it: return web.json_response({"error":"Нет такого"}, status=400)
     if it.get("is_gang_only"):
         return web.json_response({"error":"Этот предмет продаётся только в магазине банды"}, status=400)
+    if is_case_item(iid):
+        return web.json_response({"error":"Этот предмет падает только из кейсов — купить нельзя"}, status=400)
     p = await _player(uid)
     if p["balance"] < it["price"]:
         return web.json_response({"error":"Не хватает денег"}, status=400)
@@ -120,6 +124,8 @@ async def api_sell(request):
     it = ITEMS.get(iid, {})
     if it.get("is_gang_only"):
         return web.json_response({"error":"Клановые шмотки нельзя продавать"}, status=400)
+    if is_case_item(iid):
+        return web.json_response({"error":"Эксклюзив с кейсов продавать нельзя"}, status=400)
     sp = item_sell_price(iid)
     await _remove_inv(uid, iid, 1)
     await db.execute("UPDATE players SET balance=balance+? WHERE user_id=?", (sp, uid))
@@ -157,7 +163,7 @@ async def api_unequip(request):
     p = await _player(uid)
     return web.json_response({"player": _player_json(p)})
 
-# ═══════════ 🆕 МАГАЗИН БАНДЫ (за семечки) ═══════════
+# ═══════════ МАГАЗИН БАНДЫ (за семечки) ═══════════
 async def api_gang_shop_items(request):
     ud = await _user(request); uid = ud["id"]
     member = await db.fetchone("SELECT gang_id FROM gang_members WHERE user_id=?", (uid,))
@@ -261,7 +267,6 @@ async def api_businesses(request):
             elapsed = max(0, min(86400, now - info["last_collect"]))
             info["pending"] = int(real_income * elapsed / 3600)
             total_pending += info["pending"]
-            # ═══ Инфо о следующем уровне ═══
             if lvl < 3:
                 next_mult = _biz_mult(lvl + 1)
                 info["next_level_income"] = int(b["income"] * next_mult)

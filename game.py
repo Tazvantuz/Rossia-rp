@@ -172,6 +172,13 @@ def crypto_history_24h():
     now_hour = int(time.time() / 3600)
     return [crypto_price_at_hour(now_hour - i) for i in range(23, -1, -1)]
 
+# ═══════ КЕЙСОВЫЕ ПРЕДМЕТЫ (эксклюзив, нельзя купить/продать) ═══════
+CASE_ITEM_PREFIXES = ("h_case_", "b_case_", "l_case_", "rh_case_", "lh_case_")
+
+def is_case_item(iid):
+    """True если предмет падает только из кейса. Такие нельзя купить в магазине или продать."""
+    return iid.startswith(CASE_ITEM_PREFIXES)
+
 def item_json(iid):
     it = ITEMS.get(iid)
     if not it: return None
@@ -181,11 +188,13 @@ def item_json(iid):
             "rarity_color":RARITIES[it["rarity"]]["color"],
             "desc":it["desc"],"hp":it.get("hp",0),"damage":it.get("damage",0),
             "is_gang_only": it.get("is_gang_only", False),
+            "is_case_only": is_case_item(iid),
             "seeds_price": it.get("seeds_price", 0)}
 
 def item_sell_price(iid):
     it = ITEMS.get(iid, {})
     if it.get("is_gang_only"): return 0
+    if is_case_item(iid): return 0
     return max(1, int(it.get("price", 10) * 0.5))
 
 def get_outfit(player):
