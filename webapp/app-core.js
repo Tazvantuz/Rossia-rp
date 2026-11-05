@@ -1,6 +1,4 @@
 // app-core.js
-// Ядро: API, state, роутинг вкладок, тосты, хелперы, boot, renderPlayer
-
 const tg = window.Telegram?.WebApp;
 if (tg) { tg.ready(); tg.expand(); tg.setHeaderColor?.('#17212b'); tg.setBackgroundColor?.('#17212b'); }
 const initData = tg?.initData || "";
@@ -12,13 +10,11 @@ let state = {
   chatWith: 'global', jobsCache: null, businessesCache: null, casesData: null,
 };
 
-// ══════════════════════════════════════════════════════════════
-//  ХЕЛПЕРЫ
-// ══════════════════════════════════════════════════════════════
-function formatNickWithTag(name, tag) {
+function formatNickWithTag(name, tag, color) {
   const safeName = escapeHtml(name || "");
   if (!tag) return safeName;
-  return `<span class="gang-tag">[${escapeHtml(tag)}]</span> ${safeName}`;
+  const c = color || "#f39c12";
+  return `<span class="gang-tag" style="color:${escapeHtml(c)};border-color:${escapeHtml(c)}">[${escapeHtml(tag)}]</span> ${safeName}`;
 }
 
 function formatLastSeen(ts) {
@@ -75,9 +71,6 @@ function _onlineHtml(isOnline) {
   return `<span class="online-status ${cls}"><span class="online-dot ${cls}"></span>${label}</span>`;
 }
 
-// ══════════════════════════════════════════════════════════════
-//  API
-// ══════════════════════════════════════════════════════════════
 async function api(method, body = {}, retry = true) {
   let res;
   try {
@@ -92,7 +85,6 @@ async function api(method, body = {}, retry = true) {
     const err = await res.json().catch(()=>({}));
     const errMsg = err.error || `HTTP ${res.status}`;
     if (retry && method === "register" && errMsg.toLowerCase().includes("already registered")) {
-      console.log("Найден битый персонаж — авто-reset");
       try {
         await fetch(`/api/reset`, {
           method: "POST",
@@ -110,9 +102,6 @@ async function api(method, body = {}, retry = true) {
 const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 
-// ══════════════════════════════════════════════════════════════
-//  UI: экраны, вкладки, тосты, модалки
-// ══════════════════════════════════════════════════════════════
 function show(id) {
   $$(".screen").forEach(x=>x.classList.remove("active"));
   $(`#${id}`).classList.add("active");
@@ -127,8 +116,6 @@ function showTab(tab) {
   $(`.tab-content[data-tab="${tab}"]`).classList.add("active");
   $$(".nav-btn").forEach(b=>b.classList.toggle("active", b.dataset.nav===tab));
   if (typeof stopChatPolling === "function") stopChatPolling();
-
-  // Подгрузка данных по вкладкам (функции могут быть в других файлах)
   if (tab==="appearance" && typeof loadAppearance === 'function') loadAppearance();
   if (tab==="work" && typeof loadWork === 'function') loadWork();
   if (tab==="business" && typeof loadBusinesses === 'function') loadBusinesses();
@@ -142,7 +129,6 @@ function showTab(tab) {
   if (tab==="gang" && typeof loadGang === 'function') loadGang();
   if (tab==="friends" && typeof loadFriends === 'function') loadFriends();
   if (tab==="home" && typeof loadNotifications === 'function') loadNotifications();
-
   window.scrollTo(0,0);
 }
 
@@ -166,22 +152,16 @@ function closeModal() {
   }
 }
 
-// Обработчики модалки — как только DOM загрузится
 document.addEventListener('DOMContentLoaded', () => {
   const mc = document.getElementById("modal-close");
   if (mc) mc.addEventListener("click", closeModal);
   const m = document.getElementById("modal");
   if (m) m.addEventListener("click", e=>{ if(e.target.id==="modal") closeModal(); });
-
-  // Навигация
   document.querySelectorAll(".nav-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{ showTab(btn.dataset.nav); if (tg) tg.HapticFeedback?.selectionChanged(); });
   });
 });
 
-// ══════════════════════════════════════════════════════════════
-//  СЛОТЫ
-// ══════════════════════════════════════════════════════════════
 const SLOT_FILTERS = [
   {id:"head", name:"Голова", emoji:"🧢"},
   {id:"body", name:"Тело", emoji:"👕"},
@@ -199,9 +179,6 @@ function emptyOutfit() {
   };
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ПРОФИЛЬ / ОНЛАЙН / УВЕДОМЛЕНИЯ (базовые счётчики)
-// ══════════════════════════════════════════════════════════════
 async function updateChatBadge() {
   try {
     const d = await api("chat/pm/unread_count", {});
@@ -230,11 +207,12 @@ async function loadConversations() {
     if (!state.openPMs) state.openPMs = [];
     for (const c of (d.conversations || [])) {
       if (!state.openPMs.find(x => Number(x.uid) === Number(c.user_id))) {
-        state.openPMs.push({uid: c.user_id, name: c.nickname, tag: c.gang_tag, unread: c.unread});
+        state.openPMs.push({uid: c.user_id, name: c.nickname, tag: c.gang_tag, tag_color: c.gang_tag_color, unread: c.unread});
       } else {
         const existing = state.openPMs.find(x => Number(x.uid) === Number(c.user_id));
         existing.unread = c.unread;
         existing.tag = c.gang_tag;
+        existing.tag_color = c.gang_tag_color;
       }
     }
     if (typeof renderChatTabs === 'function') renderChatTabs();
@@ -249,9 +227,6 @@ async function loadOnlineCount() {
   } catch(_) {}
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ПЕРСОНАЖ
-// ══════════════════════════════════════════════════════════════
 function renderCharacterInto(selector) {
   const el = $(selector);
   if (!el || !state.player) return;
@@ -280,19 +255,16 @@ function notifyAchievements(list) {
   toast("🏆 Достижение: "+names.join(", "), "success");
 }
 
-// ══════════════════════════════════════════════════════════════
-//  RENDER PLAYER + ТАЙМЕРЫ
-// ══════════════════════════════════════════════════════════════
 function renderPlayer() {
   const p = state.player; if (!p) return;
   $("#nick").innerHTML = p.gang_tag
-    ? `<span class="gang-tag">[${escapeHtml(p.gang_tag)}]</span> ${escapeHtml(p.nickname)}`
+    ? formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color)
     : escapeHtml(p.nickname);
   const hasClothes = p.outfit.head_id.item_id || p.outfit.body_id.item_id || p.outfit.legs_id.item_id;
   $("#subtitle").textContent = `Ур. ${p.level} · ${hasClothes ? "модник" : "голый бомж"}`;
   $("#money").textContent = fmtMoney(p.balance);
   $("#char-name").innerHTML = p.gang_tag
-    ? `<span class="gang-tag">[${escapeHtml(p.gang_tag)}]</span> ${escapeHtml(p.nickname)}`
+    ? formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color)
     : escapeHtml(p.nickname);
   $("#char-level").textContent = p.level;
   (function(){
@@ -376,9 +348,6 @@ function renderCreditBanner() {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  BOOT
-// ══════════════════════════════════════════════════════════════
 async function refreshPlayer() {
   try {
     const d = await api("me");
@@ -414,7 +383,7 @@ function renderRegister() {
         renderPlayer(); renderCharacterInto("#character-view");
         show("main"); showTab("home");
         if (tg) tg.HapticFeedback?.notificationOccurred("success");
-        toast("🎉 Добро пожаловать! Ты голый — загляни в Шмот", "success");
+        toast("🎉 Добро пожаловать!", "success");
       } catch (e) {
         toast(e.message, "error");
         btn.disabled = false;

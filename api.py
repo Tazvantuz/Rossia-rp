@@ -2,7 +2,6 @@
 """Точка сборки REST API. Роутинг + обёртки для bot.py."""
 from aiohttp import web
 
-# Импорт всех модулей
 import api_core
 import api_economy
 import api_social
@@ -10,24 +9,18 @@ import api_gang
 import api_pvp
 import api_admin
 
-# ═══════════ ОБЁРТКИ ДЛЯ BOT.PY ═══════════
 def set_token(t):
-    """Передаёт токен бота в api_core для валидации initData."""
     api_core.set_token(t)
 
 async def migrate_crypto_v1():
-    """Запускает одноразовую миграцию коинов (вызывается в bot.py)."""
     await api_economy.migrate_crypto_v1()
 
 async def _process_territories():
-    """Обёртка для фоновой обработки захватов (вызывается в bot.py)."""
     await api_gang._process_territories()
 
-# ═══════════ РОУТИНГ ═══════════
 def setup_routes(app):
     R = app.router
 
-    # ═══ ADMIN ═══
     R.add_post("/api/admin/analytics", api_admin.api_admin_analytics)
     R.add_post("/api/admin/search", api_admin.api_admin_search)
     R.add_post("/api/admin/player_info", api_admin.api_admin_player_info)
@@ -35,12 +28,10 @@ def setup_routes(app):
     R.add_post("/api/admin/delete", api_admin.api_admin_delete)
     R.add_post("/api/admin/set_level", api_admin.api_admin_set_level)
 
-    # ═══ CORE ═══
     R.add_post("/api/me", api_core.api_me)
     R.add_post("/api/register", api_core.api_register)
     R.add_post("/api/reset", api_core.api_reset)
 
-    # ═══ ECONOMY ═══
     R.add_post("/api/shop", api_economy.api_shop)
     R.add_post("/api/inventory", api_economy.api_inventory)
     R.add_post("/api/buy", api_economy.api_buy)
@@ -67,13 +58,15 @@ def setup_routes(app):
     R.add_post("/api/cases/open", api_economy.api_cases_open)
     R.add_post("/api/referral/info", api_economy.api_referral_info)
     R.add_post("/api/referral/claim", api_economy.api_referral_claim)
+    R.add_post("/api/gang/shop/items", api_economy.api_gang_shop_items)
+    R.add_post("/api/gang/shop/buy", api_economy.api_gang_shop_buy)
 
-    # ═══ SOCIAL ═══
     R.add_post("/api/location", api_social.api_location)
     R.add_post("/api/move", api_social.api_move)
     R.add_post("/api/player_view", api_social.api_player_view)
     R.add_post("/api/player_items", api_social.api_player_items)
     R.add_post("/api/trade/send", api_social.api_trade_send)
+    R.add_post("/api/trade/details", api_social.api_trade_details)
     R.add_post("/api/trade/list", api_social.api_trades_list)
     R.add_post("/api/trade/accept", api_social.api_trade_accept)
     R.add_post("/api/trade/decline", api_social.api_trade_decline)
@@ -94,7 +87,6 @@ def setup_routes(app):
     R.add_post("/api/notifications/delete", api_social.api_notifications_delete)
     R.add_post("/api/online_count", api_social.api_online_count)
 
-    # ═══ GANG / GHETTO ═══
     R.add_post("/api/gang/info", api_gang.api_gang_info)
     R.add_post("/api/gang/create", api_gang.api_gang_create)
     R.add_post("/api/gang/join", api_gang.api_gang_join)
@@ -113,7 +105,6 @@ def setup_routes(app):
     R.add_post("/api/territory/capture/start", api_gang.api_territory_capture_start)
     R.add_post("/api/territory/capture/resolve", api_gang.api_territory_capture_resolve)
 
-    # ═══ PVP ═══
     R.add_post("/api/pvp/start", api_pvp.api_pvp_start)
     R.add_post("/api/pvp/challenge", api_pvp.api_pvp_challenge)
     R.add_post("/api/pvp/incoming", api_pvp.api_pvp_incoming)

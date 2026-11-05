@@ -1,9 +1,6 @@
 // app-shop.js
 // Магазин, инвентарь, экипировка, работа, бизнесы
 
-// ══════════════════════════════════════════════════════════════
-//  МАГАЗИН / ИНВЕНТАРЬ
-// ══════════════════════════════════════════════════════════════
 async function loadAppearance() {
   try {
     const [shop, inv] = await Promise.all([api("shop"), api("inventory")]);
@@ -38,6 +35,7 @@ function renderAppearance() {
         <div class="item-preview-mini">${renderCharacterSVG({...emptyOutfit(), [SLOT_KEY[it.slot]]: {item_id: it.item_id}}, {width: 40, height: 80})}</div>
         <div class="item-info">
           <div class="item-name" style="color:${it.rarity_color}">${it.name}</div>
+          <div class="item-meta" style="color:${it.rarity_color};font-size:10px;font-weight:700">${it.rarity_name}</div>
           <div class="item-meta">${it.desc}</div>${_itemStatsHtml(it)}
         </div>
         <div class="item-price ${canAfford?'':'disabled'}">${fmtMoney(it.price)}₽</div>
@@ -66,7 +64,11 @@ function renderAppearance() {
     } else {
       listHtml += inv.map(it=>`<div class="item-card" style="border-left-color:${it.rarity_color}" onclick="showInvItem('${it.item_id}')">
         <div class="item-preview-mini">${renderCharacterSVG({...emptyOutfit(), [SLOT_KEY[it.slot]]: {item_id: it.item_id}}, {width: 40, height: 80})}</div>
-        <div class="item-info"><div class="item-name" style="color:${it.rarity_color}">${it.name}</div><div class="item-meta">${it.desc}</div>${_itemStatsHtml(it)}</div>
+        <div class="item-info">
+          <div class="item-name" style="color:${it.rarity_color}">${it.name}</div>
+          <div class="item-meta" style="color:${it.rarity_color};font-size:10px;font-weight:700">${it.rarity_name}${it.is_gang_only ? ' · клан' : ''}</div>
+          <div class="item-meta">${it.desc}</div>${_itemStatsHtml(it)}
+        </div>
         <div class="item-price">×${it.quantity}</div>
       </div>`).join("");
     }
@@ -149,13 +151,14 @@ async function sellItem(iid) {
 async function showInvItem(iid) {
   const it = state.invItems.find(x=>x.item_id===iid);
   if (!it) return;
+  const isGang = it.is_gang_only;
   openModal(`
     <div class="shop-preview">${renderCharacterSVG({...emptyOutfit(), [SLOT_KEY_MAP[it.slot]]: {item_id: iid}}, {width: 160, height: 320})}</div>
     <h2 style="color:${it.rarity_color};text-align:center">${it.name}</h2>
-    <div style="color:${it.rarity_color};font-size:12px;margin:8px 0 16px;font-weight:700;text-align:center">${it.rarity_name} · ×${it.quantity}</div>
+    <div style="color:${it.rarity_color};font-size:12px;margin:8px 0 16px;font-weight:700;text-align:center">${it.rarity_name}${isGang ? ' · 🏰 клан' : ''} · ×${it.quantity}</div>
     <p style="color:var(--hint);margin-bottom:16px;text-align:center">${it.desc}</p>${_itemStatsHtml(it, 'block')}
     <button class="btn btn-primary" onclick="equipItem('${iid}')">⚡ Надеть</button>
-    <button class="btn btn-secondary" onclick="confirmSellItem('${iid}')">💰 Продать</button>
+    ${isGang ? `<p style="color:var(--hint);text-align:center;font-size:11px;margin-top:8px">Клановую шмотку нельзя продать</p>` : `<button class="btn btn-secondary" onclick="confirmSellItem('${iid}')">💰 Продать</button>`}
   `);
 }
 
@@ -237,7 +240,7 @@ async function doWork() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  БИЗНЕСЫ
+//  БИЗНЕСЫ (с инфо о следующем уровне)
 // ══════════════════════════════════════════════════════════════
 async function loadBusinesses() {
   try {
@@ -268,17 +271,23 @@ function renderBusinesses(data) {
     const name = b.name || 'Бизнес';
     const emoji = b.emoji || '🏢';
     const level = b.level || 1;
+    const nextIncome = b.next_level_income;
+    const nextLevel = b.next_level;
+    const upgradeCost = b.upgrade_cost;
 
     let actionHtml = "";
     if (!b.owned) {
       actionHtml = `<button class="btn btn-primary" style="width:100%;margin-top:10px;" onclick="buyBusiness('${b.id}')">Купить за ${fmtMoney(b.price)}₽</button>`;
     } else {
       let upgradeHtml = "";
-      if (level < 3) {
-        const cost = Math.floor(b.price * (level === 1 ? 1.3 : 1.7));
-        upgradeHtml = `<button class="btn btn-secondary" style="flex:1;margin-right:8px;font-size:12px;padding:8px;" onclick="upgradeBusiness('${b.id}')">⭐ Улучшить (${fmtMoney(cost)}₽)</button>`;
+      if (level < 3 && nextIncome) {
+        const diff = nextIncome - income;
+        upgradeHtml = `<button class="btn btn-secondary" style="flex:1;margin-right:8px;font-size:11px;padding:8px;line-height:1.2;" onclick="upgradeBusiness('${b.id}')">
+          ⭐ Улучшить до ур. ${nextLevel} (${fmtMoney(upgradeCost)}₽)<br>
+          <span style="color:#2ecc71;font-size:10px;">→ ${fmtMoney(nextIncome)}₽/ч (+${fmtMoney(diff)}₽)</span>
+        </button>`;
       } else {
-        upgradeHtml = `<button class="btn btn-secondary" style="flex:1;margin-right:8px;font-size:12px;padding:8px;" disabled>⭐ Макс. уровень</button>`;
+        upgradeHtml = `<button class="btn btn-secondary" style="flex:1;margin-right:8px;font-size:12px;padding:8px;" disabled>⭐ Максимум (3 ур.)</button>`;
       }
       actionHtml = `
         <div style="display:flex;margin-top:10px;">
@@ -325,10 +334,7 @@ async function buyBusiness(id) {
     loadBusinesses();
   } catch(e) {
     toast(e.message, "error");
-    try {
-      const me = await api("me");
-      if (me.player) { state.player = me.player; renderPlayer(); }
-    } catch(_) {}
+    try { const me = await api("me"); if (me.player) { state.player = me.player; renderPlayer(); } } catch(_) {}
   }
 }
 
@@ -346,10 +352,7 @@ async function upgradeBusiness(id) {
     loadBusinesses();
   } catch(e) {
     toast(e.message, "error");
-    try {
-      const me = await api("me");
-      if (me.player) { state.player = me.player; renderPlayer(); }
-    } catch(_) {}
+    try { const me = await api("me"); if (me.player) { state.player = me.player; renderPlayer(); } } catch(_) {}
   }
 }
 

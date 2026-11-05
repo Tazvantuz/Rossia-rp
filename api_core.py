@@ -7,7 +7,6 @@ from database import db
 from game import (
     MAX_LEVEL, START_LOCATION, START_BALANCE, xp_to_next, crypto_price,
     get_outfit, get_combat_stats, SLOTS,
-    START_BALANCE as _SB,
 )
 
 USER_LAST_CHAT = {}
@@ -33,10 +32,8 @@ def validate_init_data(init_data):
         return user if user.get("id") else None
     except: return None
 
-# ═══════════ ТРЕКИНГ АКТИВНОСТИ (для аналитики) ═══════════
 async def _track_activity(uid, now):
-    """Пишет игрока в player_daily_activity. Один запрос на 30 сек (throttle в _user)."""
-    day = now // 86400  # номер дня с эпохи
+    day = now // 86400
     try:
         await db.execute(
             "INSERT INTO player_daily_activity (user_id, day, first_seen, last_seen, requests) "
@@ -63,17 +60,16 @@ async def _user(request):
                         (now, uname, uid))
                 else:
                     await db.execute("UPDATE players SET last_seen=? WHERE user_id=?", (now, uid))
-                # Трекинг активности (только для существующих игроков)
-                _p = await db.fetchone("SELECT 1 FROM players WHERE user_id=?", (uid,))
-                if _p:
+                _p = await db.fetchone("SELECT is_bot FROM players WHERE user_id=?", (uid,))
+                if _p and not _p.get("is_bot"):
                     await _track_activity(uid, now)
             except: pass
     return ud
 
-# ═══════════ ХЕЛПЕРЫ ═══════════
 async def _player(uid):
     return await db.fetchone(
-        "SELECT p.*, g.tag AS gang_tag FROM players p "
+        "SELECT p.*, g.tag AS gang_tag, g.tag_color AS gang_tag_color "
+        "FROM players p "
         "LEFT JOIN gang_members gm ON gm.user_id = p.user_id "
         "LEFT JOIN gangs g ON g.gang_id = gm.gang_id "
         "WHERE p.user_id = ?", (uid,))
@@ -131,6 +127,7 @@ def _player_json(p):
     return {
         "user_id": p["user_id"], "nickname": p["nickname"],
         "gang_tag": p.get("gang_tag"),
+        "gang_tag_color": p.get("gang_tag_color"),
         "tg_username": p.get("tg_username"),
         "balance": p["balance"], "level": p["level"], "xp": p["xp"],
         "xp_next": xp_to_next(p["level"]),
@@ -147,6 +144,7 @@ def _player_json(p):
         "crypto_hold_since": p.get("crypto_hold_since", 0),
         "crypto_bought_today": p.get("crypto_bought_today", 0),
         "crypto_bought_ts": p.get("crypto_bought_ts", 0),
+        "seeds": p.get("seeds", 0),
         "daily_streak": p.get("daily_streak", 0),
         "last_daily": p.get("last_daily", 0),
         "last_work": p.get("last_work", 0),
@@ -193,13 +191,10 @@ async def _forced_credit_collect(uid):
         p = await _player(uid)
         debt = p.get("credit_amount", 0) or 0
         due = p.get("credit_due", 0) or 0
-        if debt <= 0 or due <= 0:
-            return 0
+        if debt <= 0 or due <= 0: return 0
         now = int(time.time())
-        if now < due:
-            return 0
-        if p["balance"] <= 0:
-            return 0
+        if now < due: return 0
+        if p["balance"] <= 0: return 0
         pay = min(p["balance"], debt)
         await db.execute(
             "UPDATE players SET balance = balance - ?, credit_amount = credit_amount - ? WHERE user_id = ?",
@@ -225,7 +220,6 @@ async def _ensure_ref_columns():
     except Exception: pass
     _ref_migrated = True
 
-# ═══════════ ЭНДПОИНТЫ: ME / REGISTER / RESET ═══════════
 async def api_me(request):
     from api_pvp import _expire_user_battles
     from api_gang import _process_territories
@@ -266,8 +260,8 @@ async def api_register(request):
         if referrer_id == uid:
             referrer_id = None
         else:
-            ref_p = await db.fetchone("SELECT user_id FROM players WHERE user_id=?", (referrer_id,))
-            if not ref_p:
+            ref_p = await db.fetchone("SELECT user_id, is_bot FROM players WHERE user_id=?", (referrer_id,))
+            if not ref_p or ref_p.get("is_bot"):
                 referrer_id = None
     tg_username = ud.get("username") or None
     await db.execute(
@@ -278,7 +272,6 @@ async def api_register(request):
         await db.execute("UPDATE players SET balance=balance+5000 WHERE user_id=?", (referrer_id,))
     for iid in ["h_cig","b_alco","l_family"]:
         await _add_inv(uid, iid, 1)
-    # Трекаем активность сразу при регистрации
     now = int(time.time())
     await _track_activity(uid, now)
     p = await _player(uid)

@@ -2,7 +2,6 @@
 import os
 import aiosqlite
 
-# Railway монтирует том в /data — использовать его если существует
 if os.path.isdir("/data") and os.access("/data", os.W_OK):
     DB_PATH = "/data/new_era_rpg.db"
     print(f"💾 БД: {DB_PATH} (Railway volume)")
@@ -34,6 +33,8 @@ CREATE TABLE IF NOT EXISTS players (
     crimes_won INTEGER DEFAULT 0,
     trades_done INTEGER DEFAULT 0,
     owned_items_count INTEGER DEFAULT 0,
+    is_bot INTEGER DEFAULT 0,
+    seeds INTEGER DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS inventory (
@@ -84,6 +85,7 @@ CREATE TABLE IF NOT EXISTS gangs (
     leader_id INTEGER NOT NULL UNIQUE,
     treasury INTEGER DEFAULT 0,
     tag TEXT DEFAULT NULL,
+    tag_color TEXT DEFAULT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS gang_members (
@@ -100,7 +102,6 @@ CREATE TABLE IF NOT EXISTS gang_territories (
     capture_end INTEGER,
     updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
-
 CREATE TABLE IF NOT EXISTS territory_captures (
     capture_id INTEGER PRIMARY KEY AUTOINCREMENT,
     territory_id INTEGER NOT NULL,
@@ -146,7 +147,6 @@ class Database:
         self.conn = await aiosqlite.connect(self.path)
         self.conn.row_factory = aiosqlite.Row
         await self.conn.executescript(SCHEMA); await self.conn.commit()
-        # Миграции для старых БД
         migrations = [
             "last_work INTEGER DEFAULT 0","last_daily INTEGER DEFAULT 0",
             "daily_streak INTEGER DEFAULT 0","last_roulette INTEGER DEFAULT 0",
@@ -162,27 +162,26 @@ class Database:
             "crypto_bought_today INTEGER DEFAULT 0",
             "crypto_bought_ts INTEGER DEFAULT 0",
             "crypto_migrated INTEGER DEFAULT 0",
+            "is_bot INTEGER DEFAULT 0",
+            "seeds INTEGER DEFAULT 0",
         ]
         for m in migrations:
             try:
                 await self.conn.execute(f"ALTER TABLE players ADD COLUMN {m}")
                 await self.conn.commit()
             except: pass
-        # Миграция: тег банды
-        try:
-            await self.conn.execute("ALTER TABLE gangs ADD COLUMN tag TEXT DEFAULT NULL")
-            await self.conn.commit()
-        except: pass
-        # Автоочистка зависших PvP-вызовов при старте
+        for _gc in ["tag TEXT DEFAULT NULL", "tag_color TEXT DEFAULT NULL"]:
+            try:
+                await self.conn.execute(f"ALTER TABLE gangs ADD COLUMN {_gc}")
+                await self.conn.commit()
+            except: pass
         try:
             await self.conn.execute("UPDATE pvp_battles SET status='expired' WHERE status='pending' AND (strftime('%s','now') - strftime('%s', created_at)) > 30")
             await self.conn.execute("UPDATE pvp_battles SET status='expired' WHERE status='active' AND (turn_started_at IS NULL OR turn_started_at = 0 OR (strftime('%s','now') - turn_started_at) > 300)")
             await self.conn.commit()
         except: pass
-        # Миграция notifications.data
         try: await self.conn.execute("ALTER TABLE notifications ADD COLUMN data TEXT DEFAULT NULL"); await self.conn.commit()
         except: pass
-        # Миграции pvp_battles
         for _col in [
             "turn_started_at INTEGER DEFAULT 0",
             "pending_attack_part TEXT",

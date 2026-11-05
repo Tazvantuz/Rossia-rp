@@ -6,7 +6,6 @@ from database import db
 from game import PVP_PARTS, PVP_PARTS_NAMES, PVP_TURN_TIMEOUT, get_combat_stats
 from api_core import _user, _player, _nick_tag
 
-# ═══════════ ЧИСТКА ЗАВИСШИХ БОЁВ ═══════════
 async def _cleanup_stale_pvp():
     try:
         await db.execute(
@@ -63,7 +62,6 @@ async def _expire_user_battles(uid):
     except Exception as e:
         print(f"⚠️ active cleanup: {e}")
 
-# ═══════════ STATE ═══════════
 async def _pvp_state_response(bid, uid):
     b = await db.fetchone("SELECT * FROM pvp_battles WHERE battle_id=?", (bid,))
     if not b or uid not in (b["attacker_id"], b["defender_id"]):
@@ -77,10 +75,10 @@ async def _pvp_state_response(bid, uid):
     return {
         "battle_id": bid, "status": b["status"], "turn": turn_int,
         "attacker": {"user_id":int(att["user_id"]),"nickname":att["nickname"],
-                     "gang_tag":att.get("gang_tag"),
+                     "gang_tag":att.get("gang_tag"), "gang_tag_color":att.get("gang_tag_color"),
                      "hp":int(b["attacker_hp"]),"max_hp":int(b["attacker_max_hp"])},
         "defender": {"user_id":int(dfn["user_id"]),"nickname":dfn["nickname"],
-                     "gang_tag":dfn.get("gang_tag"),
+                     "gang_tag":dfn.get("gang_tag"), "gang_tag_color":dfn.get("gang_tag_color"),
                      "hp":int(b["defender_hp"]),"max_hp":int(b["defender_max_hp"])},
         "log": json.loads(b["log"] or "[]"),
         "is_attacker": int(uid) == int(b["attacker_id"]),
@@ -111,7 +109,6 @@ async def api_pvp_state(request):
     state["pending_attack_part"] = b.get("pending_attack_part") if b else None
     return web.json_response(state)
 
-# ═══════════ ACTION ═══════════
 async def api_pvp_action(request):
     try:
         await _ensure_pvp_columns()
@@ -181,7 +178,6 @@ async def api_pvp_action(request):
         traceback.print_exc()
         return web.json_response({"error": f"Сервер: {e}"}, status=500)
 
-# ═══════════ CHALLENGE ═══════════
 async def api_pvp_challenge(request):
     await _cleanup_stale_pvp()
     ud = await _user(request); uid = ud["id"]
@@ -214,12 +210,11 @@ async def api_pvp_challenge(request):
                      (target_id, f"Вызов на гоп-стоп от {_nick_tag(p1)}", json.dumps({"battle_id": bid})))
     return web.json_response({"ok":True,"battle_id":bid,"attacker":p1["nickname"],"defender":p2["nickname"]})
 
-# ═══════════ INCOMING ═══════════
 async def api_pvp_incoming(request):
     await _cleanup_stale_pvp()
     ud = await _user(request); uid = ud["id"]
     rows = await db.fetchall(
-        "SELECT b.*, p.nickname as attacker_name, g.tag as attacker_gang_tag "
+        "SELECT b.*, p.nickname as attacker_name, g.tag as attacker_gang_tag, g.tag_color as attacker_gang_tag_color "
         "FROM pvp_battles b "
         "JOIN players p ON b.attacker_id = p.user_id "
         "LEFT JOIN gang_members gm ON gm.user_id = p.user_id "
@@ -230,7 +225,6 @@ async def api_pvp_incoming(request):
         "WHERE (attacker_id=? OR defender_id=?) AND status='active'", (uid, uid))
     return web.json_response({"challenges": rows, "active": active})
 
-# ═══════════ RESPOND ═══════════
 async def api_pvp_respond(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
@@ -255,7 +249,6 @@ async def api_pvp_respond(request):
                      (int(time.time()), bid))
     return web.json_response({"ok":True})
 
-# ═══════════ FORCE CANCEL ═══════════
 async def api_pvp_force_cancel(request):
     ud = await _user(request); uid = ud["id"]
     try:
@@ -267,23 +260,5 @@ async def api_pvp_force_cancel(request):
     except Exception as e:
         return web.json_response({"error": str(e)}, status=500)
 
-# ═══════════ PVP START (legacy — не используется фронтом) ═══════════
 async def api_pvp_start(request):
-    ud = await _user(request); uid = ud["id"]
-    body = await request.json()
-    target_id = int(body.get("target_id", 0))
-    if target_id == uid:
-        return web.json_response({"error": "Себя бить нельзя"}, status=400)
-    target = await _player(target_id)
-    if not target:
-        return web.json_response({"error": "Игрок не найден"}, status=404)
-    active = await db.fetchone(
-        "SELECT battle_id FROM pvp_battles WHERE (attacker_id=? OR defender_id=?) AND status='active'",
-        (uid, uid))
-    if active:
-        return web.json_response({"error": "Ты уже в бою"}, status=400)
-    battle_id = await db.execute(
-        "INSERT INTO pvp_battles (attacker_id, defender_id, status, turn, created_at) "
-        "VALUES (?,?, 'pending', 1, ?)",
-        (uid, target_id, int(time.time())))
-    return web.json_response({"battle_id": battle_id, "status": "pending"})
+    return await api_pvp_challenge(request)

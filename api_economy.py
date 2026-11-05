@@ -1,11 +1,11 @@
 # api_economy.py
-"""Экономика: магазин, работа, бизнесы, казино, кредит, крипта, кейсы, рефералы."""
+"""Экономика: магазин, работа, бизнесы, казино, кредит, крипта, кейсы, рефералы, магазин банды."""
 import json, random, time
 from aiohttp import web
 from database import db
 from game import (
     ITEMS, JOBS, BUSINESSES, CASINO_GAMES, DAILY_REWARDS, CASES,
-    SLOTS, SLOT_BY_CATEGORY,
+    SLOTS, SLOT_BY_CATEGORY, GANG_SHOP_ITEMS,
     CREDIT_MAX, CREDIT_TERMS, item_json, item_sell_price, roulette_color,
     crypto_price, crypto_history_24h, crypto_price_old_at_hour,
     START_BALANCE, xp_to_next,
@@ -76,6 +76,7 @@ async def api_shop(request):
     rarity_order = {"common":0, "uncommon":1, "rare":2, "epic":3, "legendary":4}
     items = []
     for iid, it in sorted(ITEMS.items(), key=lambda kv: (rarity_order.get(kv[1].get("rarity","common"), 99), kv[1].get("price", 0))):
+        if it.get("is_gang_only"): continue
         items.append(item_json(iid))
     return web.json_response({"items": items})
 
@@ -99,6 +100,8 @@ async def api_buy(request):
     iid = body.get("item_id")
     it = ITEMS.get(iid)
     if not it: return web.json_response({"error":"Нет такого"}, status=400)
+    if it.get("is_gang_only"):
+        return web.json_response({"error":"Этот предмет продаётся только в магазине банды"}, status=400)
     p = await _player(uid)
     if p["balance"] < it["price"]:
         return web.json_response({"error":"Не хватает денег"}, status=400)
@@ -114,6 +117,9 @@ async def api_sell(request):
     iid = body.get("item_id")
     if not await _has_inv(uid, iid):
         return web.json_response({"error":"Нет предмета"}, status=400)
+    it = ITEMS.get(iid, {})
+    if it.get("is_gang_only"):
+        return web.json_response({"error":"Клановые шмотки нельзя продавать"}, status=400)
     sp = item_sell_price(iid)
     await _remove_inv(uid, iid, 1)
     await db.execute("UPDATE players SET balance=balance+? WHERE user_id=?", (sp, uid))
@@ -142,7 +148,6 @@ async def api_unequip(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     slot = body.get("slot")
-    from game import SLOTS
     if slot not in SLOTS: return web.json_response({"error":"Слот"}, status=400)
     p = await _player(uid)
     old = p.get(slot)
@@ -151,6 +156,41 @@ async def api_unequip(request):
     await db.execute(f"UPDATE players SET {slot}=NULL WHERE user_id=?", (uid,))
     p = await _player(uid)
     return web.json_response({"player": _player_json(p)})
+
+# ═══════════ 🆕 МАГАЗИН БАНДЫ (за семечки) ═══════════
+async def api_gang_shop_items(request):
+    ud = await _user(request); uid = ud["id"]
+    member = await db.fetchone("SELECT gang_id FROM gang_members WHERE user_id=?", (uid,))
+    if not member:
+        return web.json_response({"error": "Ты не в банде"}, status=400)
+    p = await _player(uid)
+    rarity_order = {"common":0, "uncommon":1, "rare":2, "epic":3, "legendary":4}
+    items = []
+    for iid, it in sorted(GANG_SHOP_ITEMS.items(), key=lambda kv: (rarity_order.get(kv[1].get("rarity","common"), 99), kv[1].get("seeds_price", 0))):
+        ij = item_json(iid)
+        if ij: items.append(ij)
+    return web.json_response({"items": items, "seeds": p.get("seeds", 0)})
+
+async def api_gang_shop_buy(request):
+    ud = await _user(request); uid = ud["id"]
+    member = await db.fetchone("SELECT gang_id FROM gang_members WHERE user_id=?", (uid,))
+    if not member:
+        return web.json_response({"error": "Ты не в банде"}, status=400)
+    body = await request.json()
+    iid = body.get("item_id")
+    it = GANG_SHOP_ITEMS.get(iid)
+    if not it:
+        return web.json_response({"error": "Нет такого товара"}, status=400)
+    p = await _player(uid)
+    seeds_price = it.get("seeds_price", 0)
+    if seeds_price <= 0:
+        return web.json_response({"error": "Ошибка цены"}, status=400)
+    if p.get("seeds", 0) < seeds_price:
+        return web.json_response({"error": f"Нужно {seeds_price} 🌻 семечек, у тебя {p.get('seeds', 0)}"}, status=400)
+    await db.execute("UPDATE players SET seeds=seeds-? WHERE user_id=?", (seeds_price, uid))
+    await _add_inv(uid, iid, 1)
+    p = await _player(uid)
+    return web.json_response({"player": _player_json(p), "bought": it["name"], "seeds_spent": seeds_price})
 
 # ═══════════ РАБОТА ═══════════
 async def api_jobs(request):
@@ -198,6 +238,11 @@ async def api_work(request):
                               "new_achievements": ach, "credit_paid": credit_paid})
 
 # ═══════════ БИЗНЕСЫ ═══════════
+def _biz_mult(lvl):
+    if lvl == 2: return 1.75
+    if lvl >= 3: return 3.0
+    return 1.0
+
 async def api_businesses(request):
     ud = await _user(request); uid = ud["id"]
     p = await _player(uid)
@@ -210,17 +255,27 @@ async def api_businesses(request):
         if bid in owned:
             lvl = owned[bid].get("level", 1)
             info["level"] = lvl
-            mult = 1.0
-            if lvl == 2: mult = 1.75
-            elif lvl >= 3: mult = 3.0
-            real_income = int(b["income"] * mult)
+            real_income = int(b["income"] * _biz_mult(lvl))
             info["income"] = real_income
             info["last_collect"] = owned[bid].get("last_collect", now)
             elapsed = max(0, min(86400, now - info["last_collect"]))
             info["pending"] = int(real_income * elapsed / 3600)
             total_pending += info["pending"]
+            # ═══ Инфо о следующем уровне ═══
+            if lvl < 3:
+                next_mult = _biz_mult(lvl + 1)
+                info["next_level_income"] = int(b["income"] * next_mult)
+                info["next_level"] = lvl + 1
+                info["upgrade_cost"] = int(b["price"] * (1.3 if lvl == 1 else 1.7))
+            else:
+                info["next_level_income"] = None
+                info["next_level"] = None
+                info["upgrade_cost"] = None
         else:
             info["level"] = 0
+            info["next_level_income"] = None
+            info["next_level"] = None
+            info["upgrade_cost"] = None
         result.append(info)
     return web.json_response({"businesses": result, "pending": total_pending})
 
@@ -239,7 +294,7 @@ async def api_buy_business(request):
         return web.json_response({"error": "Не хватает", "required": b["price"], "balance": p["balance"]}, status=400)
     now = int(time.time())
     biz = _json_biz(p)
-    biz.append({"id":bid, "last_collect":now})
+    biz.append({"id":bid, "last_collect":now, "level":1})
     await _save_biz(uid, biz)
     await db.execute("UPDATE players SET balance=balance-?, xp=xp+? WHERE user_id=?",
                      (b["price"], b["xp"], uid))
@@ -262,10 +317,7 @@ async def api_collect_business(request):
         info = BUSINESSES.get(b["id"])
         if not info: continue
         lvl = b.get("level", 1)
-        mult = 1.0
-        if lvl == 2: mult = 1.75
-        elif lvl >= 3: mult = 3.0
-        real_income = int(info["income"] * mult)
+        real_income = int(info["income"] * _biz_mult(lvl))
         last = b.get("last_collect", now)
         elapsed = max(0, min(86400, now - last))
         earned = int(real_income * elapsed / 3600)
@@ -424,10 +476,8 @@ async def api_credit_take(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     amount = int(body.get("amount", 0))
-    try:
-        term_hours = int(float(body.get("term_hours", 0)))
-    except (ValueError, TypeError):
-        term_hours = 0
+    try: term_hours = int(float(body.get("term_hours", 0)))
+    except: term_hours = 0
     if amount <= 0 or amount > CREDIT_MAX:
         return web.json_response({"error": f"Сумма 1-{CREDIT_MAX}₽"}, status=400)
     term = next((t for t in CREDIT_TERMS if t["hours"] == term_hours), None)
@@ -474,28 +524,22 @@ async def api_crypto_price(request):
     sell_fee = _crypto_hold_fee(hold_secs) if coins > 0 else CRYPTO_SELL_FEE_BASE
     bought_today = p.get("crypto_bought_today", 0) or 0
     bought_ts = p.get("crypto_bought_ts", 0) or 0
-    if now - bought_ts > 86400:
-        bought_today = 0
+    if now - bought_ts > 86400: bought_today = 0
     return web.json_response({
-        "price": price,
-        "history": crypto_history_24h(),
+        "price": price, "history": crypto_history_24h(),
         "buy_fee_pct": int(CRYPTO_BUY_FEE * 100),
         "sell_fee_pct": int(sell_fee * 100),
         "sell_fee_base_pct": int(CRYPTO_SELL_FEE_BASE * 100),
-        "max_per_tx": CRYPTO_MAX_PER_TX,
-        "max_per_day": CRYPTO_MAX_PER_DAY,
-        "bought_today": bought_today,
-        "max_hold": CRYPTO_MAX_HOLD,
-        "coins": coins,
-        "coins_value": int(coins * price),
-        "hold_seconds": hold_secs,
+        "max_per_tx": CRYPTO_MAX_PER_TX, "max_per_day": CRYPTO_MAX_PER_DAY,
+        "bought_today": bought_today, "max_hold": CRYPTO_MAX_HOLD,
+        "coins": coins, "coins_value": int(coins * price), "hold_seconds": hold_secs,
     })
 
 async def api_crypto_buy(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     try: amount = int(body.get("amount", 0))
-    except (ValueError, TypeError): amount = 0
+    except: amount = 0
     if amount <= 0: return web.json_response({"error": "Сумма > 0"}, status=400)
     if amount > CRYPTO_MAX_PER_TX:
         return web.json_response({"error": f"Макс за операцию: {CRYPTO_MAX_PER_TX}₽"}, status=400)
@@ -533,7 +577,7 @@ async def api_crypto_sell(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     try: amount = float(body.get("amount", 0))
-    except (ValueError, TypeError): amount = 0
+    except: amount = 0
     p = await _player(uid)
     if amount <= 0: return web.json_response({"error": "Количество > 0"}, status=400)
     if amount > p.get("crypto_amount", 0):

@@ -1,5 +1,5 @@
 # api_admin.py
-"""Админ-панель + аналитика игроков."""
+"""Админ-панель + аналитика игроков (боты исключены)."""
 import json, time
 from urllib.parse import parse_qsl
 from aiohttp import web
@@ -26,7 +26,6 @@ async def _is_admin(request):
     except: pass
     return False
 
-# ═══════════ СУЩЕСТВУЮЩИЕ ЭНДПОИНТЫ ═══════════
 async def api_admin_search(request):
     if not await _is_admin(request):
         return web.json_response({"error": "Доступ запрещен"}, status=403)
@@ -35,7 +34,8 @@ async def api_admin_search(request):
     if not query:
         return web.json_response({"players": []})
     rows = await db.fetchall(
-        "SELECT user_id, nickname, balance, level FROM players WHERE nickname LIKE ? LIMIT 20",
+        "SELECT user_id, nickname, balance, level FROM players "
+        "WHERE nickname LIKE ? AND is_bot=0 LIMIT 20",
         (f"%{query}%",))
     return web.json_response({"players": [dict(r) for r in rows]})
 
@@ -46,6 +46,8 @@ async def api_admin_player_info(request):
     target_id = int(body.get("target_id"))
     p = await _player(target_id)
     if not p: return web.json_response({"error": "Игрок не найден"}, status=404)
+    if p.get("is_bot"):
+        return web.json_response({"error": "Это бот-игрок, нельзя редактировать"}, status=400)
     biz = _json_biz(p)
     biz_str = ", ".join([f"{b['id']} (ур.{b.get('level', 1)})" for b in biz]) if biz else "Нет"
     return web.json_response({
@@ -64,6 +66,9 @@ async def api_admin_change_balance(request):
     body = await request.json()
     target_id = int(body.get("target_id"))
     amount = int(body.get("amount"))
+    p = await _player(target_id)
+    if p and p.get("is_bot"):
+        return web.json_response({"error": "Это бот-игрок"}, status=400)
     await db.execute("UPDATE players SET balance = balance + ? WHERE user_id = ?", (amount, target_id))
     return web.json_response({"success": True})
 
@@ -72,6 +77,9 @@ async def api_admin_delete(request):
         return web.json_response({"error": "Доступ запрещен"}, status=403)
     body = await request.json()
     target_id = int(body.get("target_id"))
+    p = await _player(target_id)
+    if p and p.get("is_bot"):
+        return web.json_response({"error": "Ботов удалять нельзя через панель"}, status=400)
     await db.execute("DELETE FROM players WHERE user_id = ?", (target_id,))
     await db.execute("DELETE FROM gang_members WHERE user_id = ?", (target_id,))
     await db.execute("DELETE FROM trades WHERE from_user = ? OR to_user = ?", (target_id, target_id))
@@ -83,12 +91,15 @@ async def api_admin_set_level(request):
     body = await request.json()
     target_id = int(body.get("target_id"))
     new_level = int(body.get("level", 1))
+    p = await _player(target_id)
+    if p and p.get("is_bot"):
+        return web.json_response({"error": "Это бот-игрок"}, status=400)
     if new_level < 1: new_level = 1
     if new_level > MAX_LEVEL: new_level = MAX_LEVEL
     await db.execute("UPDATE players SET level = ?, xp = 0 WHERE user_id = ?", (new_level, target_id))
     return web.json_response({"success": True})
 
-# ═══════════ 🆕 АНАЛИТИКА ═══════════
+# ═══════════ АНАЛИТИКА (только реальные игроки, is_bot=0) ═══════════
 async def api_admin_analytics(request):
     if not await _is_admin(request):
         return web.json_response({"error": "Доступ запрещен"}, status=403)
@@ -96,28 +107,36 @@ async def api_admin_analytics(request):
     now = int(time.time())
     today_day = now // 86400
 
-    # ═══ 1. ОБЩИЕ ЦИФРЫ ═══
-    total = (await db.fetchone("SELECT COUNT(*) as c FROM players"))["c"]
-    online = (await db.fetchone("SELECT COUNT(*) as c FROM players WHERE last_seen > ?", (now - 120,)))["c"]
+    # ═══ 1. ОБЩИЕ ЦИФРЫ (только реальные игроки) ═══
+    total = (await db.fetchone(
+        "SELECT COUNT(*) as c FROM players WHERE is_bot=0"))["c"]
+    online = (await db.fetchone(
+        "SELECT COUNT(*) as c FROM players WHERE last_seen > ? AND is_bot=0",
+        (now - 120,)))["c"]
     new_today = (await db.fetchone(
-        "SELECT COUNT(*) as c FROM players WHERE strftime('%s', created_at) > ?",
+        "SELECT COUNT(*) as c FROM players WHERE strftime('%s', created_at) > ? AND is_bot=0",
         (today_day * 86400,)))["c"]
 
-    # ═══ 2. АКТИВНЫЕ СЕГОДНЯ / ЗА НЕДЕЛЮ ═══
+    # ═══ 2. АКТИВНЫЕ (player_daily_activity — там только реальные) ═══
     active_today = (await db.fetchone(
-        "SELECT COUNT(DISTINCT user_id) as c FROM player_daily_activity WHERE day=?", (today_day,)))["c"]
+        "SELECT COUNT(DISTINCT pda.user_id) as c FROM player_daily_activity pda "
+        "JOIN players p ON p.user_id = pda.user_id "
+        "WHERE pda.day=? AND p.is_bot=0", (today_day,)))["c"]
     week_start = today_day - 6
     active_week = (await db.fetchone(
-        "SELECT COUNT(DISTINCT user_id) as c FROM player_daily_activity WHERE day>=?", (week_start,)))["c"]
+        "SELECT COUNT(DISTINCT pda.user_id) as c FROM player_daily_activity pda "
+        "JOIN players p ON p.user_id = pda.user_id "
+        "WHERE pda.day>=? AND p.is_bot=0", (week_start,)))["c"]
 
-    # ═══ 3. СРЕДНЕЕ ВРЕМЯ СЕССИИ ═══
-    # Сессия = requests * 30 сек (throttle в _user), cap на 8ч на день
+    # ═══ 3. СЕССИИ ═══
     sessions_rows = await db.fetchall(
-        "SELECT user_id, day, requests, first_seen, last_seen FROM player_daily_activity "
-        "WHERE requests > 0")
+        "SELECT pda.user_id, pda.day, pda.requests, pda.first_seen, pda.last_seen "
+        "FROM player_daily_activity pda "
+        "JOIN players p ON p.user_id = pda.user_id "
+        "WHERE pda.requests > 0 AND p.is_bot=0")
     sessions_sec = []
     for s in sessions_rows:
-        est = min(s["requests"] * 30, 8 * 3600)  # не больше 8ч на день
+        est = min(s["requests"] * 30, 8 * 3600)
         sessions_sec.append(est)
     sessions_sec.sort()
     n = len(sessions_sec)
@@ -128,19 +147,21 @@ async def api_admin_analytics(request):
     else:
         avg_sec = median_sec = total_hours = 0
 
-    # ═══ 4. RETENTION (возвращаемость) ═══
-    # Игрок "вернулся" = есть активность на день > первый день его активности
+    # ═══ 4. RETENTION ═══
     players_first = await db.fetchall(
-        "SELECT user_id, MIN(day) as first_day FROM player_daily_activity GROUP BY user_id")
+        "SELECT pda.user_id, MIN(pda.day) as first_day "
+        "FROM player_daily_activity pda "
+        "JOIN players p ON p.user_id = pda.user_id "
+        "WHERE p.is_bot=0 "
+        "GROUP BY pda.user_id")
     total_with_activity = len(players_first)
     returned = 0
-    first_day_counts = {}  # {first_day: {total, returned}}
+    first_day_counts = {}
     for pf in players_first:
         fd = pf["first_day"]
         if fd not in first_day_counts:
             first_day_counts[fd] = {"total": 0, "returned": 0}
         first_day_counts[fd]["total"] += 1
-        # Ищем активность позже первого дня
         later = await db.fetchone(
             "SELECT 1 FROM player_daily_activity WHERE user_id=? AND day > ? LIMIT 1",
             (pf["user_id"], fd))
@@ -150,7 +171,6 @@ async def api_admin_analytics(request):
 
     overall_retention = (returned / total_with_activity * 100) if total_with_activity else 0
 
-    # Retention по когортам за последние 7 дней
     retention_by_day = []
     for i in range(6, -1, -1):
         d = today_day - i
@@ -165,12 +185,13 @@ async def api_admin_analytics(request):
                 "pct": round(pct, 1),
             })
 
-    # ═══ 5. ТОП-10 ИГРОКОВ ПО ВРЕМЕНИ ═══
+    # ═══ 5. ТОП-10 ═══
     top_rows = await db.fetchall(
         "SELECT pda.user_id, p.nickname, "
         "SUM(MIN(pda.requests * 30, 28800)) as total_sec "
         "FROM player_daily_activity pda "
         "JOIN players p ON p.user_id = pda.user_id "
+        "WHERE p.is_bot=0 "
         "GROUP BY pda.user_id ORDER BY total_sec DESC LIMIT 10")
     top_players = []
     for r in top_rows:
@@ -184,12 +205,14 @@ async def api_admin_analytics(request):
             "total_str": f"{hours}ч {mins}м" if hours > 0 else f"{mins}м",
         })
 
-    # ═══ 6. АКТИВНОСТЬ ПО ДНЯМ (график 7 дней) ═══
+    # ═══ 6. ГРАФИК 7 ДНЕЙ ═══
     daily_activity = []
     for i in range(6, -1, -1):
         d = today_day - i
         cnt = (await db.fetchone(
-            "SELECT COUNT(DISTINCT user_id) as c FROM player_daily_activity WHERE day=?", (d,)))["c"]
+            "SELECT COUNT(DISTINCT pda.user_id) as c FROM player_daily_activity pda "
+            "JOIN players p ON p.user_id = pda.user_id "
+            "WHERE pda.day=? AND p.is_bot=0", (d,)))["c"]
         daily_activity.append({
             "date": time.strftime("%d.%m", time.gmtime(d * 86400)),
             "count": cnt,

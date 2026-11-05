@@ -1,9 +1,6 @@
 // app-social.js
 // Люди, локации, трейды, профиль игрока, быстрые действия
 
-// ══════════════════════════════════════════════════════════════
-//  БЫСТРЫЕ ДЕЙСТВИЯ (для home)
-// ══════════════════════════════════════════════════════════════
 async function claimDaily() {
   try { const d = await api("daily"); state.player = d.player; renderPlayer(); toast(`🎁 +${fmtMoney(d.reward)}₽`, "success"); }
   catch(e) { toast(e.message, "error"); }
@@ -19,9 +16,6 @@ async function doCrime() {
   catch(e) { toast(e.message, "error"); }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ЛЮДИ / ЛОКАЦИИ
-// ══════════════════════════════════════════════════════════════
 async function loadPeople() {
   try {
     const [loc, trades] = await Promise.all([api("location"), api("trade/list")]);
@@ -60,7 +54,7 @@ function renderPlayersList(players) {
     <div class="player-card" onclick="viewPlayer(${p.user_id})">
       <div class="player-avatar">👤</div>
       <div class="player-info">
-        <div class="player-name">${formatNickWithTag(p.nickname, p.gang_tag)}</div>
+        <div class="player-name">${formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color)}</div>
         <div class="player-meta">Ур. ${p.level} · ${_onlineHtml(p.is_online)}${!p.is_online && p.last_seen ? ` · <span class="last-seen">${formatLastSeen(p.last_seen)}</span>` : ''}</div>
       </div>
       <div class="player-money">${fmtMoney(p.balance)}₽</div>
@@ -72,9 +66,6 @@ async function moveTo(locId) {
   catch(e) { toast(e.message, "error"); }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ПРОФИЛЬ ИГРОКА
-// ══════════════════════════════════════════════════════════════
 const ACH_MAP = {
   first_job:{name:"Работяга",emoji:"💼"}, first_business:{name:"Бизнесмен",emoji:"💼"},
   millionaire:{name:"Миллионер",emoji:"💰"}, billionaire:{name:"Миллиардер",emoji:"💎"},
@@ -95,7 +86,7 @@ async function viewPlayer(uid) {
       : `${_onlineHtml(false)}${d.last_seen ? ` · <span class="last-seen">🕐 Был(а) в сети: ${formatLastSeen(d.last_seen)}</span>` : ''}`;
     openModal(`
       <div class="shop-preview">${renderCharacterSVG(d.outfit, {width: 170, height: 340})}</div>
-      <h2 style="text-align:center;margin-bottom:4px">${formatNickWithTag(d.nickname, d.gang_tag)}</h2>
+      <h2 style="text-align:center;margin-bottom:4px">${formatNickWithTag(d.nickname, d.gang_tag, d.gang_tag_color)}</h2>
       <div style="text-align:center;margin-bottom:8px;">${onlineInfo}</div>
       <div style="text-align:center;margin:12px 0">
         <div style="font-size:16px;font-weight:700">Ур. ${d.level}</div>
@@ -108,19 +99,16 @@ async function viewPlayer(uid) {
       </div>
       ${!isMe ? `<button class="btn btn-primary" style="background:linear-gradient(135deg,#c0392b,#e74c3c);margin-bottom:8px" onclick="challengePvP(${uid}, '${d.nickname}')">⚔️ Гоп-стоп</button>` : ''}
       ${!isMe ? `<button class="btn btn-primary" onclick="showTradeOffer(${uid}, '${d.nickname}')">🤝 Трейд</button>` : ''}
-      ${!isMe && !d.is_friend && !d.friend_pending ? `<button class="btn btn-secondary" onclick="sendFriendRequest(${uid})">➕ В друзья</button>` : ''}
-      ${!isMe && d.friend_pending ? `<button class="btn btn-secondary" disabled>⏳ Заявка отправлена</button>` : ''}
-      ${!isMe && d.is_friend ? `<button class="btn btn-secondary" onclick="openPM(${uid}, '${d.nickname}', '${d.gang_tag || ''}')">✉️ Написать ЛС</button>` : ''}
-      ${!isMe && d.is_friend ? `<button class="btn btn-secondary" style="background:rgba(231,76,60,.15);color:var(--danger);border:1px solid rgba(231,76,60,.3);" onclick="removeFriend(${uid}, '${d.nickname}')">❌ Удалить из друзей</button>` : ''}
-      ${!isMe && d.my_role && ['leader','deputy'].includes(d.my_role) && !d.target_in_gang ? `<button class="btn btn-secondary" onclick="inviteToGang(${uid}, '${d.nickname}')">📨 Пригласить в банду</button>` : ''}
-      ${!isMe && d.tg_username ? `<a href="https://t.me/${escapeHtml(d.tg_username)}" target="_blank" rel="noopener" class="btn btn-secondary" style="text-decoration:none;text-align:center;display:block;background:linear-gradient(135deg,#0088cc,#005f8f);border:none;color:#fff;font-weight:700;margin-top:8px;">✈️ Telegram @${escapeHtml(d.tg_username)}</a>` : ''}
+      ${(!isMe && !d.is_friend && !d.friend_pending) ? `<button class="btn btn-secondary" onclick="sendFriendRequest(${uid})">➕ В друзья</button>` : ''}
+      ${(!isMe && d.friend_pending) ? `<button class="btn btn-secondary" disabled>⏳ Заявка отправлена</button>` : ''}
+      ${(!isMe && d.is_friend) ? `<button class="btn btn-secondary" onclick="openPM(${uid}, '${d.nickname}', '${d.gang_tag || ''}', '${d.gang_tag_color || ''}')">✉️ Написать ЛС</button>` : ''}
+      ${(!isMe && d.is_friend) ? `<button class="btn btn-secondary" style="background:rgba(231,76,60,.15);color:var(--danger);border:1px solid rgba(231,76,60,.3);" onclick="removeFriend(${uid}, '${d.nickname}')">❌ Удалить из друзей</button>` : ''}
+      ${(!isMe && d.my_role && ['leader','deputy'].includes(d.my_role) && !d.target_in_gang) ? `<button class="btn btn-secondary" onclick="inviteToGang(${uid}, '${d.nickname}')">📨 Пригласить в банду</button>` : ''}
+      ${(!isMe && d.tg_username) ? `<a href="https://t.me/${escapeHtml(d.tg_username)}" target="_blank" rel="noopener" class="btn btn-secondary" style="text-decoration:none;text-align:center;display:block;background:linear-gradient(135deg,#0088cc,#005f8f);border:none;color:#fff;font-weight:700;margin-top:8px;">✈️ Telegram @${escapeHtml(d.tg_username)}</a>` : ''}
     `);
   } catch(e) { toast(e.message, "error"); }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ТРЕЙДЫ
-// ══════════════════════════════════════════════════════════════
 function renderTrades(trades) {
   const incEl = $("#trades-incoming"), outEl = $("#trades-outgoing");
   if (trades.incoming.length === 0 && trades.outgoing.length === 0) {
@@ -128,39 +116,89 @@ function renderTrades(trades) {
     outEl.innerHTML = ""; return;
   }
   incEl.innerHTML = trades.incoming.map(t=>{
-    const give = `${t.give_money>0?t.give_money+"₽ ":""}${t.give_items.length} шт.`;
-    const want = `${t.want_money>0?t.want_money+"₽ ":""}${t.want_items.length} шт.`;
-    return `<div class="trade-card">
-      <div class="trade-title">📥 От ${formatNickWithTag(t.other_nickname, t.other_gang_tag)}</div>
-      <div class="trade-content">Даёт: ${give}<br>Хочет: ${want}</div>
-      <div class="trade-actions">
-        <button class="trade-accept" onclick="acceptTrade(${t.trade_id})">✅</button>
-        <button class="trade-decline" onclick="declineTrade(${t.trade_id})">❌</button>
-      </div>
+    return `<div class="trade-card" onclick="showTradeDetailsModal(${t.trade_id})" style="cursor:pointer;">
+      <div class="trade-title">📥 От ${formatNickWithTag(t.other_nickname, t.other_gang_tag, t.other_gang_tag_color)}</div>
+      <div class="trade-content">Нажми, чтобы посмотреть детали и принять решение</div>
     </div>`;
   }).join("");
   outEl.innerHTML = trades.outgoing.length > 0
     ? '<div style="font-size:12px;color:var(--hint);margin-top:8px;margin-bottom:4px">📤 Отправленные</div>'
       + trades.outgoing.map(t=>`<div class="trade-card" style="border-left-color:var(--hint)">
-        <div class="trade-title">К ${formatNickWithTag(t.other_nickname, t.other_gang_tag)}</div>
+        <div class="trade-title">К ${formatNickWithTag(t.other_nickname, t.other_gang_tag, t.other_gang_tag_color)}</div>
+        <div class="trade-content">Ожидает ответа...</div>
         <div class="trade-actions"><button class="trade-decline" onclick="declineTrade(${t.trade_id})">Отменить</button></div>
       </div>`).join("")
     : "";
 }
 
+async function showTradeDetailsModal(tid) {
+  try {
+    const d = await api("trade/details", {trade_id: tid});
+    const giveItemsHtml = d.give_items.map(it => `
+      <div class="trade-item selected" style="border-color:${it.rarity_color};cursor:default;">
+        <div class="trade-item-emoji">${it.emoji}</div>
+        <div class="trade-item-name">${it.name}</div>
+      </div>`).join('');
+    const wantItemsHtml = d.want_items.map(it => `
+      <div class="trade-item selected" style="border-color:${it.rarity_color};cursor:default;">
+        <div class="trade-item-emoji">${it.emoji}</div>
+        <div class="trade-item-name">${it.name}</div>
+      </div>`).join('');
+
+    openModal(`
+      <h2 style="text-align:center;margin-bottom:16px">🤝 Трейд от ${formatNickWithTag(d.from_nickname, d.from_gang_tag, d.from_gang_tag_color)}</h2>
+      
+      <div style="background:var(--bg-3);padding:12px;border-radius:10px;margin-bottom:12px;">
+        <p style="font-weight:700;margin-bottom:6px;color:var(--success);">📥 Он даёт тебе:</p>
+        ${d.give_money > 0 ? `<div style="font-size:16px;font-weight:900;color:var(--money);margin-bottom:8px;">💰 ${fmtMoney(d.give_money)}₽</div>` : ''}
+        <div class="trade-inventory" style="margin-bottom:0;">${giveItemsHtml || '<span style="color:var(--hint);text-align:center;width:100%;">Пусто</span>'}</div>
+      </div>
+
+      <div style="background:var(--bg-3);padding:12px;border-radius:10px;margin-bottom:16px;">
+        <p style="font-weight:700;margin-bottom:6px;color:var(--danger);">📤 Ты отдаёшь:</p>
+        ${d.want_money > 0 ? `<div style="font-size:16px;font-weight:900;color:var(--money);margin-bottom:8px;">💰 ${fmtMoney(d.want_money)}₽</div>` : ''}
+        <div class="trade-inventory" style="margin-bottom:0;">${wantItemsHtml || '<span style="color:var(--hint);text-align:center;width:100%;">Пусто</span>'}</div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button class="btn btn-primary" onclick="acceptTrade(${tid})" style="background:var(--success);border:none;">✅ Принять</button>
+        <button class="btn btn-secondary" onclick="declineTrade(${tid})" style="background:var(--danger);color:#fff;border:none;">❌ Отклонить</button>
+      </div>
+    `);
+  } catch(e) { toast(e.message, "error"); }
+}
+
 async function acceptTrade(tid) {
-  try { const d = await api("trade/accept", {trade_id: tid}); state.player = d.player; renderPlayer(); loadPeople(); toast("✅ Принят", "success"); }
+  try { 
+    const d = await api("trade/accept", {trade_id: tid}); 
+    state.player = d.player; 
+    renderPlayer(); 
+    toast("✅ Трейд принят", "success"); 
+    closeModal();
+    loadPeople(); 
+    if (typeof showNotificationsSilent === 'function') showNotificationsSilent();
+    if (document.getElementById('bell-badge') && !document.getElementById('bell-badge').classList.contains('hidden')) {
+       // Refresh notifications modal if open
+       const modal = document.getElementById("modal");
+       if (modal && !modal.classList.contains("hidden")) showNotifications();
+    }
+  }
   catch(e) { toast(e.message, "error"); }
 }
 
 async function declineTrade(tid) {
-  try { await api("trade/decline", {trade_id: tid}); loadPeople(); toast("❌ Отклонён"); }
+  try { 
+    await api("trade/decline", {trade_id: tid}); 
+    toast("❌ Отклонён"); 
+    closeModal();
+    loadPeople();
+    if (typeof showNotificationsSilent === 'function') showNotificationsSilent();
+    const modal = document.getElementById("modal");
+    if (modal && !modal.classList.contains("hidden")) showNotifications();
+  }
   catch(e) { toast(e.message, "error"); }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ВИЗУАЛЬНЫЙ ТРЕЙД
-// ══════════════════════════════════════════════════════════════
 let tradeGiveItems = new Set();
 let tradeWantItems = new Set();
 

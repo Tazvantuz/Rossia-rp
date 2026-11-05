@@ -6,9 +6,6 @@ let pvpTimerInterval = null;
 let pvpMyTurnPart = null;
 let pvpMyTurnAction = null;
 
-// ══════════════════════════════════════════════════════════════
-//  ВЫЗОВ НА БОЙ
-// ══════════════════════════════════════════════════════════════
 async function challengePvP(uid, name) {
   if (!confirm(`Вызвать ${name} на гоп-стоп?`)) return;
   try {
@@ -33,13 +30,9 @@ async function challengePvP(uid, name) {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ВХОДЯЩИЕ ВЫЗОВЫ (проверка каждые 5 сек)
-// ══════════════════════════════════════════════════════════════
 async function checkPvPChallenges() {
   try {
     const d = await api("pvp/incoming");
-    // Активные бои — сразу открываем UI
     if (d.active && d.active.length > 0) {
       const active = d.active[0];
       if (!pvpCurrentBattle || pvpCurrentBattle !== active.battle_id) {
@@ -67,7 +60,7 @@ async function checkPvPChallenges() {
     const render = (sl) => {
       openModal(`
         <h2 style="text-align:center">⚔️ Гоп-стоп</h2>
-        <p style="margin:16px 0;text-align:center"><b>${formatNickWithTag(c.attacker_name, c.attacker_gang_tag)}</b> хочет напасть на тебя!</p>
+        <p style="margin:16px 0;text-align:center"><b>${formatNickWithTag(c.attacker_name, c.attacker_gang_tag, c.attacker_gang_tag_color)}</b> хочет напасть на тебя!</p>
         <p style="color:var(--danger);font-size:13px;margin-bottom:8px;text-align:center">При проигрыше отдашь 10% денег</p>
         <p style="text-align:center;font-size:18px;font-weight:800;color:${sl > 10 ? 'var(--success)' : 'var(--danger)'};margin:16px 0;">⏰ Осталось: ${sl} сек</p>
         <button class="btn btn-primary" style="padding:16px;font-size:16px;" onclick="respondPvP(${c.battle_id}, true)">⚔️ Принять бой</button>
@@ -110,16 +103,12 @@ async function respondPvP(bid, accept) {
   } catch(e) { toast(e.message, "error"); }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  PVP UI
-// ══════════════════════════════════════════════════════════════
 async function startPvPUI(bid) {
   if (pvpTimerInterval) { clearInterval(pvpTimerInterval); pvpTimerInterval = null; }
   pvpCurrentBattle = bid;
   pvpMyTurnPart = null;
   pvpMyTurnAction = null;
   loadPvPState(bid);
-  // Авто-обновление каждые 3 сек
   pvpTimerInterval = setInterval(() => {
     if (pvpCurrentBattle) loadPvPState(pvpCurrentBattle, true);
     else { clearInterval(pvpTimerInterval); pvpTimerInterval = null; }
@@ -166,9 +155,9 @@ async function loadPvPState(bid, silent = false) {
     openModal(`
       <h2 style="text-align:center;margin-bottom:12px">⚔️ Гоп-стоп</h2>
       <div class="pvp-card">
-        <div class="pvp-hp-row"><span>${formatNickWithTag(enemy.nickname, enemy.gang_tag)}</span><span>${enemy.hp}/${enemy.max_hp}</span></div>
+        <div class="pvp-hp-row"><span>${formatNickWithTag(enemy.nickname, enemy.gang_tag, enemy.gang_tag_color)}</span><span>${enemy.hp}/${enemy.max_hp}</span></div>
         <div class="pvp-hp-bar"><div class="pvp-hp-fill" style="width:${enemy.hp/enemy.max_hp*100}%"></div></div>
-        <div class="pvp-hp-row" style="margin-top:12px"><span>${formatNickWithTag(me.nickname, me.gang_tag)} (ты)</span><span>${me.hp}/${me.max_hp}</span></div>
+        <div class="pvp-hp-row" style="margin-top:12px"><span>${formatNickWithTag(me.nickname, me.gang_tag, me.gang_tag_color)} (ты)</span><span>${me.hp}/${me.max_hp}</span></div>
         <div class="pvp-hp-bar"><div class="pvp-hp-fill" style="width:${me.hp/me.max_hp*100}%"></div></div>
       </div>
       ${logHtml ? `<div class="pvp-log">${logHtml}</div>` : ''}
@@ -202,7 +191,4 @@ async function pvpDoAction(action, part) {
   } catch(e) { toast(e.message, "error"); }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  СТАРТ polling — как только DOM готов
-// ══════════════════════════════════════════════════════════════
 setInterval(checkPvPChallenges, 5000);

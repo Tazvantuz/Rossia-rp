@@ -1,9 +1,6 @@
 // app-chat.js
 // Чат (общий + ЛС), друзья, уведомления
 
-// ══════════════════════════════════════════════════════════════
-//  ЧАТ: polling
-// ══════════════════════════════════════════════════════════════
 let chatInterval = null;
 
 function startChatPolling() {
@@ -25,9 +22,6 @@ function stopChatPolling() {
   if (window._convPoll) { clearInterval(window._convPoll); window._convPoll = null; }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ОБЩИЙ ЧАТ
-// ══════════════════════════════════════════════════════════════
 async function loadChat() {
   if (state.chatWith && state.chatWith !== 'global') return;
   try {
@@ -46,7 +40,7 @@ async function loadChat() {
         } catch(e) {}
         return `<div class="chat-msg">
           <div class="chat-msg-head">
-            <span class="chat-nick" onclick="viewPlayer(${m.user_id})">${formatNickWithTag(m.nickname, m.gang_tag)}</span>
+            <span class="chat-nick" onclick="viewPlayer(${m.user_id})">${formatNickWithTag(m.nickname, m.gang_tag, m.gang_tag_color)}</span>
             <span class="chat-lvl">Ур. ${m.level}</span>
             <span class="chat-time">${time}</span>
           </div>
@@ -58,9 +52,6 @@ async function loadChat() {
   } catch(e) {}
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ЛС
-// ══════════════════════════════════════════════════════════════
 function switchChat(mode) {
   if (mode === 'global' || mode === undefined || mode === null) {
     state.chatWith = 'global';
@@ -72,14 +63,15 @@ function switchChat(mode) {
   renderChatTabs();
 }
 
-function openPM(uid, name, tag) {
+function openPM(uid, name, tag, color) {
   uid = Number(uid);
   if (!state.openPMs) state.openPMs = [];
   if (!state.openPMs.find(x => Number(x.uid) === uid)) {
-    state.openPMs.push({uid: uid, name: name, tag: tag || null});
+    state.openPMs.push({uid: uid, name: name, tag: tag || null, tag_color: color || null});
   } else {
     const p = state.openPMs.find(x => Number(x.uid) === uid);
     if (tag) p.tag = tag;
+    if (color) p.tag_color = color;
   }
   state.chatWith = uid;
   const existing = state.openPMs.find(x => Number(x.uid) === uid);
@@ -97,7 +89,7 @@ function renderChatTabs() {
     for (const p of state.openPMs) {
       const isActive = Number(state.chatWith) === Number(p.uid);
       const unreadDot = (p.unread && p.unread > 0) ? `<span style="background:#e74c3c;color:#fff;border-radius:8px;padding:0 5px;font-size:10px;margin-left:4px;">${p.unread}</span>` : '';
-      const tagHtml = p.tag ? `<span class="gang-tag">[${escapeHtml(p.tag)}]</span> ` : '';
+      const tagHtml = p.tag ? `<span class="gang-tag" style="color:${p.tag_color || '#f39c12'};border-color:${p.tag_color || '#f39c12'}">[${escapeHtml(p.tag)}]</span> ` : '';
       html += `<button class="chat-tab ${isActive ? 'active' : ''}" data-chat="${p.uid}" onclick="switchChat(${p.uid})">👤 ${tagHtml}${escapeHtml(p.name)}${unreadDot}</button>`;
     }
   }
@@ -137,9 +129,6 @@ async function sendChat() {
   } catch(e) { toast(e.message, "error"); }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ДРУЗЬЯ
-// ══════════════════════════════════════════════════════════════
 async function searchFriends() {
   const q = document.getElementById("friend-search-input").value.trim();
   if (q.length < 2) return toast("Минимум 2 символа", "error");
@@ -151,7 +140,7 @@ async function searchFriends() {
       el.innerHTML = d.results.map(u => `
         <div class="player-card">
           <div class="player-avatar">👤</div>
-          <div class="player-info"><div class="player-name">${formatNickWithTag(u.nickname, u.gang_tag)}</div><div class="player-meta">Ур. ${u.level}</div></div>
+          <div class="player-info"><div class="player-name">${formatNickWithTag(u.nickname, u.gang_tag, u.gang_tag_color)}</div><div class="player-meta">Ур. ${u.level}</div></div>
           <button class="btn btn-primary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="sendFriendRequest(${u.user_id})">Добавить</button>
         </div>
       `).join("");
@@ -175,7 +164,7 @@ async function loadFriends() {
       reqBox.innerHTML = `<h3 class="section-subtitle" style="color:#f39c12">Запросы (${d.requests.length})</h3>` + sortedReqs.map(r => `
         <div class="player-card">
           <div class="player-info">
-            <div class="player-name">${formatNickWithTag(r.nickname, r.gang_tag)}</div>
+            <div class="player-name">${formatNickWithTag(r.nickname, r.gang_tag, r.gang_tag_color)}</div>
             <div class="player-meta">${_onlineHtml(r.is_online)}${!r.is_online && r.last_seen ? ` · <span class="last-seen">${formatLastSeen(r.last_seen)}</span>` : ''}</div>
           </div>
           <button class="btn btn-primary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="respondFriend(${r.user_id}, true)">✅</button>
@@ -192,10 +181,10 @@ async function loadFriends() {
         <div class="player-card" onclick="viewPlayer(${f.user_id})">
           <div class="player-avatar">👤</div>
           <div class="player-info">
-            <div class="player-name">${formatNickWithTag(f.nickname, f.gang_tag)}</div>
+            <div class="player-name">${formatNickWithTag(f.nickname, f.gang_tag, f.gang_tag_color)}</div>
             <div class="player-meta">Ур. ${f.level} · ${_onlineHtml(f.is_online)}${!f.is_online && f.last_seen ? ` · <span class="last-seen">${formatLastSeen(f.last_seen)}</span>` : ''}</div>
           </div>
-          <button class="btn btn-secondary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="event.stopPropagation(); openPM(${f.user_id}, '${f.nickname}', '${f.gang_tag || ''}')">✉️ ЛС</button>
+          <button class="btn btn-secondary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="event.stopPropagation(); openPM(${f.user_id}, '${f.nickname}', '${f.gang_tag || ''}', '${f.gang_tag_color || ''}')">✉️ ЛС</button>
           <button class="btn btn-secondary" style="width:auto;padding:6px 8px;margin:0 0 0 4px;font-size:12px;color:var(--danger);" onclick="event.stopPropagation(); removeFriend(${f.user_id}, '${f.nickname}')">✕</button>
         </div>
       `).join("");
@@ -221,9 +210,6 @@ async function respondFriend(uid, accept) {
   } catch(e) { toast(e.message, "error"); }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  УВЕДОМЛЕНИЯ
-// ══════════════════════════════════════════════════════════════
 async function loadNotifications() {
   try {
     const d = await api("notifications/get");
@@ -244,6 +230,9 @@ function showNotifications() {
       html += d.notifications.map(n => {
         const hideBtn = `<button class="btn btn-secondary" style="width:auto;padding:6px 10px;margin:0;font-size:14px;float:right;color:var(--hint);" onclick="hideNotification(${n.id})">✕</button>`;
         let actions = "";
+        let notifData = {};
+        try { notifData = JSON.parse(n.data || '{}'); } catch(_) {}
+
         if (n.type === 'gang_invite' && !n.is_read) {
           actions = `<div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
             <button class="btn btn-primary" style="margin:0;width:100%;padding:14px;font-size:15px;" onclick="acceptGangInvite(${n.id})">✅ Принять приглашение</button>
@@ -253,17 +242,28 @@ function showNotifications() {
         if (n.type === 'pvp' && n.seconds_left !== undefined) {
           const sl = n.seconds_left || 0;
           const timerText = sl > 0 ? `<span style="color:var(--danger);font-weight:700;">⏰ ${sl} сек на ответ</span>` : '<span style="color:var(--danger);">⏰ Время истекло</span>';
-          const bidFromData = (() => { try { return JSON.parse(n.data || '{}').battle_id; } catch(_) { return null; } })();
-          if (bidFromData && sl > 0) {
+          if (notifData.battle_id && sl > 0) {
             actions = `<div style="margin-top:8px;font-size:12px;">${timerText}</div>
               <div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
-                <button class="btn btn-primary" style="margin:0;width:100%;padding:14px;font-size:15px;background:linear-gradient(135deg,#c0392b,#e74c3c);" onclick="respondPvPFromNotif(${bidFromData}, true, ${n.id})">⚔️ Принять бой</button>
-                <button class="btn btn-secondary" style="margin:0;width:100%;padding:14px;font-size:15px;" onclick="respondPvPFromNotif(${bidFromData}, false, ${n.id})">❌ Отказаться</button>
+                <button class="btn btn-primary" style="margin:0;width:100%;padding:14px;font-size:15px;background:linear-gradient(135deg,#c0392b,#e74c3c);" onclick="respondPvPFromNotif(${notifData.battle_id}, true, ${n.id})">⚔️ Принять бой</button>
+                <button class="btn btn-secondary" style="margin:0;width:100%;padding:14px;font-size:15px;" onclick="respondPvPFromNotif(${notifData.battle_id}, false, ${n.id})">❌ Отказаться</button>
               </div>`;
           } else {
             actions = `<div style="margin-top:8px;font-size:12px;">${timerText}</div>`;
           }
         }
+        if (n.type === 'trade') {
+          actions = `<div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+            <button class="btn btn-primary" style="margin:0;width:100%;padding:12px;font-size:14px;" onclick="showTradeDetailsModal(${notifData.trade_id})">👀 Посмотреть трейд</button>
+          </div>`;
+        }
+        if (n.type === 'friend') {
+          actions = `<div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+            <button class="btn btn-primary" style="margin:0;width:100%;padding:12px;font-size:14px;" onclick="respondFriendFromNotif(${notifData.user_id}, true, ${n.id})">✅ Принять заявку</button>
+            <button class="btn btn-secondary" style="margin:0;width:100%;padding:12px;font-size:14px;" onclick="respondFriendFromNotif(${notifData.user_id}, false, ${n.id})">❌ Отклонить</button>
+          </div>`;
+        }
+
         return `<div style="padding:12px; background:var(--bg-3); border-radius:10px; margin-bottom:8px; font-size:13px; ${n.is_read ? 'opacity:0.6' : ''}; overflow:hidden;">
           ${hideBtn}
           <div style="padding-right:40px;">${n.text}</div>
@@ -307,6 +307,16 @@ async function respondPvPFromNotif(bid, accept, nid) {
     closeModal();
     if (accept) startPvPUI(bid);
     else toast("❌ Отказался");
+  } catch(e) { toast(e.message, "error"); }
+}
+
+async function respondFriendFromNotif(uid, accept, nid) {
+  try {
+    await api("friend/respond", {target_id: uid, accept});
+    await api("notifications/delete", {notification_id: nid});
+    toast(accept ? "✅ Добавлен в друзья" : "❌ Отклонено");
+    closeModal();
+    loadFriends();
   } catch(e) { toast(e.message, "error"); }
 }
 

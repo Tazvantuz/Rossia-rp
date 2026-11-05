@@ -1,9 +1,6 @@
 // app-gang.js
-// Банды, гетто, кейсы, рефералы
+// Банды, гетто, кейсы, рефералы, магазин банды
 
-// ══════════════════════════════════════════════════════════════
-//  КЕЙСЫ
-// ══════════════════════════════════════════════════════════════
 async function loadCases() {
   try {
     const d = await api("cases/list");
@@ -37,6 +34,7 @@ function showCaseDetail(cid) {
     return `<div class="case-modal-item" style="border-color:${it.rarity_color}">
       <div class="case-modal-item-svg">${renderCharacterSVG(preview, {width: 80, height: 160})}</div>
       <div class="case-modal-item-name" style="color:${it.rarity_color}">${it.name}</div>
+      <div class="case-modal-item-rarity" style="color:${it.rarity_color};font-size:11px;font-weight:700;margin-bottom:4px;">${it.rarity_name}</div>
       <div class="case-modal-item-chance">${it.chance}%</div>
       <div class="case-modal-item-stats">${stats.join("<br>")}</div>
     </div>`;
@@ -70,9 +68,6 @@ async function openCase(cid) {
   } catch(e) { toast(e.message, "error"); }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  БАНДЫ
-// ══════════════════════════════════════════════════════════════
 function showCreateGang() {
   openModal(`
     <h2>🚬 Создать банду</h2>
@@ -126,9 +121,74 @@ function showGangWithdraw() {
   }).catch(e => toast(e.message, "error"));
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ФОРМАТИРОВАНИЕ ЛОГА
-// ══════════════════════════════════════════════════════════════
+async function showGangShop() {
+  try {
+    const d = await api("gang/shop/items", {});
+    if (d.error) { toast(d.error, "error"); return; }
+    const seeds = d.seeds || 0;
+    const items = d.items || [];
+
+    const bySlot = {};
+    items.forEach(it => {
+      if (!bySlot[it.slot]) bySlot[it.slot] = [];
+      bySlot[it.slot].push(it);
+    });
+    const slotOrder = ["head", "body", "legs", "right_hand", "left_hand"];
+    const slotNames = {head:"🧢 Голова", body:"👕 Тело", legs:"👖 Ноги", right_hand:"🤚 Пр.рука", left_hand:"🖐 Лев.рука"};
+
+    let html = `<h2>🌻 Магазин банды</h2>
+      <div style="background:linear-gradient(135deg,#8b6914,#d4ac0d);border-radius:12px;padding:14px;text-align:center;margin:12px 0;">
+        <div style="font-size:11px;color:rgba(0,0,0,.6);text-transform:uppercase;letter-spacing:0.5px;font-weight:700">Твой баланс семечек</div>
+        <div style="font-size:32px;font-weight:900;color:#fff;margin-top:4px;text-shadow:0 2px 4px rgba(0,0,0,.3)">${seeds} 🌻</div>
+        <div style="font-size:11px;color:rgba(255,255,255,.8);margin-top:4px;">10 🌻/час за каждую территорию клана</div>
+      </div>`;
+
+    for (const slot of slotOrder) {
+      const list = bySlot[slot];
+      if (!list || list.length === 0) continue;
+      html += `<h3 class="section-subtitle">${slotNames[slot]}</h3>`;
+      list.sort((a,b) => (a.seeds_price || 0) - (b.seeds_price || 0));
+      html += list.map(it => {
+        const canBuy = seeds >= (it.seeds_price || 0);
+        const preview = {...emptyOutfit()};
+        preview[SLOT_KEY[it.slot]] = {item_id: it.item_id};
+        const stats = [];
+        if (it.hp) stats.push(`❤️ +${it.hp} HP`);
+        if (it.damage) stats.push(`⚔️ +${it.damage} DMG`);
+        return `<div class="item-card" style="border-left-color:${it.rarity_color}">
+          <div class="item-preview-mini">${renderCharacterSVG(preview, {width: 40, height: 80})}</div>
+          <div class="item-info">
+            <div class="item-name" style="color:${it.rarity_color}">${it.name}</div>
+            <div class="item-meta" style="color:${it.rarity_color};font-size:10px;font-weight:700">${it.rarity_name}</div>
+            <div class="item-meta">${stats.join(" · ") || "—"}</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:14px;font-weight:900;color:${canBuy ? '#f39c12' : '#8494a5'}">${it.seeds_price} 🌻</div>
+            <button class="btn ${canBuy ? 'btn-primary' : 'btn-secondary'}" style="width:auto;padding:6px 10px;margin:4px 0 0;font-size:11px;" ${canBuy ? `onclick="buyGangShopItem('${it.item_id}')"` : 'disabled'}>
+              ${canBuy ? 'Купить' : 'Мало 🌻'}
+            </button>
+          </div>
+        </div>`;
+      }).join("");
+    }
+
+    html += `<button class="btn btn-secondary" style="margin-top:16px;" onclick="closeModal()">Закрыть</button>`;
+    openModal(html);
+  } catch(e) { toast(e.message, "error"); }
+}
+
+async function buyGangShopItem(iid) {
+  try {
+    const d = await api("gang/shop/buy", {item_id: iid});
+    if (d.error) { toast(d.error, "error"); return; }
+    state.player = d.player;
+    renderPlayer();
+    toast(`✅ Куплено: ${d.bought} (-${d.seeds_spent} 🌻)`, "success");
+    showGangShop();
+    if (tg) tg.HapticFeedback?.notificationOccurred("success");
+  } catch(e) { toast(e.message, "error"); }
+}
+
 function formatTerritoryLog(entry, myGid) {
   const tname = entry.territory_name || "территория";
   const etype = entry.event_type;
@@ -160,9 +220,6 @@ function formatTerritoryLog(entry, myGid) {
   return { icon: "•", text: `${etype}: ${tname}`, color: "#8494a5" };
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ТЕРРИТОРИЯ (модалка при клике)
-// ══════════════════════════════════════════════════════════════
 async function showTerritoryCapture(tid) {
   try {
     const d = await api("gang/get");
@@ -184,16 +241,14 @@ async function showTerritoryCapture(tid) {
     if (!isLeader) {
       buttonsHtml = `<p style="color:var(--hint);text-align:center;font-size:12px;margin-top:12px">Захват доступен только лидеру и замам</p>`;
     } else if (t.is_contested) {
-      buttonsHtml = `<p style="color:var(--danger);text-align:center;font-weight:700;margin-top:12px">⚔️ Битва уже началась — 2 претендента</p>`;
+      buttonsHtml = `<p style="color:var(--danger);text-align:center;font-weight:700;margin-top:12px">⚔️ Битва уже началась</p>`;
     } else if (t.capturing_by_us) {
       buttonsHtml = `<p style="color:var(--success);text-align:center;font-weight:700;margin-top:12px">⏳ Вы уже захватываете</p>`;
     } else if (t.has_capture && t.captures[0].gang_id !== myGid) {
       if (t.is_ours) {
-        buttonsHtml = `<button class="btn btn-primary" onclick="captureTerritory(${tid})" style="background:linear-gradient(135deg,#3498db,#2980b9)">🛡 Защитить территорию</button>
-          <p style="color:var(--hint);text-align:center;font-size:11px;margin-top:6px">Битва через ${formatTime(t.battle_left)}</p>`;
+        buttonsHtml = `<button class="btn btn-primary" onclick="captureTerritory(${tid})" style="background:linear-gradient(135deg,#3498db,#2980b9)">🛡 Защитить</button>`;
       } else {
-        buttonsHtml = `<button class="btn btn-primary" onclick="captureTerritory(${tid})">⚔️ Помешать захвату</button>
-          <p style="color:var(--hint);text-align:center;font-size:11px;margin-top:6px">Битва через ${formatTime(t.battle_left)}</p>`;
+        buttonsHtml = `<button class="btn btn-primary" onclick="captureTerritory(${tid})">⚔️ Помешать захвату</button>`;
       }
     } else if (t.is_ours) {
       buttonsHtml = `<p style="color:var(--success);text-align:center;font-weight:700;margin-top:12px">🟢 Территория под контролем</p>`;
@@ -203,18 +258,18 @@ async function showTerritoryCapture(tid) {
 
     openModal(`
       <h2 style="text-align:center">${t.emoji} ${t.name}</h2>
-      <p style="margin:16px 0;text-align:center">Доход: <b style="color:var(--money)">+${t.income}₽/ч</b></p>
+      <p style="margin:16px 0;text-align:center">Доход: <b style="color:var(--money)">+${t.income}₽/ч</b> + <b style="color:#f39c12">10 🌻/ч</b></p>
       <p style="color:var(--hint);margin-bottom:8px;text-align:center">${statusText}</p>
       ${t.has_capture ? `
         <div style="background:rgba(243,156,18,0.1);border:1px solid rgba(243,156,18,0.3);border-radius:10px;padding:10px;margin-bottom:12px;">
-          <div style="font-size:11px;color:var(--hint);text-transform:uppercase;margin-bottom:6px;letter-spacing:0.5px;text-align:center">Активные претенденты</div>
+          <div style="font-size:11px;color:var(--hint);text-transform:uppercase;margin-bottom:6px;text-align:center">Активные претенденты</div>
           ${t.captures.map(c => `
             <div style="display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px solid rgba(255,255,255,0.05);">
               <span>${c.gang_emoji} <b>${escapeHtml(c.gang_name)}</b>${c.gang_id === myGid ? ' (мы)' : ''}</span>
               <span style="color:#f39c12;font-weight:700;">${c.total_damage} урона · ${formatTime(c.left)}</span>
             </div>
           `).join('')}
-          ${t.is_contested ? `<div style="text-align:center;font-size:11px;color:#e74c3c;font-weight:700;margin-top:8px;">⚔️ Битва через ${formatTime(t.battle_left)} — победит тот, у кого больше урона (шанс ~${Math.round(100 * Math.pow(Math.max(1,t.captures[0].total_damage),1.2) / (Math.pow(Math.max(1,t.captures[0].total_damage),1.2) + Math.pow(Math.max(1,t.captures[1].total_damage),1.2)))}% у первого)</div>` : ''}
+          ${t.is_contested ? `<div style="text-align:center;font-size:11px;color:#e74c3c;font-weight:700;margin-top:8px;">⚔️ Битва через ${formatTime(t.battle_left)}</div>` : ''}
         </div>` : ''}
       ${buttonsHtml}
       <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal()">Закрыть</button>
@@ -232,16 +287,13 @@ async function captureTerritory(tid) {
   } catch(e) { toast(e.message, "error"); }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ЗАГРУЗКА БАНДЫ
-// ══════════════════════════════════════════════════════════════
 async function loadGang() {
   try {
     const d = await api("gang/get");
     const el = $("#gang-content");
     if (!d.in_gang) {
       let listHtml = d.gangs.length > 0 ? d.gangs.map(g => {
-        const tagHtml = g.tag ? ` <span class="gang-tag">[${escapeHtml(g.tag)}]</span>` : '';
+        const tagHtml = g.tag ? ` <span class="gang-tag" style="color:${g.tag_color || '#f39c12'};border-color:${g.tag_color || '#f39c12'}">[${escapeHtml(g.tag)}]</span>` : '';
         return `
         <div class="member-row">
           <div style="font-size:22px">${g.emoji}</div>
@@ -262,32 +314,25 @@ async function loadGang() {
     }
     const g = d.gang;
     const myGid = g.gang_id;
+    const mySeeds = d.my_seeds || 0;
 
     const terrHtml = d.territories.map(t => {
       let cls = "neutral", label = "Ничейная", subLine = "";
       if (t.is_contested) {
-        cls = "enemy";
-        label = "⚔️ БИТВА";
+        cls = "enemy"; label = "⚔️ БИТВА";
         subLine = `<div style="font-size:9px;color:#f39c12;font-weight:900;margin-top:2px;" class="terr-timer" data-left="${t.battle_left}">${formatTime(t.battle_left)}</div>`;
       } else if (t.capturing_by_us) {
-        cls = "capturing";
-        const left = t.captures[0].left;
-        label = "Наш захват";
+        cls = "capturing"; const left = t.captures[0].left; label = "Наш захват";
         subLine = `<div style="font-size:9px;color:#f39c12;font-weight:900;margin-top:2px;" class="terr-timer" data-left="${left}">${formatTime(left)}</div>`;
       } else if (t.has_capture) {
-        cls = "capturing";
-        const c = t.captures[0];
-        label = `${c.gang_emoji} атакует`;
+        cls = "capturing"; const c = t.captures[0]; label = `${c.gang_emoji} атакует`;
         subLine = `<div style="font-size:9px;color:#f39c12;font-weight:900;margin-top:2px;" class="terr-timer" data-left="${c.left}">${formatTime(c.left)}</div>`;
-      } else if (t.is_ours) {
-        cls = "mine"; label = "Наша";
-      } else if (t.gang_id) {
-        cls = "enemy"; label = "Чужая";
-      }
+      } else if (t.is_ours) { cls = "mine"; label = "Наша"; }
+      else if (t.gang_id) { cls = "enemy"; label = "Чужая"; }
       return `<div class="territory ${cls}" onclick="showTerritoryCapture(${t.id})">
         <div class="territory-emoji">${t.emoji}</div>
         <div class="territory-name">${t.name}</div>
-        <div class="territory-income">+${t.income}₽/ч</div>
+        <div class="territory-income">+${t.income}₽ +10🌻/ч</div>
         <div style="font-size:9px;margin-top:2px;font-weight:700">${label}</div>
         ${subLine}
       </div>`;
@@ -298,11 +343,11 @@ async function loadGang() {
       const roleName = {leader:"Лидер",deputy:"Зам",member:"Боец"}[m.role];
       let actionBtn = "";
       if (d.my_role === "leader" && m.role !== "leader") {
-        if (m.role === "member") actionBtn = `<button class="btn btn-secondary" style="width:auto;padding:4px 8px;font-size:10px;margin:0" onclick="setDeputy(${m.user_id}, 'promote')">Назначить замом</button>`;
-        else actionBtn = `<button class="btn btn-secondary" style="width:auto;padding:4px 8px;font-size:10px;margin:0" onclick="setDeputy(${m.user_id}, 'demote')">Снять зама</button>`;
+        if (m.role === "member") actionBtn = `<button class="btn btn-secondary" style="width:auto;padding:4px 8px;font-size:10px;margin:0" onclick="setDeputy(${m.user_id}, 'promote')">Зам</button>`;
+        else actionBtn = `<button class="btn btn-secondary" style="width:auto;padding:4px 8px;font-size:10px;margin:0" onclick="setDeputy(${m.user_id}, 'demote')">-Зам</button>`;
       }
       return `<div class="member-row">
-        <div style="flex:1"><b>${formatNickWithTag(m.nickname, m.gang_tag)}</b> · ур. ${m.level}</div>
+        <div style="flex:1"><b>${formatNickWithTag(m.nickname, m.gang_tag, m.gang_tag_color)}</b> · ур. ${m.level}</div>
         <span class="member-role ${roleClass}">${roleName}</span>
         ${actionBtn}
       </div>`;
@@ -311,7 +356,7 @@ async function loadGang() {
     const logs = d.territory_log || [];
     let logHtml = "";
     if (logs.length === 0) {
-      logHtml = `<div style="background:var(--bg-2);border-radius:12px;padding:16px;text-align:center;color:var(--hint);font-size:12px;">Пока нет событий (макс. 10 в истории)</div>`;
+      logHtml = `<div style="background:var(--bg-2);border-radius:12px;padding:16px;text-align:center;color:var(--hint);font-size:12px;">Пока нет событий (макс. 10)</div>`;
     } else {
       logHtml = logs.slice(0, 10).map(entry => {
         const f = formatTerritoryLog(entry, myGid);
@@ -331,7 +376,7 @@ async function loadGang() {
     }
 
     const tagBanner = g.tag
-      ? `<div style="text-align:center;color:var(--money);font-weight:900;font-size:18px;margin-top:4px;">[${escapeHtml(g.tag)}]</div>`
+      ? `<div style="text-align:center;font-weight:900;font-size:18px;margin-top:4px;"><span class="gang-tag" style="color:${g.tag_color || '#f39c12'};border-color:${g.tag_color || '#f39c12'};font-size:1em;padding:2px 8px;">[${escapeHtml(g.tag)}]</span></div>`
       : '';
     const tagEditBtn = d.my_role === "leader"
       ? `<button class="btn btn-secondary" onclick="showSetTag()" style="margin:8px 0">🏷 ${g.tag ? `Изменить тег [${escapeHtml(g.tag)}]` : 'Установить тег банды'}</button>`
@@ -343,7 +388,11 @@ async function loadGang() {
         <div class="gang-name">${escapeHtml(g.name)}</div>
         ${tagBanner}
         <div class="gang-treasury">💰 Казна: ${fmtMoney(g.treasury)}₽</div>
+        <div style="margin-top:8px;display:inline-block;background:linear-gradient(135deg,#8b6914,#d4ac0d);padding:6px 14px;border-radius:20px;font-weight:900;color:#fff;font-size:14px;">
+          🌻 ${mySeeds} семечек
+        </div>
       </div>
+      <button class="btn btn-secondary" onclick="showGangShop()" style="margin-bottom:8px;background:linear-gradient(135deg,#8b6914,#d4ac0d);color:#fff;border:none;font-weight:700;">🌻 Магазин банды (${mySeeds} 🌻)</button>
       ${tagEditBtn}
       ${d.is_leader_or_deputy ? `
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px">
@@ -377,40 +426,61 @@ async function loadGang() {
 }
 
 function showSetTag() {
+  const colors = ["#f39c12", "#e74c3c", "#e91e63", "#9b59b6", "#3498db", "#1abc9c", "#2ecc71", "#f1c40f", "#ecf0f1", "#95a5a6"];
+  const currentTag = state.player && state.player.gang_tag ? state.player.gang_tag : "";
+  let currentColor = "#f39c12";
+  
+  const gangs = document.querySelector(".gang-banner");
+  if (gangs) {
+      // Пытаемся достать цвет из DOM (на баннере)
+      const tagSpan = gangs.querySelector(".gang-tag");
+      if (tagSpan) currentColor = tagSpan.style.color || "#f39c12";
+  }
+  
+  window._selectedTagColor = currentColor;
+
+  const colorsHtml = colors.map(c => `
+    <div onclick="window._selectedTagColor='${c}'; document.querySelectorAll('.tag-color-swatch').forEach(el=>el.style.borderColor='transparent'); this.style.borderColor='#fff';"
+         class="tag-color-swatch" style="width:42px;height:42px;border-radius:50%;background:${c};border:3px solid ${c === currentColor ? '#fff' : 'transparent'};cursor:pointer;transition:transform 0.1s;box-shadow:0 2px 6px rgba(0,0,0,0.3);"></div>
+  `).join('');
+
   openModal(`
     <h2>🏷 Тег банды</h2>
-    <p style="color:var(--hint);font-size:13px;margin:12px 0">Ровно 3 буквы (A-Z или А-Я). Будет отображаться как [XXX] возле ника всех участников.</p>
-    <input id="gang-tag-input" type="text" maxlength="3" placeholder="XXX" style="width:100%;padding:14px;background:var(--bg-3);border:none;border-radius:10px;color:#fff;font-size:22px;text-align:center;letter-spacing:8px;text-transform:uppercase;font-weight:900;">
-    <button class="btn btn-primary" onclick="setGangTag()" style="margin-top:12px">✅ Сохранить</button>
+    <p style="color:var(--hint);font-size:13px;margin:12px 0">Ровно 3 буквы (A-Z или А-Я)</p>
+    <input id="gang-tag-input" type="text" maxlength="3" placeholder="XXX" value="${currentTag}" style="width:100%;padding:14px;background:var(--bg-3);border:none;border-radius:10px;color:#fff;font-size:22px;text-align:center;letter-spacing:8px;text-transform:uppercase;font-weight:900;">
+    
+    <p style="color:var(--hint);font-size:13px;margin:16px 0 8px;">Цвет тега:</p>
+    <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:16px;">
+      ${colorsHtml}
+    </div>
+
+    <button class="btn btn-primary" onclick="setGangTag()" style="margin-top:8px">✅ Сохранить</button>
   `);
 }
 
 async function setGangTag() {
   const tag = document.getElementById("gang-tag-input").value.trim().toUpperCase();
+  const color = window._selectedTagColor || "#f39c12";
   if (!/^[A-ZА-ЯЁ]{3}$/.test(tag)) {
-    toast("Ровно 3 буквы (A-Z или А-Я)", "error");
+    toast("Ровно 3 буквы", "error");
     return;
   }
   try {
-    await api("gang/set_tag", { tag });
-    closeModal();
-    loadGang();
+    await api("gang/set_tag", { tag, color });
+    closeModal(); 
     toast(`🏷 Тег установлен: [${tag}]`, "success");
-    refreshPlayer();
+    refreshPlayer().then(() => loadGang());
   } catch(e) { toast(e.message, "error"); }
 }
 
 async function setDeputy(uid, action) {
   try {
     await api("gang/set_deputy", {user_id: uid, action});
-    toast(action === "promote" ? "✅ Назначен замом" : "✅ Снят с должности", "success");
+    toast(action === "promote" ? "✅ Зам" : "✅ Снят", "success");
     loadGang();
   } catch(e) { toast(e.message, "error"); }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  РЕФЕРАЛЫ
-// ══════════════════════════════════════════════════════════════
 async function renderReferral() {
   const countEl = document.getElementById("ref-count");
   const earnedEl = document.getElementById("ref-earned");
@@ -421,7 +491,6 @@ async function renderReferral() {
   try {
     const d = await api("referral/info", {});
     if (!d || d.error) throw new Error(d?.error || "Пустой ответ сервера");
-
     countEl.textContent = d.count;
     earnedEl.textContent = fmtMoney(d.earned);
     linkEl.value = d.link;
@@ -437,13 +506,9 @@ async function renderReferral() {
       const isClaimed = d.claims.includes(m.count);
       const isReady = d.count >= m.count;
       let btnHtml = "";
-      if (isClaimed) {
-        btnHtml = `<button class="ref-mile-btn" disabled>✅ Получено</button>`;
-      } else if (isReady) {
-        btnHtml = `<button class="ref-mile-btn" onclick="claimRefReward(${m.count})">🎁 Забрать ${fmtMoney(m.reward)}₽</button>`;
-      } else {
-        btnHtml = `<button class="ref-mile-btn" disabled>Нужно еще ${m.count - d.count} чел.</button>`;
-      }
+      if (isClaimed) btnHtml = `<button class="ref-mile-btn" disabled>✅ Получено</button>`;
+      else if (isReady) btnHtml = `<button class="ref-mile-btn" onclick="claimRefReward(${m.count})">🎁 Забрать ${fmtMoney(m.reward)}₽</button>`;
+      else btnHtml = `<button class="ref-mile-btn" disabled>Нужно еще ${m.count - d.count} чел.</button>`;
       milestonesContainer.innerHTML += `
         <div class="ref-mile-card ${isClaimed ? 'claimed' : ''}">
           <div class="ref-mile-icon">${m.icon}</div>
@@ -452,36 +517,27 @@ async function renderReferral() {
             <div class="ref-mile-desc">Награда: <span class="ref-mile-reward">${fmtMoney(m.reward)}₽</span></div>
             ${btnHtml}
           </div>
-        </div>
-      `;
+        </div>`;
     });
   } catch(e) {
-    console.error("Referral error:", e);
     linkEl.value = "Ошибка сервера";
-    milestonesContainer.innerHTML = `
-      <div style="color:#e74c3c;text-align:center;padding:20px;background:rgba(231,76,60,0.1);border-radius:12px;">
-        Не удалось загрузить данные: ${e.message}<br>
-        <button onclick="renderReferral()" style="margin-top:10px;background:#e74c3c;color:#fff;border:none;padding:8px 16px;border-radius:8px;">Повторить</button>
-      </div>`;
+    milestonesContainer.innerHTML = `<div style="color:#e74c3c;text-align:center;padding:20px;background:rgba(231,76,60,0.1);border-radius:12px;">Не удалось: ${e.message}</div>`;
   }
 }
 
 function copyRefLink() {
   const inp = document.getElementById("ref-link-input");
-  inp.select();
-  inp.setSelectionRange(0, 99999);
+  inp.select(); inp.setSelectionRange(0, 99999);
   document.execCommand("copy");
-  toast("Ссылка скопирована!", "success");
+  toast("Скопировано!", "success");
 }
 
 async function claimRefReward(milestone) {
   try {
     const d = await api("referral/claim", { milestone });
-    toast(`🎉 Получено ${d.reward}₽!`, "success");
+    toast(`🎉 +${d.reward}₽!`, "success");
     state.player.balance += d.reward;
     document.getElementById("money").textContent = fmtMoney(state.player.balance);
     renderReferral();
-  } catch(e) {
-    toast(e.message, "error");
-  }
+  } catch(e) { toast(e.message, "error"); }
 }

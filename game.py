@@ -39,7 +39,6 @@ RARITIES = {
 }
 
 ITEMS = {
-    # ГОЛОВА
     "h_cig":{"name":"Сига в зубы","emoji":"🚬","slot":"head","price":100,"rarity":"common","desc":"Всё похуй"},
     "h_cap":{"name":"Кепка 'Сосать'","emoji":"🧢","slot":"head","price":300,"rarity":"common","desc":"Дерзкая классика"},
     "h_ushanka":{"name":"Шапка-ушанка","emoji":"🧢","slot":"head","price":500,"rarity":"common","desc":"Русский стиль"},
@@ -52,7 +51,6 @@ ITEMS = {
     "h_horns":{"name":"Рога дьявола","emoji":"😈","slot":"head","price":15000,"rarity":"epic","desc":"Демонический вайб"},
     "h_moto":{"name":"Шлем мотоциклиста","emoji":"🪖","slot":"head","price":20000,"rarity":"epic","desc":"Скорость и опасность"},
     "h_gold_crown":{"name":"Золотая корона","emoji":"👑","slot":"head","price":100000,"rarity":"legendary","desc":"Император"},
-    # ТЕЛО
     "b_alco":{"name":"Майка-алкоголичка","emoji":"👕","slot":"body","price":200,"rarity":"common","desc":"Классика жанра"},
     "b_aura":{"name":"Футболка 'АУРА ФАРМИНГ'","emoji":"👕","slot":"body","price":500,"rarity":"common","desc":"+100 к ауре"},
     "b_iambog":{"name":"Футболка 'Я БОГ'","emoji":"👕","slot":"body","price":800,"rarity":"common","desc":"Скромно"},
@@ -65,7 +63,6 @@ ITEMS = {
     "b_vest":{"name":"Бронежилет","emoji":"🦺","slot":"body","price":25000,"rarity":"epic","desc":"Пуленепробиваемый"},
     "b_tuxedo":{"name":"Смокинг","emoji":"🤵","slot":"body","price":50000,"rarity":"epic","desc":"Джеймс Бонд"},
     "b_santa":{"name":"Костюм Санты","emoji":"🎅","slot":"body","price":80000,"rarity":"legendary","desc":"Хо-хо-хо"},
-    # НОГИ
     "l_family":{"name":"Семейные трусы","emoji":"🩲","slot":"legs","price":100,"rarity":"common","desc":"Уютно"},
     "l_adidas":{"name":"Треники Adidas","emoji":"👖","slot":"legs","price":400,"rarity":"common","desc":"3 полоски"},
     "l_ripped":{"name":"Джинсы с дырками","emoji":"👖","slot":"legs","price":800,"rarity":"common","desc":"Модно"},
@@ -76,7 +73,6 @@ ITEMS = {
     "l_classic":{"name":"Классические брюки","emoji":"👖","slot":"legs","price":10000,"rarity":"rare","desc":"Офисный"},
     "l_leather":{"name":"Кожаные штаны рокера","emoji":"👖","slot":"legs","price":20000,"rarity":"epic","desc":"Рок-н-ролл"},
     "l_gold":{"name":"Штаны из чистого золота","emoji":"👖","slot":"legs","price":100000,"rarity":"legendary","desc":"Золотой унитаз"},
-    # ПРАВАЯ РУКА
     "rh_cig":{"name":"Сигарета","emoji":"🚬","slot":"right_hand","price":50,"rarity":"common","desc":"Затянись"},
     "rh_beer":{"name":"Бутылка пива","emoji":"🍺","slot":"right_hand","price":100,"rarity":"common","desc":"Жигулёвское"},
     "rh_baltica":{"name":"Балтика 9","emoji":"🍺","slot":"right_hand","price":200,"rarity":"common","desc":"Крепкое"},
@@ -87,7 +83,6 @@ ITEMS = {
     "rh_nerf":{"name":"Пистолет (нерф)","emoji":"🔫","slot":"right_hand","price":5000,"rarity":"rare","desc":"Понты"},
     "rh_flag_rus":{"name":"Флаг России","emoji":"🇷🇺","slot":"right_hand","price":8000,"rarity":"rare","desc":"Патриот"},
     "rh_case":{"name":"Чемодан с деньгами","emoji":"💼","slot":"right_hand","price":50000,"rarity":"epic","desc":"Олигарх"},
-    # ЛЕВАЯ РУКА
     "lh_phone":{"name":"Телефон","emoji":"📱","slot":"left_hand","price":200,"rarity":"common","desc":"Нокиа"},
     "lh_wallet":{"name":"Кошелёк","emoji":"👛","slot":"left_hand","price":500,"rarity":"common","desc":"С двумя рублями"},
     "lh_cola":{"name":"Кола","emoji":"🥤","slot":"left_hand","price":300,"rarity":"common","desc":"Освежает"},
@@ -128,13 +123,12 @@ CASINO_GAMES = {
     "slots":    {"name":"Автомат","emoji":"🎰","desc":"3 в ряд — x5, 3 💎 — x50","chance":None,"payout":None},
 }
 
-ROULETTE_NUMBERS = list(range(37))  # 0-36
+ROULETTE_NUMBERS = list(range(37))
 ROULETTE_RED = {1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36}
 
 def roulette_color(n):
     if n == 0: return "green"
     return "red" if n in ROULETTE_RED else "black"
-
 
 ACHIEVEMENTS = {
     "first_job":{"name":"Работяга","emoji":"💼","desc":"Выполни первую работу"},
@@ -160,24 +154,20 @@ def total_xp_for_level(level):
     return sum(xp_to_next(i) for i in range(1, level))
 
 def crypto_price_at_hour(hour):
-    """Цена коина 900-1099 (диапазон 20%)."""
     import hashlib
     h = hashlib.md5(f"coin_{hour}".encode()).hexdigest()
     return 900 + (int(h[:4], 16) % 200)
 
 def crypto_price_old_at_hour(hour):
-    """СТАРАЯ формула: 500-1499. Нужна ТОЛЬКО для одноразовой миграции коинов."""
     import hashlib
     h = hashlib.md5(f"coin_{hour}".encode()).hexdigest()
     return 500 + (int(h[:4], 16) % 1000)
 
 def crypto_price():
-    """Цена коина — глобальная, меняется каждый час (новая формула)."""
     import time
     return crypto_price_at_hour(int(time.time() / 3600))
 
 def crypto_history_24h():
-    """История цены за последние 24 часа — для графика."""
     import time
     now_hour = int(time.time() / 3600)
     return [crypto_price_at_hour(now_hour - i) for i in range(23, -1, -1)]
@@ -189,13 +179,16 @@ def item_json(iid):
             "slot":it["slot"],"price":it["price"],"rarity":it["rarity"],
             "rarity_name":RARITIES[it["rarity"]]["name"],
             "rarity_color":RARITIES[it["rarity"]]["color"],
-            "desc":it["desc"],"hp":it.get("hp",0),"damage":it.get("damage",0)}
+            "desc":it["desc"],"hp":it.get("hp",0),"damage":it.get("damage",0),
+            "is_gang_only": it.get("is_gang_only", False),
+            "seeds_price": it.get("seeds_price", 0)}
 
 def item_sell_price(iid):
-    return max(1, int(ITEMS.get(iid, {}).get("price", 10) * 0.5))
+    it = ITEMS.get(iid, {})
+    if it.get("is_gang_only"): return 0
+    return max(1, int(it.get("price", 10) * 0.5))
 
 def get_outfit(player):
-    """Возвращает словарь slot -> {item_id, emoji, name} или None."""
     outfit = {}
     for slot in SLOTS:
         iid = player.get(slot)
@@ -206,9 +199,8 @@ def get_outfit(player):
             outfit[slot] = {"item_id":None, "emoji":SLOT_DEFAULT_EMOJI[slot], "name":None}
     return outfit
 
-# ═══════ ДОПОЛНИТЕЛЬНЫЕ ПРЕДМЕТЫ (+10 на слот) ═══════
+# ═══════ ДОПОЛНИТЕЛЬНЫЕ ПРЕДМЕТЫ ═══════
 ITEMS.update({
-    # ГОЛОВА +10
     "h_cheburashka": {"name":"Шапка Чебурашки","emoji":"🐻","slot":"head","price":400,"rarity":"common","desc":"Огромные уши"},
     "h_bandit": {"name":"Бандитская маска","emoji":"🥷","slot":"head","price":900,"rarity":"uncommon","desc":"Никто не узнает"},
     "h_pirate": {"name":"Пиратская бандана","emoji":"🏴‍☠️","slot":"head","price":1500,"rarity":"uncommon","desc":"Йо-хо-хо"},
@@ -219,7 +211,6 @@ ITEMS.update({
     "h_cap_red": {"name":"Красная кепка","emoji":"🧢","slot":"head","price":6000,"rarity":"rare","desc":"Классика гопника"},
     "h_flower": {"name":"Цветок в волосах","emoji":"🌸","slot":"head","price":8000,"rarity":"rare","desc":"Романтика"},
     "h_mask_money": {"name":"Маска с $","emoji":"💵","slot":"head","price":30000,"rarity":"epic","desc":"Денежный"},
-    # ТЕЛО +10
     "b_tank_usa": {"name":"Майка USA","emoji":"🇺🇸","slot":"body","price":600,"rarity":"common","desc":"Америка"},
     "b_hoodie": {"name":"Черное худи","emoji":"🧥","slot":"body","price":1200,"rarity":"uncommon","desc":"Гоп-стиль"},
     "b_hawaii": {"name":"Гавайка","emoji":"🌴","slot":"body","price":1800,"rarity":"uncommon","desc":"Отпуск"},
@@ -230,7 +221,6 @@ ITEMS.update({
     "b_jersey": {"name":"Спортивная майка","emoji":"⚽","slot":"body","price":22000,"rarity":"epic","desc":"Спортсмен"},
     "b_dress_red": {"name":"Красное платье","emoji":"👗","slot":"body","price":35000,"rarity":"epic","desc":"Шикарно"},
     "b_shirt_tie": {"name":"Рубашка с галстуком","emoji":"👔","slot":"body","price":70000,"rarity":"legendary","desc":"Бизнесмен"},
-    # НОГИ +10
     "l_joggers": {"name":"Джоггеры","emoji":"👖","slot":"legs","price":500,"rarity":"common","desc":"Спортивные"},
     "l_chinos": {"name":"Чиносы","emoji":"👖","slot":"legs","price":1000,"rarity":"uncommon","desc":"Универсальные"},
     "l_skinny": {"name":"Скинни","emoji":"👖","slot":"legs","price":1500,"rarity":"uncommon","desc":"Узкие"},
@@ -241,7 +231,6 @@ ITEMS.update({
     "l_track": {"name":"Спортивки","emoji":"👖","slot":"legs","price":18000,"rarity":"epic","desc":"Адидас"},
     "l_cargo": {"name":"Карго","emoji":"👖","slot":"legs","price":28000,"rarity":"epic","desc":"Тактичные"},
     "l_chains": {"name":"Штаны с цепями","emoji":"⛓️","slot":"legs","price":75000,"rarity":"legendary","desc":"Панк"},
-    # ПРАВАЯ РУКА +10
     "rh_knife": {"name":"Нож","emoji":"🔪","slot":"right_hand","price":200,"rarity":"common","desc":"Острый"},
     "rh_book": {"name":"Книга","emoji":"📕","slot":"right_hand","price":400,"rarity":"common","desc":"Умный"},
     "rh_donut": {"name":"Пончик","emoji":"🍩","slot":"right_hand","price":300,"rarity":"common","desc":"Вкусный"},
@@ -252,7 +241,6 @@ ITEMS.update({
     "rh_watermelon": {"name":"Арбуз","emoji":"🍉","slot":"right_hand","price":4000,"rarity":"rare","desc":"Сладкий"},
     "rh_fish": {"name":"Рыба","emoji":"🐟","slot":"right_hand","price":6000,"rarity":"rare","desc":"Свежая"},
     "rh_burger": {"name":"Бургер","emoji":"🍔","slot":"right_hand","price":20000,"rarity":"epic","desc":"Биг-мак"},
-    # ЛЕВАЯ РУКА +10
     "lh_coffee": {"name":"Кофе","emoji":"☕","slot":"left_hand","price":150,"rarity":"common","desc":"Бодрит"},
     "lh_hammer": {"name":"Молоток","emoji":"🔨","slot":"left_hand","price":600,"rarity":"common","desc":"Рабочий"},
     "lh_book2": {"name":"Большая книга","emoji":"📚","slot":"left_hand","price":1000,"rarity":"uncommon","desc":"Учёный"},
@@ -264,9 +252,8 @@ ITEMS.update({
     "lh_pizza": {"name":"Пицца","emoji":"🍕","slot":"left_hand","price":15000,"rarity":"epic","desc":"Итальянская"},
     "lh_teddy": {"name":"Мишка","emoji":"🧸","slot":"left_hand","price":80000,"rarity":"legendary","desc":"Милый"},
 })
-print("✅ Загружено предметов:", len(ITEMS))
+print("✅ Загружено предметов (базовые):", len(ITEMS))
 
-# ═══════ КРЕДИТ ═══════
 CREDIT_MAX = 15000
 CREDIT_TERMS = [
     {"hours": 1,  "pct": 5,  "label": "1 час"},
@@ -277,10 +264,8 @@ CREDIT_TERMS = [
     {"hours": 48, "pct": 35, "label": "2 дня"},
 ]
 
-# ═══════ БИЗНЕС ВКУСНО И ТОЧКА ═══════
 BUSINESSES["vtope"] = {"name":"Вкусно и Точка","emoji":"🍔","price":500000,"income":6000,"xp":700,"desc":"Макдональдс по-русски"}
 
-# ═══════ HP НА ОДЕЖДУ ═══════
 BODY_HP = {
   "b_alco":10,"b_aura":15,"b_iambog":20,"b_cage":25,"b_supreme":30,
   "b_armani":35,"b_nf":50,"b_leather":60,"b_wedding":80,"b_vest":150,
@@ -291,7 +276,6 @@ BODY_HP = {
 for iid, hp in BODY_HP.items():
     if iid in ITEMS: ITEMS[iid]["hp"] = hp
 
-# ═══════ УРОН НА РУКИ ═══════
 HAND_DAMAGE = {
   "rh_cig":1,"rh_beer":3,"rh_baltica":4,"rh_shaverma":2,"rh_rose":1,"rh_rod":5,
   "rh_bat":15,"rh_nerf":8,"rh_flag_rus":6,"rh_case":12,"rh_knife":12,"rh_book":5,
@@ -305,7 +289,6 @@ HAND_DAMAGE = {
 for iid, dmg in HAND_DAMAGE.items():
     if iid in ITEMS: ITEMS[iid]["damage"] = dmg
 
-# ═══════ HP НА ГОЛОВУ ═══════
 HEAD_HP = {
     "h_cig":5,"h_cap":8,"h_ushanka":10,"h_balaclava":15,"h_rooster":18,
     "h_bandana":20,"h_wig":22,"h_crown":35,"h_guy":45,"h_horns":70,
@@ -316,7 +299,6 @@ HEAD_HP = {
 for iid, hp in HEAD_HP.items():
     if iid in ITEMS: ITEMS[iid]["hp"] = hp
 
-# ═══════ HP НА НОГИ ═══════
 LEGS_HP = {
     "l_family":5,"l_adidas":8,"l_ripped":12,"l_shorts":15,"l_levis":20,
     "l_lampasy":25,"l_camo":35,"l_classic":50,"l_leather":80,"l_gold":180,
@@ -326,55 +308,106 @@ LEGS_HP = {
 for iid, hp in LEGS_HP.items():
     if iid in ITEMS: ITEMS[iid]["hp"] = hp
 
+# ═══════ МАГАЗИН БАНДЫ ═══════
+GANG_SHOP_ITEMS = {
+    "h_gang_bandana": {"name":"Бандана клана","emoji":"🧣","slot":"head","price":0,"rarity":"common","desc":"Знак принадлежности","hp":25,"is_gang_only":True,"seeds_price":50},
+    "h_gang_mask": {"name":"Маска клана","emoji":"🎭","slot":"head","price":0,"rarity":"rare","desc":"Никто не узнает","hp":120,"is_gang_only":True,"seeds_price":250},
+    "h_gang_helmet": {"name":"Шлем клана","emoji":"⛑️","slot":"head","price":0,"rarity":"legendary","desc":"Непробиваемый","hp":500,"is_gang_only":True,"seeds_price":650},
+    "b_gang_shirt": {"name":"Футболка клана","emoji":"👕","slot":"body","price":0,"rarity":"common","desc":"Мы вместе","hp":30,"is_gang_only":True,"seeds_price":50},
+    "b_gang_jacket": {"name":"Куртка клана","emoji":"🧥","slot":"body","price":0,"rarity":"rare","desc":"Кожа и сталь","hp":180,"is_gang_only":True,"seeds_price":250},
+    "b_gang_armor": {"name":"Броня клана","emoji":"🛡️","slot":"body","price":0,"rarity":"legendary","desc":"Непробиваемая","hp":600,"is_gang_only":True,"seeds_price":650},
+    "l_gang_pants": {"name":"Штаны клана","emoji":"👖","slot":"legs","price":0,"rarity":"common","desc":"Удобные","hp":25,"is_gang_only":True,"seeds_price":50},
+    "l_gang_tracksuit": {"name":"Спортивки клана","emoji":"👖","slot":"legs","price":0,"rarity":"rare","desc":"С лампасами","hp":160,"is_gang_only":True,"seeds_price":250},
+    "l_gang_gold": {"name":"Золотые штаны клана","emoji":"👖","slot":"legs","price":0,"rarity":"legendary","desc":"Роскошь","hp":550,"is_gang_only":True,"seeds_price":650},
+    "rh_gang_bat": {"name":"Бита клана","emoji":"🏏","slot":"right_hand","price":0,"rarity":"common","desc":"Разборки","damage":10,"is_gang_only":True,"seeds_price":50},
+    "rh_gang_mace": {"name":"Булава клана","emoji":"⚔️","slot":"right_hand","price":0,"rarity":"rare","desc":"Сокрушительная","damage":40,"is_gang_only":True,"seeds_price":250},
+    "rh_gang_halberd": {"name":"Секира клана","emoji":"⚔️","slot":"right_hand","price":0,"rarity":"legendary","desc":"Кровавая","damage":120,"is_gang_only":True,"seeds_price":650},
+    "lh_gang_banner": {"name":"Флаг клана","emoji":"🚩","slot":"left_hand","price":0,"rarity":"common","desc":"Символ","damage":5,"is_gang_only":True,"seeds_price":50},
+    "lh_gang_shield": {"name":"Щит клана","emoji":"🛡","slot":"left_hand","price":0,"rarity":"rare","desc":"Крепкий","damage":20,"is_gang_only":True,"seeds_price":250},
+    "lh_gang_trophy": {"name":"Трофей клана","emoji":"🏆","slot":"left_hand","price":0,"rarity":"legendary","desc":"Легендарный","damage":80,"is_gang_only":True,"seeds_price":650},
+}
+ITEMS.update(GANG_SHOP_ITEMS)
 
-# ═══════ УНИКАЛЬНЫЕ ПРЕДМЕТЫ ИЗ КЕЙСОВ (15, только кейсы) ═══════
+# ═══════ КЕЙСОВЫЕ ПРЕДМЕТЫ ═══════
 CASE_ITEMS = {
-    # Basic кейс (5)
-    "h_case_bandit":   {"name":"Бандитская шапка","emoji":"🧢","slot":"head","price":1500,"rarity":"uncommon","desc":"Только из кейса","hp":15},
-    "b_case_tracksuit":{"name":"Спортивка Adidas (оригинал)","emoji":"👕","slot":"body","price":3000,"rarity":"uncommon","desc":"Только из кейса","hp":40},
-    "l_case_adidas":   {"name":"Треники Adidas (оригинал)","emoji":"👖","slot":"legs","price":2500,"rarity":"uncommon","desc":"Только из кейса","hp":30},
-    "rh_case_knife":   {"name":"Выкидной нож","emoji":"🔪","slot":"right_hand","price":3500,"rarity":"rare","desc":"Только из кейса","damage":22},
-    "b_case_chains":   {"name":"Футболка с цепями","emoji":"👕","slot":"body","price":4000,"rarity":"rare","desc":"Только из кейса","hp":60},
-    # Rare кейс (5)
-    "h_case_rooster":  {"name":"Золотая маска петуха","emoji":"🐔","slot":"head","price":15000,"rarity":"epic","desc":"Только из кейса","hp":50},
-    "h_case_crypto":   {"name":"Маска биткоина","emoji":"₿","slot":"head","price":20000,"rarity":"epic","desc":"Только из кейса","hp":45},
-    "b_case_armani_real":{"name":"Пиджак Armani (оригинал)","emoji":"🤵","slot":"body","price":25000,"rarity":"epic","desc":"Только из кейса","hp":120},
-    "rh_case_uzi_gold":{"name":"Золотой УЗИ","emoji":"🔫","slot":"right_hand","price":30000,"rarity":"epic","desc":"Только из кейса","damage":70},
-    "l_case_gold_shorts":{"name":"Золотые шорты","emoji":"🩳","slot":"legs","price":22000,"rarity":"epic","desc":"Только из кейса","hp":80},
-    # Legendary кейс (5)
-    "h_case_helmet_alpha":{"name":"Шлем Альфа","emoji":"🪖","slot":"head","price":80000,"rarity":"legendary","desc":"Только из кейса","hp":200},
-    "lh_case_brilliant":{"name":"Бриллиантовый кейс","emoji":"💼","slot":"left_hand","price":100000,"rarity":"legendary","desc":"Только из кейса","damage":80},
-    "h_case_dragon":   {"name":"Шлем дракона","emoji":"🐲","slot":"head","price":150000,"rarity":"legendary","desc":"Только из кейса","hp":250},
-    "b_case_dragon_armor":{"name":"Доспех дракона","emoji":"🛡","slot":"body","price":200000,"rarity":"legendary","desc":"Только из кейса","hp":300},
-    "rh_case_dragon_sword":{"name":"Меч дракона","emoji":"⚔","slot":"right_hand","price":250000,"rarity":"legendary","desc":"Только из кейса","damage":150},
+    "h_case_bandit":    {"name":"Бандитская шапка","emoji":"🧢","slot":"head","price":1000,"rarity":"common","desc":"Только из кейса","hp":15},
+    "b_case_tracksuit": {"name":"Спортивка Adidas","emoji":"👕","slot":"body","price":2000,"rarity":"uncommon","desc":"Только из кейса","hp":40},
+    "l_case_adidas":    {"name":"Треники Adidas","emoji":"👖","slot":"legs","price":4000,"rarity":"rare","desc":"Только из кейса","hp":65},
+    "rh_case_knife":    {"name":"Выкидной нож","emoji":"🔪","slot":"right_hand","price":8000,"rarity":"epic","desc":"Только из кейса","damage":25},
+    "lh_case_lucky":    {"name":"Счастливая монета","emoji":"🪙","slot":"left_hand","price":15000,"rarity":"legendary","desc":"Только из кейса","hp":150,"damage":40},
+    "h_case_rooster":     {"name":"Кепка гопника","emoji":"🧢","slot":"head","price":4000,"rarity":"common","desc":"Только из кейса","hp":70},
+    "b_case_armani_real": {"name":"Пиджак Armani","emoji":"🤵","slot":"body","price":8000,"rarity":"uncommon","desc":"Только из кейса","hp":110},
+    "l_case_gold_shorts": {"name":"Золотые шорты","emoji":"🩳","slot":"legs","price":20000,"rarity":"rare","desc":"Только из кейса","hp":175},
+    "rh_case_uzi_gold":   {"name":"Золотой УЗИ","emoji":"🔫","slot":"right_hand","price":50000,"rarity":"epic","desc":"Только из кейса","damage":120},
+    "lh_case_pepper":     {"name":"Перец гопника","emoji":"🌶️","slot":"left_hand","price":100000,"rarity":"legendary","desc":"Только из кейса","hp":400,"damage":100},
+    "h_case_helmet_alpha": {"name":"Шлем Альфа","emoji":"🪖","slot":"head","price":20000,"rarity":"common","desc":"Только из кейса","hp":200},
+    "b_case_dragon_armor": {"name":"Доспех дракона","emoji":"🛡","slot":"body","price":40000,"rarity":"uncommon","desc":"Только из кейса","hp":300},
+    "l_case_dragon_pants": {"name":"Штаны дракона","emoji":"👖","slot":"legs","price":100000,"rarity":"rare","desc":"Только из кейса","hp":500},
+    "rh_case_dragon_sword":{"name":"Меч дракона","emoji":"⚔","slot":"right_hand","price":300000,"rarity":"epic","desc":"Только из кейса","damage":250},
+    "lh_case_brilliant":   {"name":"Бриллиантовый кейс","emoji":"💼","slot":"left_hand","price":500000,"rarity":"legendary","desc":"Только из кейса","hp":1200,"damage":250},
+    "h_case_top1_head":     {"name":"Шлем Максимуса","emoji":"🪖","slot":"head","price":80000,"rarity":"common","desc":"Топ-1 дроп","hp":500},
+    "b_case_top1_body":     {"name":"Броня Максимуса","emoji":"🛡","slot":"body","price":150000,"rarity":"uncommon","desc":"Топ-1 дроп","hp":800},
+    "l_case_top1_legs":     {"name":"Поножи Максимуса","emoji":"👖","slot":"legs","price":400000,"rarity":"rare","desc":"Топ-1 дроп","hp":1300},
+    "rh_case_top1_weapon":  {"name":"Глефа Максимуса","emoji":"⚔","slot":"right_hand","price":1000000,"rarity":"epic","desc":"Топ-1 дроп","damage":600},
+    "lh_case_top1_artifact":{"name":"Артефакт Максимуса","emoji":"💠","slot":"left_hand","price":2000000,"rarity":"legendary","desc":"Топ-1 дроп","hp":3000,"damage":600},
+    "h_case_top2_head":     {"name":"Корона Императора","emoji":"👑","slot":"head","price":100000,"rarity":"common","desc":"Топ-2 дроп","hp":1200},
+    "b_case_top2_body":     {"name":"Мантия Императора","emoji":"👑","slot":"body","price":300000,"rarity":"uncommon","desc":"Топ-2 дроп","hp":1900},
+    "l_case_top2_legs":     {"name":"Штаны Императора","emoji":"👖","slot":"legs","price":800000,"rarity":"rare","desc":"Топ-2 дроп","hp":3100},
+    "rh_case_top2_weapon":  {"name":"Скипетр Императора","emoji":"🪄","slot":"right_hand","price":2000000,"rarity":"epic","desc":"Топ-2 дроп","damage":1500},
+    "lh_case_top2_artifact":{"name":"Держава Императора","emoji":"🌍","slot":"left_hand","price":5000000,"rarity":"legendary","desc":"Топ-2 дроп","hp":7000,"damage":1500},
 }
 ITEMS.update(CASE_ITEMS)
 
-# ═══════ КЕЙСЫ (ТОЛЬКО УНИКАЛЬНЫЕ ПРЕДМЕТЫ, НОВЫЕ ЦЕНЫ) ═══════
+LEGACY_CASE_ITEMS = {
+    "b_case_chains": {"name":"Футболка с цепями","emoji":"👕","slot":"body","price":4000,"rarity":"rare","desc":"Только из кейса (старый)","hp":60},
+    "h_case_crypto": {"name":"Маска биткоина","emoji":"₿","slot":"head","price":20000,"rarity":"epic","desc":"Только из кейса (старый)","hp":45},
+    "h_case_dragon": {"name":"Шлем дракона","emoji":"🐲","slot":"head","price":150000,"rarity":"legendary","desc":"Только из кейса (старый)","hp":250},
+}
+for iid, data in LEGACY_CASE_ITEMS.items():
+    if iid not in ITEMS:
+        ITEMS[iid] = data
+
+# ═══════ 5 КЕЙСОВ ═══════
 CASES = {
   "basic": {"name":"Кейс новичка","emoji":"📦","price":2000,
     "items":[
       {"iid":"h_case_bandit","chance":35},
-      {"iid":"b_case_tracksuit","chance":25},
+      {"iid":"b_case_tracksuit","chance":28},
       {"iid":"l_case_adidas","chance":20},
-      {"iid":"rh_case_knife","chance":15},
-      {"iid":"b_case_chains","chance":5},
+      {"iid":"rh_case_knife","chance":12},
+      {"iid":"lh_case_lucky","chance":5},
     ]},
   "rare": {"name":"Кейс гопника","emoji":"🎁","price":12000,
     "items":[
       {"iid":"h_case_rooster","chance":35},
-      {"iid":"h_case_crypto","chance":25},
-      {"iid":"b_case_armani_real","chance":20},
-      {"iid":"rh_case_uzi_gold","chance":15},
-      {"iid":"l_case_gold_shorts","chance":5},
+      {"iid":"b_case_armani_real","chance":28},
+      {"iid":"l_case_gold_shorts","chance":20},
+      {"iid":"rh_case_uzi_gold","chance":12},
+      {"iid":"lh_case_pepper","chance":5},
     ]},
   "legendary": {"name":"Кейс олигарха","emoji":"💎","price":60000,
     "items":[
-      {"iid":"h_case_helmet_alpha","chance":40},
-      {"iid":"lh_case_brilliant","chance":25},
-      {"iid":"h_case_dragon","chance":20},
-      {"iid":"b_case_dragon_armor","chance":10},
-      {"iid":"rh_case_dragon_sword","chance":5},
+      {"iid":"h_case_helmet_alpha","chance":30},
+      {"iid":"b_case_dragon_armor","chance":28},
+      {"iid":"l_case_dragon_pants","chance":22},
+      {"iid":"rh_case_dragon_sword","chance":14},
+      {"iid":"lh_case_brilliant","chance":6},
+    ]},
+  "top1": {"name":"Топ-кейс Максимуса","emoji":"👑","price":300000,
+    "items":[
+      {"iid":"h_case_top1_head","chance":25},
+      {"iid":"b_case_top1_body","chance":25},
+      {"iid":"l_case_top1_legs","chance":22},
+      {"iid":"rh_case_top1_weapon","chance":18},
+      {"iid":"lh_case_top1_artifact","chance":10},
+    ]},
+  "top2": {"name":"Кейс Императора","emoji":"🌍","price":800000,
+    "items":[
+      {"iid":"h_case_top2_head","chance":20},
+      {"iid":"b_case_top2_body","chance":22},
+      {"iid":"l_case_top2_legs","chance":24},
+      {"iid":"rh_case_top2_weapon","chance":20},
+      {"iid":"lh_case_top2_artifact","chance":14},
     ]},
 }
 
@@ -393,6 +426,21 @@ GANG_TERRITORIES = [
   {"id":8,"name":"Элитный квартал","emoji":"🏰","income":1000,"x":3,"y":3},
 ]
 CAPTURE_HOURS = 1
+GANG_SEEDS_PER_TERR_PER_HOUR = 10
+
+# ═══════ ЦВЕТА ТЕГА БАНДЫ ═══════
+GANG_TAG_COLORS = [
+    "#f39c12",  # оранжевый (дефолт)
+    "#e74c3c",  # красный
+    "#e91e63",  # розовый
+    "#9b59b6",  # фиолетовый
+    "#3498db",  # синий
+    "#1abc9c",  # бирюзовый
+    "#2ecc71",  # зелёный
+    "#f1c40f",  # жёлтый
+    "#ecf0f1",  # белый
+    "#95a5a6",  # серый
+]
 
 # ═══════ PVP ═══════
 PVP_PARTS = ["head","torso","legs"]
@@ -401,7 +449,6 @@ PVP_BASE_HP = 100
 PVP_TURN_TIMEOUT = 30
 
 def get_combat_stats(player):
-    """HP и урон с учётом одежды."""
     hp = PVP_BASE_HP
     dmg = 5
     for slot in ("weapon_id","armor_id","shield_id","head_id","body_id","legs_id","right_hand_id","left_hand_id"):
@@ -411,10 +458,11 @@ def get_combat_stats(player):
             dmg += ITEMS[iid].get("damage", 0)
     return {"hp": hp, "damage": dmg}
 
-# ═══════════════════════════════════════════════════════════════
-# БАЛАНСИРОВКА СТАТОВ (BALANCE_APPLIED)
-# ═══════════════════════════════════════════════════════════════
-_CASE_PREFIXES = ("h_case_", "b_case_", "l_case_", "rh_case_", "lh_case_")
+# ═══════ БАЛАНСИРОВКА СТАТОВ ═══════
+_CASE_PREFIXES = (
+    "h_case_", "b_case_", "l_case_", "rh_case_", "lh_case_",
+    "h_gang_", "b_gang_", "l_gang_", "rh_gang_", "lh_gang_",
+)
 
 _RANGES = {
     ("common", "head"):   (5, 12),
@@ -465,3 +513,4 @@ def _apply_balance():
             ITEMS[iid][stat_key] = val
 
 _apply_balance()
+print("✅ Итого загружено предметов:", len(ITEMS))

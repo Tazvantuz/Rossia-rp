@@ -1,9 +1,6 @@
 // app-profile.js
 // Кредит, достижения, лидерборд, бейджи "Ещё"
 
-// ══════════════════════════════════════════════════════════════
-//  БЕЙДЖИ В "ЕЩЁ"
-// ══════════════════════════════════════════════════════════════
 function updateMoreBadges() {
   const p = state.player;
   if (!p) return;
@@ -17,9 +14,6 @@ function updateMoreBadges() {
   renderCreditBanner();
 }
 
-// ══════════════════════════════════════════════════════════════
-//  КРЕДИТ
-// ══════════════════════════════════════════════════════════════
 function showCredit() {
   const p = state.player;
   if (p.credit_amount > 0) {
@@ -131,9 +125,6 @@ async function payCredit() {
   } catch(e) { toast(e.message, "error"); }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ДОСТИЖЕНИЯ
-// ══════════════════════════════════════════════════════════════
 function showAchievements() {
   const p = state.player;
   const all = ["first_job","first_business","millionaire","billionaire","gambler","big_winner","criminal","in_debt","fashion","level10","rich_king","trader"];
@@ -146,9 +137,6 @@ function showAchievements() {
   </div>`);
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ЛИДЕРБОРД
-// ══════════════════════════════════════════════════════════════
 let lbCategory = "money";
 
 async function showLeaderboard(category = null) {
@@ -168,19 +156,20 @@ async function showLeaderboard(category = null) {
       listHtml = d.leaders.map(l => `
         <div class="lb-row ${l.rank<=3?'top-'+l.rank:''}">
           <div class="lb-rank">${l.rank===1?'🥇':l.rank===2?'🥈':l.rank===3?'🥉':'#'+l.rank}</div>
-          <div class="lb-info"><div class="lb-name">${formatNickWithTag(l.nickname, l.gang_tag)}</div><div class="lb-meta">Ур. ${l.level} · ${l.businesses_count} бизнесов</div></div>
+          <div class="lb-info"><div class="lb-name">${formatNickWithTag(l.nickname, l.gang_tag, l.gang_tag_color)}</div><div class="lb-meta">Ур. ${l.level} · ${l.businesses_count} бизнесов</div></div>
           <div class="lb-level">${fmtMoney(l.balance)}₽</div>
         </div>`).join("");
     } else if (lbCategory === "level") {
       listHtml = d.leaders.map(l => `
         <div class="lb-row ${l.rank<=3?'top-'+l.rank:''}">
           <div class="lb-rank">${l.rank===1?'🥇':l.rank===2?'🥈':l.rank===3?'🥉':'#'+l.rank}</div>
-          <div class="lb-info"><div class="lb-name">${formatNickWithTag(l.nickname, l.gang_tag)}</div><div class="lb-meta">${fmtMoney(l.balance)}₽ · ${l.xp} XP</div></div>
+          <div class="lb-info"><div class="lb-name">${formatNickWithTag(l.nickname, l.gang_tag, l.gang_tag_color)}</div><div class="lb-meta">${fmtMoney(l.balance)}₽ · ${l.xp} XP</div></div>
           <div class="lb-level">Ур. ${l.level}</div>
         </div>`).join("");
     } else {
       listHtml = d.leaders.map(l => {
-        const nameWithTag = l.tag ? `${l.emoji} <span class="gang-tag">[${escapeHtml(l.tag)}]</span> ${escapeHtml(l.name)}` : `${l.emoji} ${escapeHtml(l.name)}`;
+        const tagColor = l.tag_color || '#f39c12';
+        const nameWithTag = l.tag ? `${l.emoji} <span class="gang-tag" style="color:${tagColor};border-color:${tagColor}">[${escapeHtml(l.tag)}]</span> ${escapeHtml(l.name)}` : `${l.emoji} ${escapeHtml(l.name)}`;
         return `
         <div class="lb-row ${l.rank<=3?'top-'+l.rank:''}" style="flex-direction:column;align-items:stretch;gap:6px;">
           <div style="display:flex;align-items:center;gap:12px;">
