@@ -1007,6 +1007,7 @@ async function viewPlayer(uid) {
       ${!isMe && d.is_friend ? `<button class="btn btn-secondary" onclick="openPM(${uid}, '${d.nickname}', '${d.gang_tag || ''}')">✉️ Написать ЛС</button>` : ''}
       ${!isMe && d.is_friend ? `<button class="btn btn-secondary" style="background:rgba(231,76,60,.15);color:var(--danger);border:1px solid rgba(231,76,60,.3);" onclick="removeFriend(${uid}, '${d.nickname}')">❌ Удалить из друзей</button>` : ''}
       ${!isMe && d.my_role && ['leader','deputy'].includes(d.my_role) && !d.target_in_gang ? `<button class="btn btn-secondary" onclick="inviteToGang(${uid}, '${d.nickname}')">📨 Пригласить в банду</button>` : ''}
+      ${!isMe && d.tg_username ? `<a href="https://t.me/${escapeHtml(d.tg_username)}" target="_blank" rel="noopener" class="btn btn-secondary" style="text-decoration:none;text-align:center;display:block;background:linear-gradient(135deg,#0088cc,#005f8f);border:none;color:#fff;font-weight:700;margin-top:8px;">✈️ Telegram @${escapeHtml(d.tg_username)}</a>` : ''}
     `);
   } catch(e) { toast(e.message, "error"); }
 }
@@ -1090,7 +1091,6 @@ async function showCrypto() {
 
   const p = state.player;
   const price = d.price;
-  // ═══ Берём последние 8 часов из истории ═══
   const fullHistory = d.history || [];
   const history = fullHistory.length > 8 ? fullHistory.slice(-8) : fullHistory;
   const feePct = d.fee_pct || 5;
@@ -1119,7 +1119,6 @@ async function showCrypto() {
     const trendArrow = change >= 0 ? "▲" : "▼";
     const trendSign = change >= 0 ? "+" : "";
 
-    // Метки времени: последние 8 часов, правый = текущий
     const nowHour = new Date().getHours();
     const hourLabels = [];
     for (let i = 0; i < history.length; i++) {
@@ -1127,14 +1126,12 @@ async function showCrypto() {
       hourLabels.push(hour);
     }
 
-    // Сетка на каждом часе
     const gridLines = hourLabels.map((_, i) => {
       if (i === 0 || i === history.length - 1) return "";
       const x = pad + (w - 2*pad) * i / (history.length - 1);
       return `<line x1="${x}" y1="${pad}" x2="${x}" y2="${h-pad}" stroke="rgba(255,255,255,0.08)" stroke-width="1" stroke-dasharray="2,2"/>`;
     }).join("");
 
-    // Подписи под графиком — все 8 штук крупные
     const timeLabelsHtml = hourLabels.map((hr, i) => {
       const xPercent = ((pad + (w - 2*pad) * i / (history.length - 1)) / w) * 100;
       const isNow = i === history.length - 1;

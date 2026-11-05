@@ -146,6 +146,7 @@ class Database:
             "owned_items_count INTEGER DEFAULT 0",
             "last_seen INTEGER DEFAULT 0",
             "credit_due INTEGER DEFAULT 0","last_casino INTEGER DEFAULT 0",
+            "tg_username TEXT DEFAULT NULL",
         ]
         for m in migrations:
             try:
@@ -166,7 +167,7 @@ class Database:
         # Миграция notifications.data
         try: await self.conn.execute("ALTER TABLE notifications ADD COLUMN data TEXT DEFAULT NULL"); await self.conn.commit()
         except: pass
-        # Миграции pvp_battles — отдельные try/except для каждой колонки
+        # Миграции pvp_battles
         for _col in [
             "turn_started_at INTEGER DEFAULT 0",
             "pending_attack_part TEXT",
