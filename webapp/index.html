@@ -118,17 +118,14 @@
 
     <section class="tab-content" data-tab="casino">
       <h2 class="section-title">🎰 Казино "У Ашота"</h2>
-
       <div class="casino-menu" id="casino-menu">
         <div class="casino-menu-item" data-game="coin" onclick="switchCasinoGame('coin')"><span>🪙</span>Монетка</div>
         <div class="casino-menu-item" data-game="dice" onclick="switchCasinoGame('dice')"><span>🎲</span>Кости</div>
         <div class="casino-menu-item" data-game="roulette" onclick="switchCasinoGame('roulette')"><span>🎡</span>Рулетка</div>
         <div class="casino-menu-item" data-game="slots" onclick="switchCasinoGame('slots')"><span>🎰</span>Автомат</div>
       </div>
-
       <div class="casino-stage" id="casino-stage"></div>
       <div id="casino-result" style="text-align:center;margin:15px 0;font-weight:bold;font-size:18px;min-height:24px;"></div>
-
       <div class="bet-panel">
         <div class="bet-row">
           <input id="bet-input" type="number" placeholder="Ставка ₽" min="1">
@@ -158,10 +155,8 @@
       <div id="trades-outgoing"></div>
     </section>
 
-    
     <section class="tab-content" data-tab="referral">
       <h2 class="section-title">👥 Реферальная система</h2>
-      
       <div class="ref-hero">
         <div class="ref-hero-title">Приглашай друзей и зарабатывай!</div>
         <div class="ref-hero-sub">За каждого друга ты получаешь <b>5 000₽</b> на баланс.</div>
@@ -170,7 +165,6 @@
           <button onclick="copyRefLink()">Копировать</button>
         </div>
       </div>
-
       <div class="ref-stats">
         <div class="ref-stat-card">
           <div class="ref-stat-value" id="ref-count">0</div>
@@ -181,7 +175,6 @@
           <div class="ref-stat-label">Заработано</div>
         </div>
       </div>
-
       <h3 class="section-subtitle">🏆 Бонусы за достижения</h3>
       <div id="ref-milestones" class="ref-milestones"></div>
     </section>
@@ -214,7 +207,7 @@
       <div id="friend-list"></div>
     </section>
 
-<section class="tab-content" data-tab="chat">
+    <section class="tab-content" data-tab="chat">
       <h2 class="section-title">💬 Чат</h2>
       <div class="chat-tabs" id="chat-tabs">
         <button class="chat-tab active" onclick="switchChat('global')">🌐 Общий</button>
@@ -261,7 +254,18 @@
 </div>
 
 <div id="toast" class="toast hidden"></div>
-<script src="app-v24.js"></script>
+
+<!-- ═══ Порядок важен! ═══ -->
+<script src="app-svg.js"></script>
+<script src="app-core.js"></script>
+<script src="app-shop.js"></script>
+<script src="app-social.js"></script>
+<script src="app-chat.js"></script>
+<script src="app-profile.js"></script>
+<script src="app-crypto.js"></script>
+<script src="app-gang.js"></script>
+<script src="app-pvp.js"></script>
+<script src="app-admin.js"></script>
 <script src="casino.js"></script>
 <script src="gang.js"></script>
 
@@ -269,14 +273,16 @@
   <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
     <div class="modal-close" onclick="document.getElementById('admin-panel').classList.add('hidden')">✕</div>
     <h3 style="color:#e74c3c; margin-bottom:16px;">🛠 Админ-панель</h3>
-    
+
+    <button class="btn btn-secondary" onclick="showAdminAnalytics()" style="width:100%;margin-bottom:12px;background:linear-gradient(135deg,#3498db,#2980b9);color:#fff;border:none;font-weight:700;">📊 Аналитика игроков</button>
+
     <div style="display:flex; gap:8px; margin-bottom:16px;">
       <input type="text" id="admin-search-input" placeholder="Ник игрока..." style="flex:1; background:#111; border:1px solid #333; color:#fff; padding:10px; border-radius:8px;">
       <button class="btn btn-primary" onclick="adminSearch()" style="padding:10px 16px;">Найти</button>
     </div>
-    
+
     <div id="admin-results" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;"></div>
-    
+
     <div id="admin-player-details" style="display:none; background:#1e1e1e; border:1px solid #e74c3c; border-radius:12px; padding:16px;">
       <!-- Заполняется через JS -->
     </div>

@@ -126,6 +126,17 @@ CREATE TABLE IF NOT EXISTS territory_log (
 CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, type TEXT NOT NULL, text TEXT NOT NULL, is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS friends (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, friend_id INTEGER NOT NULL, status TEXT DEFAULT 'pending', UNIQUE(user_id, friend_id));
 CREATE TABLE IF NOT EXISTS private_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, from_id INTEGER NOT NULL, to_id INTEGER NOT NULL, message TEXT NOT NULL, is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS player_daily_activity (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    day INTEGER NOT NULL,
+    first_seen INTEGER NOT NULL,
+    last_seen INTEGER NOT NULL,
+    requests INTEGER DEFAULT 1,
+    UNIQUE(user_id, day)
+);
+CREATE INDEX IF NOT EXISTS idx_activity_day ON player_daily_activity(day);
+CREATE INDEX IF NOT EXISTS idx_activity_user ON player_daily_activity(user_id);
 """
 
 class Database:
@@ -147,7 +158,6 @@ class Database:
             "last_seen INTEGER DEFAULT 0",
             "credit_due INTEGER DEFAULT 0","last_casino INTEGER DEFAULT 0",
             "tg_username TEXT DEFAULT NULL",
-            # ═══ НОВОЕ: крипто-балансировка ═══
             "crypto_hold_since INTEGER DEFAULT 0",
             "crypto_bought_today INTEGER DEFAULT 0",
             "crypto_bought_ts INTEGER DEFAULT 0",
