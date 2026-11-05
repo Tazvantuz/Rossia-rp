@@ -160,13 +160,20 @@ def total_xp_for_level(level):
     return sum(xp_to_next(i) for i in range(1, level))
 
 def crypto_price_at_hour(hour):
-    """Детерминированная цена для конкретного часа (unix // 3600)."""
+    """НОВАЯ формула: цена 900-1099 (диапазон 20%).
+    Раньше было 500-1499 (диапазон 300%)."""
+    import hashlib
+    h = hashlib.md5(f"coin_{hour}".encode()).hexdigest()
+    return 900 + (int(h[:4], 16) % 200)
+
+def crypto_price_old_at_hour(hour):
+    """СТАРАЯ формула: 500-1499. Нужна ТОЛЬКО для одноразовой миграции коинов."""
     import hashlib
     h = hashlib.md5(f"coin_{hour}".encode()).hexdigest()
     return 500 + (int(h[:4], 16) % 1000)
 
 def crypto_price():
-    """Цена коина — глобальная, меняется каждый час."""
+    """Цена коина — глобальная, меняется каждый час (новая формула)."""
     import time
     return crypto_price_at_hour(int(time.time() / 3600))
 
@@ -407,8 +414,6 @@ def get_combat_stats(player):
 
 # ═══════════════════════════════════════════════════════════════
 # БАЛАНСИРОВКА СТАТОВ (BALANCE_APPLIED)
-# Линейное распределение стат внутри (редкость, слот) по цене.
-# Кейсовые предметы (h_case_*, ...) не трогаются.
 # ═══════════════════════════════════════════════════════════════
 _CASE_PREFIXES = ("h_case_", "b_case_", "l_case_", "rh_case_", "lh_case_")
 

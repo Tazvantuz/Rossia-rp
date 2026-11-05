@@ -99,6 +99,11 @@ async def main():
     logging.basicConfig(level=logging.INFO)
     await db.init()
     api.set_token(BOT_TOKEN)
+    # ═══ ОДНОРАЗОВАЯ МИГРАЦИЯ КРИПТЫ ═══
+    try:
+        await api.migrate_crypto_v1()
+    except Exception as e:
+        logging.warning(f"crypto migration: {e}")
     runner = web.AppRunner(make_app())
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", PORT).start()
@@ -109,7 +114,6 @@ async def main():
     logging.info(f"🤖 @{me.username}")
     logging.info(f"🎮 WebApp: {WEBAPP_URL}")
     await _set_menu_button(bot)
-    # Фоновая обработка захватов гетто
     asyncio.create_task(_capture_processor())
     logging.info("⚔️ Background capture processor запущен")
     try:

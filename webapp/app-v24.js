@@ -1084,6 +1084,9 @@ function updateMoreBadges() {
   renderCreditBanner();
 }
 
+// ══════════════════════════════════════════════════════════════
+//  КРИПТО-БИРЖА (Вариант A: 3% покупка, 5% продажа + стейкинг)
+// ══════════════════════════════════════════════════════════════
 async function showCrypto() {
   let d;
   try { d = await api("crypto/price", {}); }
@@ -1093,9 +1096,36 @@ async function showCrypto() {
   const price = d.price;
   const fullHistory = d.history || [];
   const history = fullHistory.length > 8 ? fullHistory.slice(-8) : fullHistory;
-  const feePct = d.fee_pct || 5;
-  const coins = Number(p.crypto_amount || 0);
-  const coinsRub = Math.floor(coins * price);
+
+  const buyFeePct = d.buy_fee_pct ?? 3;
+  const sellFeePct = d.sell_fee_pct ?? 5;
+  const sellFeeBasePct = d.sell_fee_base_pct ?? 5;
+  const maxPerTx = d.max_per_tx || 10000;
+  const maxPerDay = d.max_per_day || 50000;
+  const boughtToday = d.bought_today || 0;
+  const leftToday = Math.max(0, maxPerDay - boughtToday);
+  const maxHold = d.max_hold || 100000;
+  const coins = Number(d.coins || 0);
+  const coinsValue = Number(d.coins_value || 0);
+  const holdSeconds = Number(d.hold_seconds || 0);
+  const holdHours = holdSeconds / 3600;
+
+  // Стейкинг-сообщение
+  let holdMsg = "";
+  if (coins > 0) {
+    if (holdHours < 1) {
+      const nextBonus = 5; // через час — базовая 5%
+      holdMsg = `<div style="color:#e74c3c;font-weight:700;">⏱ Держишь ${holdHours.toFixed(1)}ч — комиссия ${sellFeePct}% (штраф за <1ч). Продай через ${(1-holdHours).toFixed(1)}ч → будет 5%</div>`;
+    } else if (holdHours < 3) {
+      holdMsg = `<div style="color:#f39c12;font-weight:700;">⏱ ${holdHours.toFixed(1)}ч — комиссия ${sellFeePct}%. Через ${(3-holdHours).toFixed(1)}ч → 4%</div>`;
+    } else if (holdHours < 6) {
+      holdMsg = `<div style="color:#f39c12;font-weight:700;">⏱ ${holdHours.toFixed(1)}ч — комиссия ${sellFeePct}%. Через ${(6-holdHours).toFixed(1)}ч → 3%</div>`;
+    } else if (holdHours < 12) {
+      holdMsg = `<div style="color:#2ecc71;font-weight:700;">⏱ ${holdHours.toFixed(1)}ч — комиссия ${sellFeePct}%. Через ${(12-holdHours).toFixed(1)}ч → 2%</div>`;
+    } else {
+      holdMsg = `<div style="color:#2ecc71;font-weight:700;">🏆 ${holdHours.toFixed(1)}ч — минимальная комиссия ${sellFeePct}% (максимум бонус)</div>`;
+    }
+  }
 
   const w = 300, h = 120, pad = 16;
   let chartHtml = '<div style="color:var(--hint);text-align:center;padding:20px;">Нет данных</div>';
@@ -1184,31 +1214,46 @@ async function showCrypto() {
     ${chartHtml}
 
     <div style="background:var(--bg-3);border-radius:12px;padding:14px;margin-bottom:12px;">
-      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:6px;">
         <span style="color:var(--hint);font-size:12px;">У тебя коинов:</span>
         <b>${coins.toFixed(4)}</b>
       </div>
-      <div style="display:flex;justify-content:space-between;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
         <span style="color:var(--hint);font-size:12px;">Стоимость:</span>
-        <b style="color:var(--money);">${fmtMoney(coinsRub)}₽</b>
+        <b style="color:var(--money);">${fmtMoney(coinsValue)}₽</b>
       </div>
+      ${holdMsg}
+    </div>
+
+    <div style="background:rgba(82,136,193,0.08);border:1px solid rgba(82,136,193,0.3);border-radius:10px;padding:10px;margin-bottom:12px;font-size:11px;color:var(--hint);line-height:1.5;">
+      💰 <b style="color:#e74c3c;">Комиссия покупки: ${buyFeePct}%</b><br>
+      💸 <b style="color:#e74c3c;">Комиссия продажи: ${sellFeePct}%</b> (базовая ${sellFeeBasePct}%, снижается при долгом держании)<br>
+      📊 Лимит покупки: <b>${fmtMoney(maxPerTx)}₽/операция</b>, <b>${fmtMoney(maxPerDay)}₽/сутки</b><br>
+      📊 Максимум во владении: <b>${fmtMoney(maxHold)}₽</b><br>
+      💡 Сегодня куплено: <b>${fmtMoney(boughtToday)}₽</b>, свободно: <b style="color:#2ecc71;">${fmtMoney(leftToday)}₽</b>
     </div>
 
     <div style="margin-bottom:12px;">
       <label style="font-size:12px;color:var(--hint);">Купить на сумму (₽)</label>
       <input id="crypto-buy-amt" type="number" placeholder="Например 5000" style="width:100%;padding:10px;background:var(--bg-3);border:none;border-radius:8px;color:#fff;margin-top:4px;">
-      <button class="btn btn-primary" onclick="buyCrypto()" style="margin-top:6px;">💰 Купить коины</button>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <button class="btn btn-secondary" onclick="document.getElementById('crypto-buy-amt').value=1000" style="flex:1;margin:0;padding:8px;font-size:12px;">1К</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('crypto-buy-amt').value=5000" style="flex:1;margin:0;padding:8px;font-size:12px;">5К</button>
+        <button class="btn btn-secondary" onclick="document.getElementById('crypto-buy-amt').value=10000" style="flex:1;margin:0;padding:8px;font-size:12px;">MAX ${fmtMoney(maxPerTx)}</button>
+      </div>
+      <button class="btn btn-primary" onclick="buyCrypto()" style="margin-top:6px;">💰 Купить коины (комиссия ${buyFeePct}%)</button>
     </div>
 
+    ${coins > 0 ? `
     <div style="margin-bottom:8px;">
       <label style="font-size:12px;color:var(--hint);">Продать коины (шт.)</label>
       <input id="crypto-sell-amt" type="number" step="0.0001" placeholder="Например 5" style="width:100%;padding:10px;background:var(--bg-3);border:none;border-radius:8px;color:#fff;margin-top:4px;">
-      <button class="btn btn-secondary" onclick="sellCrypto()" style="margin-top:6px;border:1px solid var(--danger);">💸 Продать</button>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <button class="btn btn-secondary" onclick="document.getElementById('crypto-sell-amt').value=${coins.toFixed(4)}" style="flex:1;margin:0;padding:8px;font-size:12px;">ПРОДАТЬ ВСЁ</button>
+      </div>
+      <button class="btn btn-secondary" onclick="sellCrypto()" style="margin-top:6px;border:1px solid var(--danger);">💸 Продать (комиссия ${sellFeePct}%)</button>
     </div>
-
-    <div style="background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.3);border-radius:8px;padding:10px;text-align:center;font-size:12px;color:#e74c3c;font-weight:700;">
-      ⚠️ Комиссия на вывод: ${feePct}%
-    </div>
+    ` : ''}
   `);
 
   if (window._cryptoRefresh) clearInterval(window._cryptoRefresh);
@@ -1227,6 +1272,7 @@ async function showCrypto() {
     }).catch(()=>{});
   }, 60000);
 }
+
 async function buyCrypto() {
   const amt = parseInt($("#crypto-buy-amt").value) || 0;
   if (amt <= 0) { toast("Введи сумму", "error"); return; }
@@ -1235,7 +1281,7 @@ async function buyCrypto() {
     state.player = d.player;
     renderPlayer();
     closeModal();
-    toast(`✅ Куплено ${d.coins.toFixed(4)} коинов по ${d.price}₽`, "success");
+    toast(`✅ Куплено ${d.coins.toFixed(4)} коинов по ${d.price}₽ (комиссия ${d.buy_fee}₽)`, "success");
   } catch(e) { toast(e.message, "error"); }
 }
 async function sellCrypto() {
@@ -1246,7 +1292,7 @@ async function sellCrypto() {
     state.player = d.player;
     renderPlayer();
     closeModal();
-    toast(`💰 +${fmtMoney(d.rub)}₽ (комиссия ${fmtMoney(d.fee)}₽)`, "success");
+    toast(`💰 +${fmtMoney(d.rub)}₽ (комиссия ${d.fee_pct}%, держал ${d.hold_hours}ч)`, "success");
   } catch(e) { toast(e.message, "error"); }
 }
 function showCredit() {
@@ -2231,12 +2277,13 @@ async function loadGang() {
       </div>`;
     }).join("");
 
+    // ═══ ЛОГ ЗАХВАТОВ: максимум 10 (обрезка на бэке) ═══
     const logs = d.territory_log || [];
     let logHtml = "";
     if (logs.length === 0) {
-      logHtml = `<div style="background:var(--bg-2);border-radius:12px;padding:16px;text-align:center;color:var(--hint);font-size:12px;">Пока нет событий</div>`;
+      logHtml = `<div style="background:var(--bg-2);border-radius:12px;padding:16px;text-align:center;color:var(--hint);font-size:12px;">Пока нет событий (макс. 10 в истории)</div>`;
     } else {
-      logHtml = logs.slice(0, 15).map(entry => {
+      logHtml = logs.slice(0, 10).map(entry => {
         const f = formatTerritoryLog(entry, myGid);
         let timeStr = "";
         try {
@@ -2278,7 +2325,7 @@ async function loadGang() {
       <h3 class="section-subtitle">🗺 Территории (ГЕТТО)</h3>
       <div class="gang-map">${terrHtml}</div>
 
-      <h3 class="section-subtitle">📜 Лог захватов</h3>
+      <h3 class="section-subtitle">📜 Лог захватов <span style="font-size:11px;color:var(--hint);font-weight:400;">(${logs.length}/10)</span></h3>
       <div style="margin-bottom:16px;">${logHtml}</div>
 
       <h3 class="section-subtitle">👥 Участники (${d.members.length}/10)</h3>

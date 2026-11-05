@@ -147,6 +147,11 @@ class Database:
             "last_seen INTEGER DEFAULT 0",
             "credit_due INTEGER DEFAULT 0","last_casino INTEGER DEFAULT 0",
             "tg_username TEXT DEFAULT NULL",
+            # ═══ НОВОЕ: крипто-балансировка ═══
+            "crypto_hold_since INTEGER DEFAULT 0",
+            "crypto_bought_today INTEGER DEFAULT 0",
+            "crypto_bought_ts INTEGER DEFAULT 0",
+            "crypto_migrated INTEGER DEFAULT 0",
         ]
         for m in migrations:
             try:
