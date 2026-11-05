@@ -14,12 +14,6 @@ from api_core import (
     BOT_IDS_SET, bot_online_ids,
 )
 
-def _is_bot_online(uid, now, online_ids):
-    """Определяет статус: бот — по ротации, юзер — по last_seen."""
-    if uid in BOT_IDS_SET:
-        return uid in online_ids
-    return False  # юзеров считаем отдельно, у них есть last_seen
-
 async def api_location(request):
     ud = await _user(request); uid = ud["id"]
     p = await _player(uid)
@@ -347,7 +341,7 @@ async def api_friend_search(request):
         if r.get("is_bot"):
             r["is_online"] = r["user_id"] in online_ids
         else:
-            r["is_online"] = False
+            r["is_online"] = (r.get("last_seen") or 0) > now_ts - 120
     return web.json_response({"results": rows})
 
 async def api_friend_request(request):
@@ -584,5 +578,5 @@ async def api_online_count(request):
         "SELECT COUNT(*) as c FROM players WHERE last_seen > ? AND (is_bot=0 OR is_bot IS NULL)",
         (now - 120,))
     human = human_row["c"] if human_row else 0
-    total = human + BOTS_ONLINE_COUNT
-    return web.json_response({"count": total})
+    bots = len(bot_online_ids(now))
+    return web.json_response({"count": human + bots})
