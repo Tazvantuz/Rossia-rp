@@ -158,12 +158,22 @@ def xp_to_next(level):
 def total_xp_for_level(level):
     return sum(xp_to_next(i) for i in range(1, level))
 
-def crypto_price():
-    """Цена коина меняется каждый час."""
-    import time, hashlib
-    hour = int(time.time() / 3600)
+def crypto_price_at_hour(hour):
+    """Детерминированная цена для конкретного часа (unix // 3600)."""
+    import hashlib
     h = hashlib.md5(f"coin_{hour}".encode()).hexdigest()
     return 500 + (int(h[:4], 16) % 1000)
+
+def crypto_price():
+    """Цена коина — глобальная, меняется каждый час."""
+    import time
+    return crypto_price_at_hour(int(time.time() / 3600))
+
+def crypto_history_24h():
+    """История цены за последние 24 часа — для графика."""
+    import time
+    now_hour = int(time.time() / 3600)
+    return [crypto_price_at_hour(now_hour - i) for i in range(23, -1, -1)]
 
 def item_json(iid):
     it = ITEMS.get(iid)

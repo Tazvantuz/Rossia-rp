@@ -11,7 +11,7 @@ from game import (
     CREDIT_MAX, CREDIT_TERMS, CASES, GANG_TERRITORIES, GANG_CREATE_COST,
     GANG_MAX_MEMBERS, CAPTURE_HOURS, PVP_PARTS, PVP_PARTS_NAMES,
     get_combat_stats,
-    START_BALANCE, xp_to_next, crypto_price, item_json, item_sell_price,
+    START_BALANCE, xp_to_next, crypto_price, crypto_price_at_hour, crypto_history_24h, item_json, item_sell_price,
     get_outfit, roulette_color, ROULETTE_NUMBERS,
 )
 
@@ -631,6 +631,14 @@ async def api_credit_pay(request):
     return web.json_response({"player": _player_json(p), "paid": debt})
 
 
+async def api_crypto_price(request):
+    await _user(request)
+    return web.json_response({
+        "price": crypto_price(),
+        "history": crypto_history_24h(),
+        "fee_pct": 5,
+    })
+
 async def api_crypto_buy(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
@@ -654,12 +662,15 @@ async def api_crypto_sell(request):
     if amount <= 0 or amount > p.get("crypto_amount",0):
         return web.json_response({"error":"Недостаточно"}, status=400)
     price = crypto_price()
-    rub = int(amount * price)
+    rub_before = int(amount * price)
+    fee = int(rub_before * 0.05)
+    rub = rub_before - fee
     await db.execute("UPDATE players SET balance=balance+?, crypto_amount=crypto_amount-? WHERE user_id=?",
                      (rub, amount, uid))
     credit_paid = await _forced_credit_collect(uid)
     p = await _player(uid)
-    return web.json_response({"player": _player_json(p), "rub": rub, "price": price,
+    return web.json_response({"player": _player_json(p), "rub": rub, "fee": fee,
+                              "rub_before": rub_before, "price": price,
                               "credit_paid": credit_paid})
 
 async def api_location(request):
@@ -2327,6 +2338,7 @@ def setup_routes(app):
     R.add_post("/api/territory/capture/start", api_territory_capture_start)
     R.add_post("/api/territory/capture/resolve", api_territory_capture_resolve)
     R.add_post("/api/credit/pay", api_credit_pay)
+    R.add_post("/api/crypto/price", api_crypto_price)
     R.add_post("/api/crypto/buy", api_crypto_buy)
     R.add_post("/api/crypto/sell", api_crypto_sell)
     R.add_post("/api/location", api_location)

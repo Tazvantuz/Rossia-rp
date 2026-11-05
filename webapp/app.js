@@ -1064,27 +1064,137 @@ function updateMoreBadges() {
   $("#crypto-price-badge").textContent = `${p.crypto_price}₽`;
   renderCreditBanner();
 }
-function showCrypto() {
+async function showCrypto() {
+  let d;
+  try { d = await api("crypto/price", {}); }
+  catch(e) { toast("Не удалось загрузить цену", "error"); return; }
+
   const p = state.player;
-  openModal(`<h2>🪙 Крипто-биржа</h2>
-    <p style="color:var(--hint);margin:16px 0">Цена: <b style="color:var(--money)">${p.crypto_price}₽</b></p>
-    <p>У тебя: <b>${p.crypto_amount.toFixed(2)}</b> (~${fmtMoney(Math.floor(p.crypto_amount*p.crypto_price))}₽)</p>
-    <div style="margin-top:16px"><label style="font-size:12px;color:var(--hint)">Купить на ₽</label>
-      <input id="crypto-buy-amt" type="number" style="width:100%;padding:10px;background:var(--bg-3);border:none;border-radius:8px;color:#fff;margin-top:4px">
-      <button class="btn btn-primary" onclick="buyCrypto()">Купить</button></div>
-    <div style="margin-top:12px"><label style="font-size:12px;color:var(--hint)">Продать</label>
-      <input id="crypto-sell-amt" type="number" step="0.01" style="width:100%;padding:10px;background:var(--bg-3);border:none;border-radius:8px;color:#fff;margin-top:4px">
-      <button class="btn btn-secondary" onclick="sellCrypto()">Продать</button></div>`);
+  const price = d.price;
+  const history = d.history || [];
+  const feePct = d.fee_pct || 5;
+  const coins = Number(p.crypto_amount || 0);
+  const coinsRub = Math.floor(coins * price);
+
+  // SVG график
+  const w = 300, h = 120, pad = 10;
+  let chartHtml = '<div style="color:var(--hint);text-align:center;padding:20px;">Нет данных</div>';
+  if (history.length > 1) {
+    const minP = Math.min(...history);
+    const maxP = Math.max(...history);
+    const range = Math.max(1, maxP - minP);
+    const pts = history.map((v, i) => {
+      const x = pad + (w - 2*pad) * i / (history.length - 1);
+      const y = h - pad - (h - 2*pad) * (v - minP) / range;
+      return {x, y, v};
+    });
+    const poly = pts.map(pt => `${pt.x.toFixed(1)},${pt.y.toFixed(1)}`).join(" ");
+    const area = `${pad},${h-pad} ${poly} ${w-pad},${h-pad}`;
+
+    const first = history[0];
+    const last = history[history.length - 1];
+    const change = last - first;
+    const changePct = first ? ((change / first) * 100) : 0;
+    const trendColor = change >= 0 ? "#2ecc71" : "#e74c3c";
+    const trendArrow = change >= 0 ? "▲" : "▼";
+    const trendSign = change >= 0 ? "+" : "";
+
+    chartHtml = `
+      <div style="background:var(--bg-3);border-radius:12px;padding:12px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-size:11px;color:var(--hint);font-weight:700;">24 ЧАСА</span>
+          <span style="font-size:13px;font-weight:800;color:${trendColor};">${trendArrow} ${trendSign}${change}₽ (${trendSign}${changePct.toFixed(1)}%)</span>
+        </div>
+        <svg viewBox="0 0 ${w} ${h}" width="100%" height="120" preserveAspectRatio="none">
+          <polygon points="${area}" fill="rgba(82,136,193,0.15)"/>
+          <polyline points="${poly}" fill="none" stroke="${trendColor}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+          <circle cx="${pts[pts.length-1].x}" cy="${pts[pts.length-1].y}" r="3.5" fill="${trendColor}"/>
+        </svg>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--hint);margin-top:4px;">
+          <span>Мин: ${minP}₽</span>
+          <span>Макс: ${maxP}₽</span>
+        </div>
+      </div>
+    `;
+  }
+
+  openModal(`
+    <h2>🪙 Крипто-биржа</h2>
+    <p style="color:var(--hint);margin:8px 0 12px;text-align:center;font-size:12px;">Цена обновляется раз в час у всех игроков</p>
+
+    <div style="background:var(--bg-3);border-radius:12px;padding:14px;margin-bottom:12px;text-align:center;">
+      <div style="font-size:11px;color:var(--hint);text-transform:uppercase;letter-spacing:.5px;">Текущая цена</div>
+      <div style="font-size:32px;font-weight:900;color:var(--money);margin-top:4px;">${price}₽</div>
+      <div style="font-size:11px;color:var(--hint);margin-top:2px;">за 1 коин</div>
+    </div>
+
+    ${chartHtml}
+
+    <div style="background:var(--bg-3);border-radius:12px;padding:14px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+        <span style="color:var(--hint);font-size:12px;">У тебя коинов:</span>
+        <b>${coins.toFixed(4)}</b>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="color:var(--hint);font-size:12px;">Стоимость:</span>
+        <b style="color:var(--money);">${fmtMoney(coinsRub)}₽</b>
+      </div>
+    </div>
+
+    <div style="margin-bottom:12px;">
+      <label style="font-size:12px;color:var(--hint);">Купить на сумму (₽)</label>
+      <input id="crypto-buy-amt" type="number" placeholder="Например 5000" style="width:100%;padding:10px;background:var(--bg-3);border:none;border-radius:8px;color:#fff;margin-top:4px;">
+      <button class="btn btn-primary" onclick="buyCrypto()" style="margin-top:6px;">💰 Купить коины</button>
+    </div>
+
+    <div style="margin-bottom:8px;">
+      <label style="font-size:12px;color:var(--hint);">Продать коины (шт.)</label>
+      <input id="crypto-sell-amt" type="number" step="0.0001" placeholder="Например 5" style="width:100%;padding:10px;background:var(--bg-3);border:none;border-radius:8px;color:#fff;margin-top:4px;">
+      <button class="btn btn-secondary" onclick="sellCrypto()" style="margin-top:6px;border:1px solid var(--danger);">💸 Продать</button>
+    </div>
+
+    <div style="background:rgba(231,76,60,0.1);border:1px solid rgba(231,76,60,0.3);border-radius:8px;padding:10px;text-align:center;font-size:12px;color:#e74c3c;font-weight:700;">
+      ⚠️ Комиссия на вывод: ${feePct}%
+    </div>
+  `);
+
+  if (window._cryptoRefresh) clearInterval(window._cryptoRefresh);
+  window._cryptoRefresh = setInterval(() => {
+    const modal = document.getElementById("modal");
+    if (!modal || modal.classList.contains("hidden")) {
+      clearInterval(window._cryptoRefresh);
+      window._cryptoRefresh = null;
+      return;
+    }
+    api("crypto/price", {}).then(nd => {
+      if (nd.price !== price) {
+        const el = document.querySelector('#modal-body div[style*="Текущая цена"] + div');
+        if (el) el.textContent = nd.price + "₽";
+      }
+    }).catch(()=>{});
+  }, 60000);
 }
 async function buyCrypto() {
   const amt = parseInt($("#crypto-buy-amt").value) || 0;
-  try { const d = await api("crypto/buy", {amount: amt}); state.player = d.player; renderPlayer(); closeModal(); toast(`✅ ${d.coins.toFixed(2)} коинов`, "success"); }
-  catch(e) { toast(e.message, "error"); }
+  if (amt <= 0) { toast("Введи сумму", "error"); return; }
+  try {
+    const d = await api("crypto/buy", {amount: amt});
+    state.player = d.player;
+    renderPlayer();
+    closeModal();
+    toast(`✅ Куплено ${d.coins.toFixed(4)} коинов по ${d.price}₽`, "success");
+  } catch(e) { toast(e.message, "error"); }
 }
 async function sellCrypto() {
   const amt = parseFloat($("#crypto-sell-amt").value) || 0;
-  try { const d = await api("crypto/sell", {amount: amt}); state.player = d.player; renderPlayer(); closeModal(); toast(`💰 +${fmtMoney(d.rub)}₽`, "success"); }
-  catch(e) { toast(e.message, "error"); }
+  if (amt <= 0) { toast("Введи количество", "error"); return; }
+  try {
+    const d = await api("crypto/sell", {amount: amt});
+    state.player = d.player;
+    renderPlayer();
+    closeModal();
+    toast(`💰 +${fmtMoney(d.rub)}₽ (комиссия ${fmtMoney(d.fee)}₽)`, "success");
+  } catch(e) { toast(e.message, "error"); }
 }
 function showCredit() {
   const p = state.player;
