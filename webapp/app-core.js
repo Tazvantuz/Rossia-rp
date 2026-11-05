@@ -160,6 +160,10 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll(".nav-btn").forEach(btn=>{
     btn.addEventListener("click", ()=>{ showTab(btn.dataset.nav); if (tg) tg.HapticFeedback?.selectionChanged(); });
   });
+
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && state.player) loadOnlineCount();
+  });
 });
 
 const SLOT_FILTERS = [
@@ -224,7 +228,25 @@ async function loadOnlineCount() {
     const d = await api("online_count", {});
     const el = document.getElementById("online-count");
     if (el) el.textContent = d.count;
-  } catch(_) {}
+    const dot = document.querySelector(".online-badge .online-dot");
+    if (dot) { dot.classList.remove("off"); dot.classList.add("on"); }
+  } catch(_) {
+    const dot = document.querySelector(".online-badge .online-dot");
+    if (dot) { dot.classList.remove("on"); dot.classList.add("off"); }
+  }
+}
+
+let _onlinePollInterval = null;
+function startOnlinePolling() {
+  if (_onlinePollInterval) clearInterval(_onlinePollInterval);
+  _onlinePollInterval = setInterval(() => {
+    if (document.hidden) return;
+    loadOnlineCount();
+  }, 15000);
+}
+
+function stopOnlinePolling() {
+  if (_onlinePollInterval) { clearInterval(_onlinePollInterval); _onlinePollInterval = null; }
 }
 
 function renderCharacterInto(selector) {
@@ -407,6 +429,7 @@ async function boot() {
       showTab("home"); checkAdminAccess?.();
       updateChatBadge();
       loadOnlineCount();
+      startOnlinePolling();
       if (d.new_achievements?.length) notifyAchievements(d.new_achievements);
       if (d.credit_paid) setTimeout(() => toast(`💸 Банк списал ${fmtMoney(d.credit_paid)}₽`, "error"), 800);
     }
