@@ -1037,14 +1037,14 @@ const ITEMS_SVG = {
   </g>`,
 
   // ═══════ TOP-2 ═══════
-  h_case_top2_head: `<path d="M55 22 L55 55 Q100 76 145 55 L145 22 Z" fill="#8b0000" stroke="#ffd700" stroke-width="2.5"/>
-    <path d="M55 22 L48 2 L70 18 L86 -2 L100 16 L114 -2 L130 18 L152 2 L145 22" fill="none" stroke="#ffd700" stroke-width="2.5" stroke-linejoin="round"/>
-    <circle cx="100" cy="8" r="4.5" fill="#e74c3c" stroke="#8b0000" stroke-width="0.8"/>
-    <circle cx="70" cy="14" r="3" fill="#3498db"/>
-    <circle cx="130" cy="14" r="3" fill="#3498db"/>
-    <circle cx="48" cy="8" r="2" fill="#fff"/>
-    <circle cx="152" cy="8" r="2" fill="#fff"/>
-    <path d="M74 40 Q100 46 126 40" stroke="#ffd700" stroke-width="2" fill="none"/>`,
+  h_case_top2_head: `<path d="M64 36 L64 24 Q100 18 136 24 L136 36 Q100 42 64 36 Z" fill="#8b0000" stroke="#ffd700" stroke-width="2"/>
+    <path d="M64 24 L56 6 L76 20 L88 2 L100 16 L112 2 L124 20 L144 6 L136 24" fill="none" stroke="#ffd700" stroke-width="2.2" stroke-linejoin="round"/>
+    <circle cx="100" cy="10" r="3.5" fill="#e74c3c" stroke="#8b0000" stroke-width="0.7"/>
+    <circle cx="76" cy="16" r="2.5" fill="#3498db"/>
+    <circle cx="124" cy="16" r="2.5" fill="#3498db"/>
+    <circle cx="56" cy="8" r="1.8" fill="#fff"/>
+    <circle cx="144" cy="8" r="1.8" fill="#fff"/>
+    <path d="M70 32 Q100 38 130 32" stroke="#ffd700" stroke-width="1.8" fill="none"/>`,
 
   b_case_top2_body: `<path d="M64 90 L136 90 L142 215 L58 215 Z" fill="#8b0000" stroke="#ffd700" stroke-width="2.2"/>
     <path d="M64 90 L84 106 L100 90 L116 106 L136 90" stroke="#ffd700" stroke-width="2" fill="none"/>

@@ -271,7 +271,7 @@ ITEMS.update({
     "lh_teddy": {"name":"Мишка","emoji":"🧸","slot":"left_hand","price":80000,"rarity":"legendary","desc":"Милый"},
 })
 
-# ═══════ ПРИЧЁСКИ (новый слот, не дают статов) ═══════
+# ═══════ ПРИЧЁСКИ ═══════
 ITEMS.update({
     "hair_short_black": {"name":"Короткая стрижка","emoji":"💇","slot":"hair","price":200,"rarity":"common","desc":"Аккуратно, по-мужски"},
     "hair_curly_brown": {"name":"Кудри","emoji":"💇","slot":"hair","price":1500,"rarity":"uncommon","desc":"Завитки как у итальянца"},
@@ -280,7 +280,7 @@ ITEMS.update({
     "hair_flowing_gold":{"name":"Золотые локоны","emoji":"💇","slot":"hair","price":50000,"rarity":"legendary","desc":"Как у полубога"},
 })
 
-# ═══════ КРОССОВКИ (новый слот, дают HP) ═══════
+# ═══════ КРОССОВКИ ═══════
 ITEMS.update({
     "shoes_worn":     {"name":"Стоптанные кеды","emoji":"👟","slot":"shoes","price":300,"rarity":"common","desc":"Ещё походят","hp":10},
     "shoes_sneakers": {"name":"Серые кроссовки","emoji":"👟","slot":"shoes","price":2000,"rarity":"uncommon","desc":"Удобные для города","hp":25},
@@ -409,7 +409,7 @@ TYANKA_ITEMS = {
     "lh_tyanka": {"name":"Тянка в футболке","emoji":"👱‍♀️","slot":"left_hand","price":0,"rarity":"epic","desc":"Стоит рядом и смотрит","hp":1200,"damage":600,"is_case_only":True},
     "lh_tyanka2": {"name":"Тянка на коленях","emoji":"👩‍🦰","slot":"left_hand","price":0,"rarity":"rare","desc":"Сидит рядом и держит","hp":800,"damage":300,"is_case_only":True},
     "rh_miku": {"name":"Мику","emoji":"👩‍🎤","slot":"right_hand","price":0,"rarity":"uncommon","desc":"Поёт тебе, пока ты грабишь","hp":500,"damage":200,"is_case_only":True},
-    "rh_tyanka3": {"name":"Соник","emoji":"👙","slot":"right_hand","price":0,"rarity":"legendary","desc":"Согревает даже в лютый мороз","hp":2500,"damage":1200,"is_case_only":True},
+    "rh_tyanka3": {"name":"Сонико","emoji":"👙","slot":"right_hand","price":0,"rarity":"legendary","desc":"Согревает даже в лютый мороз","hp":2500,"damage":1200,"is_case_only":True},
 }
 ITEMS.update(TYANKA_ITEMS)
 
@@ -501,7 +501,6 @@ def get_combat_stats(player):
             dmg += ITEMS[iid].get("damage", 0)
     return {"hp": hp, "damage": dmg}
 
-# ═══════ БАЛАНСИРОВКА СТАТОВ ═══════
 _CASE_PREFIXES = (
     "h_case_", "b_case_", "l_case_", "rh_case_", "lh_case_",
     "h_gang_", "b_gang_", "l_gang_", "rh_gang_", "lh_gang_",

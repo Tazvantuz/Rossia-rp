@@ -1,6 +1,8 @@
 // app-shop.js
 // Магазин, инвентарь, экипировка, работа, бизнесы
 
+const RARITY_ORDER = { legendary: 0, epic: 1, rare: 2, uncommon: 3, common: 4 };
+
 async function loadAppearance() {
   try {
     const [shop, inv] = await Promise.all([api("shop"), api("inventory")]);
@@ -48,7 +50,10 @@ function renderAppearance() {
     for (const [slot, item] of Object.entries(p.outfit)) {
       if (item.item_id) equipped.push({slot, item});
     }
-    const inv = state.invItems.filter(it => it.slot === state.shopFilter);
+    // Сортировка: сверху самые крутые (legendary → common)
+    const inv = state.invItems
+      .filter(it => it.slot === state.shopFilter)
+      .sort((a, b) => (RARITY_ORDER[a.rarity] ?? 99) - (RARITY_ORDER[b.rarity] ?? 99));
     const equippedInSlot = equipped.filter(e => SLOT_KEY[state.shopFilter] === e.slot);
 
     if (equippedInSlot.length > 0) {
