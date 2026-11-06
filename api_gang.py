@@ -80,32 +80,113 @@ async def api_gang_create(request):
     return web.json_response({"ok":True,"gang_id":gid})
 
 async def api_gang_join(request):
-    ud = await _user(request); uid = ud["id"]
-    body = await request.json()
-    gid = int(body.get("gang_id",0))
-    ex = await db.fetchone("SELECT * FROM gang_members WHERE user_id=?", (uid,))
-    if ex: return web.json_response({"error":"Ты уже в банде"}, status=400)
-    gang = await db.fetchone("SELECT * FROM gangs WHERE gang_id=?", (gid,))
-    if not gang: return web.json_response({"error":"Банда не найдена"}, status=400)
-    cnt = await db.fetchone("SELECT COUNT(*) as c FROM gang_members WHERE gang_id=?", (gid,))
-    if cnt["c"] >= GANG_MAX_MEMBERS:
-        return web.json_response({"error":"Банда заполнена"}, status=400)
-    await db.execute(
-        "INSERT INTO gang_members (gang_id, user_id, role) VALUES (?, ?, 'member')",
-        (gid, uid))
-    return web.json_response({"ok":True})
+    """Свободное вступление закрыто — только по приглашению лидера/зама."""
+    await _user(request)
+    return web.json_response(
+        {"error": "Вступить в банду можно только по приглашению от лидера или зама"},
+        status=403)
 
 async def api_gang_leave(request):
     ud = await _user(request); uid = ud["id"]
     member = await db.fetchone("SELECT * FROM gang_members WHERE user_id=?", (uid,))
     if not member: return web.json_response({"error":"Не в банде"}, status=400)
     if member["role"] == "leader":
-        return web.json_response({"error":"Лидер не может выйти"}, status=400)
+        return web.json_response({"error":"Лидер не может выйти — удали банду"}, status=400)
     await db.execute("DELETE FROM gang_members WHERE user_id=?", (uid,))
     return web.json_response({"ok":True})
 
+async def api_gang_kick(request):
+    """Кик участника лидером или замом. Лидера кикнуть нельзя, зам не может кикнуть зама."""
+    ud = await _user(request); uid = ud["id"]
+    body = await request.json()
+    try:
+        target_id = int(body.get("target_id", 0))
+    except:
+        target_id = 0
+    if not target_id:
+        return web.json_response({"error": "Не указан игрок"}, status=400)
+    if target_id == uid:
+        return web.json_response({"error": "Себя кикнуть нельзя"}, status=400)
+
+    my = await db.fetchone("SELECT gang_id, role FROM gang_members WHERE user_id=?", (uid,))
+    if not my or my["role"] not in ("leader", "deputy"):
+        return web.json_response({"error": "Только лидер или зам может кикать"}, status=403)
+
+    target = await db.fetchone(
+        "SELECT gang_id, role FROM gang_members WHERE user_id=? AND gang_id=?",
+        (target_id, my["gang_id"]))
+    if not target:
+        return web.json_response({"error": "Этот игрок не в твоей банде"}, status=404)
+    if target["role"] == "leader":
+        return web.json_response({"error": "Лидера кикнуть нельзя"}, status=400)
+    if target["role"] == "deputy" and my["role"] != "leader":
+        return web.json_response({"error": "Зам не может кикнуть другого зама"}, status=403)
+
+    await db.execute("DELETE FROM gang_members WHERE user_id=? AND gang_id=?",
+                     (target_id, my["gang_id"]))
+    return web.json_response({"ok": True, "kicked": target_id})
+
+async def api_gang_disband(request):
+    """Удаление банды лидером: территории → нейтральные, участники → выгнать."""
+    ud = await _user(request); uid = ud["id"]
+    my = await db.fetchone("SELECT gang_id, role FROM gang_members WHERE user_id=?", (uid,))
+    if not my:
+        return web.json_response({"error": "Ты не в банде"}, status=400)
+    if my["role"] != "leader":
+        return web.json_response({"error": "Только лидер может удалить банду"}, status=403)
+    gid = my["gang_id"]
+
+    gang = await db.fetchone("SELECT name FROM gangs WHERE gang_id=?", (gid,))
+    gang_name = gang["name"] if gang else f"#{gid}"
+
+    # 1) Территории → нейтральные
+    try:
+        await db.execute("UPDATE gang_territories SET gang_id=NULL WHERE gang_id=?", (gid,))
+    except Exception as e:
+        print(f"⚠️ disband territories: {e}")
+
+    # 2) Активные захваты этой банды → отменяются
+    try:
+        await db.execute(
+            "UPDATE territory_captures SET status='cancelled' WHERE gang_id=? AND status='active'",
+            (gid,))
+    except Exception as e:
+        print(f"⚠️ disband captures: {e}")
+
+    # 3) Все участники → выгнать
+    try:
+        await db.execute("DELETE FROM gang_members WHERE gang_id=?", (gid,))
+    except Exception as e:
+        print(f"⚠️ disband members: {e}")
+
+    # 4) Висящие приглашения в эту банду — удалить
+    try:
+        rows = await db.fetchall(
+            "SELECT id, data FROM notifications WHERE type='gang_invite'")
+        for n in rows:
+            try:
+                data = json.loads(n.get("data") or "{}")
+                if int(data.get("gang_id", 0)) == int(gid):
+                    await db.execute("DELETE FROM notifications WHERE id=?", (n["id"],))
+            except Exception:
+                pass
+    except Exception as e:
+        print(f"⚠️ disband invites: {e}")
+
+    # 5) Сама банда
+    await db.execute("DELETE FROM gangs WHERE gang_id=?", (gid,))
+
+    # 6) Записать в лог территорий (если был лог)
+    try:
+        await _log_territory_event(
+            0, f"Банда {gang_name}", "disbanded",
+            g_a_id=None, g_a_name=gang_name)
+    except Exception:
+        pass
+
+    return web.json_response({"ok": True, "disbanded": gid, "name": gang_name})
+
 async def api_gang_set_tag(request):
-    """Установить тег (3 буквы) + опционально цвет из 10 вариантов."""
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     tag = (body.get("tag") or "").strip().upper()
@@ -184,6 +265,17 @@ async def api_gang_invite(request):
     cnt = await db.fetchone("SELECT COUNT(*) as c FROM gang_members WHERE gang_id=?", (my["gang_id"],))
     if cnt["c"] >= GANG_MAX_MEMBERS:
         return web.json_response({"error": "Банда заполнена"}, status=400)
+    # Не дублировать приглашение
+    existing = await db.fetchall(
+        "SELECT id, data FROM notifications WHERE user_id=? AND type='gang_invite'",
+        (target_id,))
+    for n in existing:
+        try:
+            data = json.loads(n.get("data") or "{}")
+            if int(data.get("gang_id", 0)) == int(my["gang_id"]):
+                return web.json_response({"ok": True, "already": True})
+        except Exception:
+            pass
     gang = await db.fetchone("SELECT name, emoji FROM gangs WHERE gang_id=?", (my["gang_id"],))
     me = await _player(uid)
     await db.execute(

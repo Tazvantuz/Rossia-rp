@@ -118,7 +118,6 @@ async function openCase(cid) {
     state.player = d.player;
     renderPlayer();
 
-    // ═══ Обновляем лимит ЛОКАЛЬНО из ответа сервера ═══
     if (d.is_limited && d.opened !== undefined) {
         c.opened = d.opened;
         c.left = d.left;
@@ -224,18 +223,31 @@ async function createGang() {
   } catch(e) { toast(e.message, "error"); }
 }
 
-async function joinGang(gid) {
-  try {
-    await api("gang/join", {gang_id: gid});
-    loadGang(); toast("✅ Вступил в банду");
-  } catch(e) { toast(e.message, "error"); }
-}
-
 async function leaveGang() {
   if (!confirm("Покинуть банду?")) return;
   try {
     await api("gang/leave");
     loadGang(); toast("Покинул банду");
+  } catch(e) { toast(e.message, "error"); }
+}
+
+async function kickMember(uid, nickname) {
+  if (!confirm(`Кикнуть ${nickname} из банды?`)) return;
+  try {
+    await api("gang/kick", {target_id: uid});
+    toast(`👢 ${nickname} кикнут`, "success");
+    loadGang();
+  } catch(e) { toast(e.message, "error"); }
+}
+
+async function disbandGang() {
+  if (!confirm("УДАЛИТЬ БАНДУ?\n\nВсе территории станут нейтральными, все участники будут выгнаны. Это нельзя отменить.")) return;
+  if (!confirm("Точно уверен? Банда будет удалена навсегда.")) return;
+  try {
+    await api("gang/disband");
+    toast("🗑 Банда удалена", "success");
+    loadGang();
+    refreshPlayer();
   } catch(e) { toast(e.message, "error"); }
 }
 
@@ -353,6 +365,9 @@ function formatTerritoryLog(entry, myGid) {
     if (aIsMe) return { icon: "✅", text: `Захват «${tname}» завершён без боя (урон: ${entry.gang_a_dmg || 0})`, color: "#2ecc71" };
     return { icon: "⚠️", text: `${entry.gang_a_name} захватили «${tname}» без боя`, color: "#e74c3c" };
   }
+  if (etype === "disbanded") {
+    return { icon: "🗑", text: `Банда ${entry.gang_a_name || ""} расформирована`, color: "#8494a5" };
+  }
   return { icon: "•", text: `${etype}: ${tname}`, color: "#8494a5" };
 }
 
@@ -428,14 +443,16 @@ async function loadGang() {
     const d = await api("gang/get");
     const el = $("#gang-content");
     if (!d.in_gang) {
+      // Свободное вступление закрыто — показываем только список банд без кнопки "Вступить"
       let listHtml = d.gangs.length > 0 ? d.gangs.map(g => {
         const tagHtml = g.tag ? ` <span class="gang-tag" style="color:${g.tag_color || '#f39c12'};border-color:${g.tag_color || '#f39c12'}">[${escapeHtml(g.tag)}]</span>` : '';
         return `
         <div class="member-row">
           <div style="font-size:22px">${g.emoji}</div>
-          <div style="flex:1"><div style="font-weight:700">${escapeHtml(g.name)}${tagHtml}</div>
-          <div style="font-size:11px;color:var(--hint)">${g.members_count}/10 · казна ${fmtMoney(g.treasury)}₽</div></div>
-          <button class="btn btn-secondary" style="width:auto;padding:8px 14px;margin:0" onclick="joinGang(${g.gang_id})">Вступить</button>
+          <div style="flex:1">
+            <div style="font-weight:700">${escapeHtml(g.name)}${tagHtml}</div>
+            <div style="font-size:11px;color:var(--hint)">${g.members_count}/10 · казна ${fmtMoney(g.treasury)}₽</div>
+          </div>
         </div>`;
       }).join("") : '<p style="color:var(--hint);text-align:center;padding:20px">Банд пока нет</p>';
       el.innerHTML = `
@@ -443,6 +460,9 @@ async function loadGang() {
         <div style="background:var(--bg-2);border-radius:16px;padding:16px;margin-bottom:16px">
           <p style="margin-bottom:12px">Создай свою банду за <b style="color:var(--money)">50 000₽</b></p>
           <button class="btn btn-primary" onclick="showCreateGang()">🚬 Создать банду</button>
+        </div>
+        <div style="background:rgba(82,136,193,.08);border:1px solid rgba(82,136,193,.3);border-radius:12px;padding:12px;margin-bottom:16px;font-size:12px;color:var(--hint);line-height:1.5;">
+          💡 Вступить в банду можно только по приглашению. Лидер или зам должны пригласить тебя через профиль — приглашение придёт в уведомления (🔔).
         </div>
         <h3 class="section-subtitle">Существующие банды</h3>
         ${listHtml}`;
@@ -474,18 +494,39 @@ async function loadGang() {
       </div>`;
     }).join("");
 
+    const myRole = d.my_role;
     const membersHtml = d.members.map(m => {
       const roleClass = `role-${m.role}`;
       const roleName = {leader:"Лидер",deputy:"Зам",member:"Боец"}[m.role];
-      let actionBtn = "";
-      if (d.my_role === "leader" && m.role !== "leader") {
-        if (m.role === "member") actionBtn = `<button class="btn btn-secondary" style="width:auto;padding:4px 8px;font-size:10px;margin:0" onclick="setDeputy(${m.user_id}, 'promote')">Зам</button>`;
-        else actionBtn = `<button class="btn btn-secondary" style="width:auto;padding:4px 8px;font-size:10px;margin:0" onclick="setDeputy(${m.user_id}, 'demote')">-Зам</button>`;
+      const isMe = m.user_id === state.player.user_id;
+
+      let actionBtns = "";
+
+      // Для лидера: promote/demote у не-лидера
+      if (myRole === "leader" && m.role !== "leader") {
+        if (m.role === "member") {
+          actionBtns += `<button class="btn btn-secondary" style="width:auto;padding:4px 8px;font-size:10px;margin:0 0 0 4px" onclick="setDeputy(${m.user_id}, 'promote')">Зам</button>`;
+        } else if (m.role === "deputy") {
+          actionBtns += `<button class="btn btn-secondary" style="width:auto;padding:4px 8px;font-size:10px;margin:0 0 0 4px" onclick="setDeputy(${m.user_id}, 'demote')">-Зам</button>`;
+        }
       }
+
+      // Кнопка «Кикнуть»
+      // Лидер может кикнуть любого кроме себя (и кроме другого лидера — но лидер один)
+      // Зам может кикнуть только member (не лидера, не зама)
+      const canKick =
+        (myRole === "leader" && m.role !== "leader") ||
+        (myRole === "deputy" && m.role === "member");
+
+      if (canKick && !isMe) {
+        const nickForJs = jsAttr(m.nickname);
+        actionBtns += `<button class="btn btn-secondary" style="width:auto;padding:4px 8px;font-size:10px;margin:0 0 0 4px;color:var(--danger);border-color:rgba(231,76,60,.4);" onclick='kickMember(${m.user_id}, ${nickForJs})'>👢 Кик</button>`;
+      }
+
       return `<div class="member-row">
-        <div style="flex:1"><b>${formatNickWithTag(m.nickname, m.gang_tag, m.gang_tag_color)}</b> · ур. ${m.level}</div>
+        <div style="flex:1;min-width:0"><b>${formatNickWithTag(m.nickname, m.gang_tag, m.gang_tag_color)}</b> · ур. ${m.level}</div>
         <span class="member-role ${roleClass}">${roleName}</span>
-        ${actionBtn}
+        ${actionBtns}
       </div>`;
     }).join("");
 
@@ -514,9 +555,17 @@ async function loadGang() {
     const tagBanner = g.tag
       ? `<div style="text-align:center;font-weight:900;font-size:18px;margin-top:4px;"><span class="gang-tag" style="color:${g.tag_color || '#f39c12'};border-color:${g.tag_color || '#f39c12'};font-size:1em;padding:2px 8px;">[${escapeHtml(g.tag)}]</span></div>`
       : '';
-    const tagEditBtn = d.my_role === "leader"
+    const tagEditBtn = myRole === "leader"
       ? `<button class="btn btn-secondary" onclick="showSetTag()" style="margin:8px 0">🏷 ${g.tag ? `Изменить тег [${escapeHtml(g.tag)}]` : 'Установить тег банды'}</button>`
       : '';
+
+    // Нижняя кнопка: лидер → удалить банду, остальные → покинуть
+    let bottomBtn = "";
+    if (myRole === "leader") {
+      bottomBtn = `<button class="btn btn-secondary" style="margin-top:12px;background:rgba(231,76,60,.15);color:var(--danger);border:1px solid rgba(231,76,60,.4);font-weight:800;" onclick="disbandGang()">🗑 Удалить банду</button>`;
+    } else {
+      bottomBtn = `<button class="btn btn-secondary" style="margin-top:12px" onclick="leaveGang()">🚪 Покинуть банду</button>`;
+    }
 
     el.innerHTML = `
       <div class="gang-banner">
@@ -545,7 +594,7 @@ async function loadGang() {
 
       <h3 class="section-subtitle">👥 Участники (${d.members.length}/10)</h3>
       ${membersHtml}
-      ${d.my_role !== "leader" ? `<button class="btn btn-secondary" style="margin-top:12px" onclick="leaveGang()">🚪 Покинуть банду</button>` : ''}
+      ${bottomBtn}
     `;
 
     if (window._gangTimer) clearInterval(window._gangTimer);
@@ -565,13 +614,13 @@ function showSetTag() {
   const colors = ["#f39c12", "#e74c3c", "#e91e63", "#9b59b6", "#3498db", "#1abc9c", "#2ecc71", "#f1c40f", "#ecf0f1", "#95a5a6"];
   const currentTag = state.player && state.player.gang_tag ? state.player.gang_tag : "";
   let currentColor = "#f39c12";
-  
+
   const gangs = document.querySelector(".gang-banner");
   if (gangs) {
       const tagSpan = gangs.querySelector(".gang-tag");
       if (tagSpan && tagSpan.style.color) currentColor = tagSpan.style.color;
   }
-  
+
   window._selectedTagColor = currentColor;
 
   const colorsHtml = colors.map(c => `
@@ -583,7 +632,7 @@ function showSetTag() {
     <h2>🏷 Тег банды</h2>
     <p style="color:var(--hint);font-size:13px;margin:12px 0">Ровно 3 буквы (A-Z или А-Я)</p>
     <input id="gang-tag-input" type="text" maxlength="3" placeholder="XXX" value="${currentTag}" style="width:100%;padding:14px;background:var(--bg-3);border:none;border-radius:10px;color:#fff;font-size:22px;text-align:center;letter-spacing:8px;text-transform:uppercase;font-weight:900;">
-    
+
     <p style="color:var(--hint);font-size:13px;margin:16px 0 8px;">Цвет тега:</p>
     <div style="display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-bottom:16px;">
       ${colorsHtml}
@@ -602,7 +651,7 @@ async function setGangTag() {
   }
   try {
     await api("gang/set_tag", { tag, color });
-    closeModal(); 
+    closeModal();
     toast(`🏷 Тег установлен: [${tag}]`, "success");
     refreshPlayer().then(() => loadGang());
   } catch(e) { toast(e.message, "error"); }

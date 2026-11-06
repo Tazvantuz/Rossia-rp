@@ -28,7 +28,6 @@ def setup_routes(app):
     R.add_post("/api/admin/delete", api_admin.api_admin_delete)
     R.add_post("/api/admin/set_level", api_admin.api_admin_set_level)
 
-    # ═══ ПРОМОКОДЫ ═══
     R.add_post("/api/promo/apply", api_economy.api_promo_apply)
     R.add_post("/api/admin/promo/list", api_admin.api_admin_promo_list)
     R.add_post("/api/admin/promo/create", api_admin.api_admin_promo_create)
@@ -67,7 +66,6 @@ def setup_routes(app):
     R.add_post("/api/gang/shop/items", api_economy.api_gang_shop_items)
     R.add_post("/api/gang/shop/buy", api_economy.api_gang_shop_buy)
 
-    # ═══ БЛЭКДЖЕК ═══
     R.add_post("/api/casino/blackjack/state", api_economy.api_blackjack_state)
     R.add_post("/api/casino/blackjack/start", api_economy.api_blackjack_start)
     R.add_post("/api/casino/blackjack/hit", api_economy.api_blackjack_hit)
@@ -75,7 +73,6 @@ def setup_routes(app):
     R.add_post("/api/casino/blackjack/double", api_economy.api_blackjack_double)
     R.add_post("/api/casino/blackjack/cancel", api_economy.api_blackjack_cancel)
 
-    # ═══ КОЛЕСО ФОРТУНЫ ═══
     R.add_post("/api/casino/wheel/play", api_economy.api_wheel_play)
 
     R.add_post("/api/location", api_social.api_location)
@@ -108,6 +105,8 @@ def setup_routes(app):
     R.add_post("/api/gang/create", api_gang.api_gang_create)
     R.add_post("/api/gang/join", api_gang.api_gang_join)
     R.add_post("/api/gang/leave", api_gang.api_gang_leave)
+    R.add_post("/api/gang/kick", api_gang.api_gang_kick)
+    R.add_post("/api/gang/disband", api_gang.api_gang_disband)
     R.add_post("/api/gang/set_tag", api_gang.api_gang_set_tag)
     R.add_post("/api/gang/set_deputy", api_gang.api_gang_set_deputy)
     R.add_post("/api/gang/deposit", api_gang.api_gang_deposit)
