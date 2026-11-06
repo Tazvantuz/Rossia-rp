@@ -530,6 +530,22 @@ function renderPlayer() {
   startTimers();
   renderCreditBanner();
   updateNextStepBanner();
+
+  // Кнопка бонуса за ТГ
+  const tgBtn = document.getElementById("tg-bonus-btn");
+  if (tgBtn) {
+    if (p.tg_bonus_claimed) {
+      tgBtn.disabled = true;
+      tgBtn.style.opacity = "0.5";
+      tgBtn.style.cursor = "not-allowed";
+      tgBtn.textContent = "✅ Бонус за ТГ получен";
+    } else {
+      tgBtn.disabled = false;
+      tgBtn.style.opacity = "1";
+      tgBtn.style.cursor = "pointer";
+      tgBtn.innerHTML = '📢 Бонус за Telegram <span class="badge" style="background:#2ecc71;color:#fff;">10 000₽</span>';
+    }
+  }
 }
 
 let timerInterval = null;

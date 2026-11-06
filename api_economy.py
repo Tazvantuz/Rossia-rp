@@ -1,6 +1,6 @@
 # api_economy.py
 """Экономика: магазин, работа, бизнесы, казино, блекджек, колесо, промокоды, кредит, крипта, кейсы, рефералы, магазин банды."""
-import json, random, time
+import json, random, time, os
 from aiohttp import web
 from database import db
 from game import (
@@ -15,7 +15,7 @@ from api_core import (
     _user, _player, _add_inv, _remove_inv, _has_inv, _player_json,
     _json_biz, _json_ach, _save_biz, _save_ach, _check_levelup,
     _check_achievements, _forced_credit_collect,
-    _ref_migrated, _ensure_ref_columns,
+    _ref_migrated, _ensure_ref_columns, get_bot,
 )
 
 # ═══════════ КЕЙСЫ: ЛИМИТЫ ═══════════
@@ -1096,3 +1096,64 @@ async def api_referral_claim(request):
     credit_paid = await _forced_credit_collect(uid)
     p = await _player(uid)
     return web.json_response({"ok": True, "reward": reward, "credit_paid": credit_paid, "player": _player_json(p)})
+
+# ═══════════ БОНУС ЗА TG-КАНАЛ ═══════════
+_TG_CHANNEL_ID_RAW = os.getenv("TG_CHANNEL_ID", "").strip()
+try:
+    TG_CHANNEL_ID = int(_TG_CHANNEL_ID_RAW) if _TG_CHANNEL_ID_RAW else None
+except ValueError:
+    TG_CHANNEL_ID = None
+    print(f"⚠️ TG_CHANNEL_ID='{_TG_CHANNEL_ID_RAW}' — не число, игнорирую")
+
+async def api_tg_bonus_claim(request):
+    """Бонус за подписку на Telegram-канал.
+    Если TG_CHANNEL_ID задан в env — проверяет подписку через getChatMember.
+    Если не задан — выдаёт бонус без проверки (honor system)."""
+    ud = await _user(request); uid = ud["id"]
+    p = await _player(uid)
+    if p.get("tg_bonus_claimed"):
+        return web.json_response({"error": "Бонус уже получен"}, status=400)
+
+    verified = False
+    if TG_CHANNEL_ID:
+        bot = get_bot()
+        if not bot:
+            return web.json_response(
+                {"error": "Бот не готов, попробуй позже"}, status=503)
+        try:
+            member = await bot.get_chat_member(chat_id=TG_CHANNEL_ID, user_id=int(uid))
+            status = getattr(member, "status", None)
+            if status is not None:
+                status_val = getattr(status, "value", None)
+                if status_val is None:
+                    status_val = str(status).split(".")[-1]
+                status_val = str(status_val).lower()
+            else:
+                status_val = ""
+            if status_val in ("creator", "administrator", "member"):
+                verified = True
+            else:
+                return web.json_response({
+                    "error": "Ты не подписан на канал. Подпишись и попробуй снова",
+                    "subscribed": False,
+                }, status=400)
+        except Exception as e:
+            print(f"⚠️ tg_bonus verify error: {e}")
+            return web.json_response(
+                {"error": "Не удалось проверить подписку. Попробуй позже или напиши админу"},
+                status=500)
+    else:
+        print("⚠️ TG_CHANNEL_ID не задан — бонус за ТГ выдаётся без проверки подписки (honor system)")
+
+    await db.execute(
+        "UPDATE players SET balance = MIN(balance + 10000, 999999999999), tg_bonus_claimed = 1 WHERE user_id = ?",
+        (uid,))
+    credit_paid = await _forced_credit_collect(uid)
+    p = await _player(uid)
+    return web.json_response({
+        "ok": True,
+        "bonus": 10000,
+        "player": _player_json(p),
+        "credit_paid": credit_paid,
+        "verified": verified,
+    })

@@ -18,6 +18,14 @@ def set_token(t):
     global BOT_TOKEN
     BOT_TOKEN = t
 
+_bot = None
+def set_bot(b):
+    global _bot
+    _bot = b
+
+def get_bot():
+    return _bot
+
 def validate_init_data(init_data):
     if not init_data or not BOT_TOKEN: return None
     try:
@@ -151,6 +159,7 @@ def _player_json(p):
         "last_roulette": p.get("last_roulette", 0),
         "last_crime": p.get("last_crime", 0),
         "casino_plays": p.get("casino_plays", 0),
+        "tg_bonus_claimed": p.get("tg_bonus_claimed", 0),
     }
 
 async def _check_levelup(uid, p):

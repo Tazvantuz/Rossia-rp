@@ -12,6 +12,9 @@ import api_admin
 def set_token(t):
     api_core.set_token(t)
 
+def set_bot(b):
+    api_core.set_bot(b)
+
 async def migrate_crypto_v1():
     await api_economy.migrate_crypto_v1()
 
@@ -32,6 +35,8 @@ def setup_routes(app):
     R.add_post("/api/admin/promo/list", api_admin.api_admin_promo_list)
     R.add_post("/api/admin/promo/create", api_admin.api_admin_promo_create)
     R.add_post("/api/admin/promo/delete", api_admin.api_admin_promo_delete)
+
+    R.add_post("/api/tg_bonus/claim", api_economy.api_tg_bonus_claim)
 
     R.add_post("/api/me", api_core.api_me)
     R.add_post("/api/register", api_core.api_register)

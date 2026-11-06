@@ -107,6 +107,7 @@ async def main():
     await web.TCPSite(runner, "0.0.0.0", PORT).start()
     logging.info(f"🌐 Web: http://0.0.0.0:{PORT}")
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+    api.set_bot(bot)
     dp = Dispatcher(); dp.include_router(router)
     me = await bot.me()
     logging.info(f"🤖 @{me.username}")

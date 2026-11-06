@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS players (
     owned_items_count INTEGER DEFAULT 0,
     is_bot INTEGER DEFAULT 0,
     seeds INTEGER DEFAULT 0,
+    tg_bonus_claimed INTEGER DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS inventory (
@@ -201,6 +202,7 @@ class Database:
             "seeds INTEGER DEFAULT 0",
             "hair_id TEXT",
             "shoes_id TEXT",
+            "tg_bonus_claimed INTEGER DEFAULT 0",
         ]
         for m in migrations:
             try:

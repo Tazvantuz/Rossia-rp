@@ -23,6 +23,55 @@ async function claimRoulette() {
   catch(e) { toast(e.message, "error"); }
 }
 
+// ══════════════════════════════════════════════════════════════
+//  БОНУС ЗА ПОДПИСКУ НА TELEGRAM-КАНАЛ
+// ══════════════════════════════════════════════════════════════
+const TG_BONUS_CHANNEL_URL = "https://t.me/+Wnms2IVth_s3ZWQy";
+
+function claimTgBonus() {
+  const p = state.player;
+  if (!p) return;
+  if (p.tg_bonus_claimed) {
+    toast("Бонус уже получен", "error");
+    return;
+  }
+  openModal(`
+    <h2 style="text-align:center;margin-bottom:8px;">📢 Бонус за подписку</h2>
+    <div style="text-align:center;padding:16px 0;">
+      <div style="font-size:64px;line-height:1;margin-bottom:8px;">🎁</div>
+      <div style="font-size:32px;font-weight:900;color:var(--money);">10 000₽</div>
+      <div style="color:var(--hint);margin-top:10px;font-size:13px;line-height:1.5;">
+        Подпишись на наш Telegram-канал<br>и получи бонус на баланс
+      </div>
+    </div>
+    <a href="${TG_BONUS_CHANNEL_URL}" rel="noopener"
+       onclick="event.preventDefault(); openTgLink('${TG_BONUS_CHANNEL_URL}');"
+       class="btn btn-primary"
+       style="display:block;text-align:center;text-decoration:none;background:linear-gradient(135deg,#0088cc,#00a8e8);color:#fff;font-weight:800;">
+      📢 Подписаться на канал
+    </a>
+    <button class="btn btn-primary" style="margin-top:8px;background:linear-gradient(135deg,#27ae60,#229954);" onclick="claimTgBonusConfirm()">
+      ✅ Я подписался — получить бонус
+    </button>
+    <button class="btn btn-secondary" onclick="closeModal()">Отмена</button>
+  `);
+}
+
+async function claimTgBonusConfirm() {
+  try {
+    const d = await api("tg_bonus/claim");
+    state.player = d.player;
+    renderPlayer();
+    closeModal();
+    toast(`🎉 +${fmtMoney(d.bonus)}₽ за подписку!`, "success");
+    checkCreditPaid(d);
+    if (tg) tg.HapticFeedback?.notificationOccurred("success");
+  } catch(e) {
+    toast(e.message, "error");
+    if (tg) tg.HapticFeedback?.notificationOccurred("error");
+  }
+}
+
 async function doCrime() {
   try { const d = await api("crime"); state.player = d.player; renderPlayer(); toast(d.result, d.success?"success":"error"); }
   catch(e) { toast(e.message, "error"); }
@@ -96,7 +145,6 @@ async function viewPlayer(uid) {
     const onlineInfo = d.is_online
       ? _onlineHtml(true)
       : `${_onlineHtml(false)}${d.last_seen ? ` · <span class="last-seen">🕐 Был(а) в сети: ${formatLastSeen(d.last_seen)}</span>` : ''}`;
-    // Безопасные литералы для inline-обработчиков (защита от ников с ' " < >)
     const nickJs = jsAttr(d.nickname);
     const tagJs  = jsAttr(d.gang_tag || '');
     const colJs  = jsAttr(d.gang_tag_color || '');
@@ -163,7 +211,7 @@ async function showTradeDetailsModal(tid) {
 
     openModal(`
       <h2 style="text-align:center;margin-bottom:16px">🤝 Трейд от ${formatNickWithTag(d.from_nickname, d.from_gang_tag, d.from_gang_tag_color)}</h2>
-      
+
       <div style="background:var(--bg-3);padding:12px;border-radius:10px;margin-bottom:12px;">
         <p style="font-weight:700;margin-bottom:6px;color:var(--success);">📥 Он даёт тебе:</p>
         ${d.give_money > 0 ? `<div style="font-size:16px;font-weight:900;color:var(--money);margin-bottom:8px;">💰 ${fmtMoney(d.give_money)}₽</div>` : ''}
@@ -185,13 +233,13 @@ async function showTradeDetailsModal(tid) {
 }
 
 async function acceptTrade(tid) {
-  try { 
-    const d = await api("trade/accept", {trade_id: tid}); 
-    state.player = d.player; 
-    renderPlayer(); 
-    toast("✅ Трейд принят", "success"); 
+  try {
+    const d = await api("trade/accept", {trade_id: tid});
+    state.player = d.player;
+    renderPlayer();
+    toast("✅ Трейд принят", "success");
     closeModal();
-    loadPeople(); 
+    loadPeople();
     if (typeof showNotificationsSilent === 'function') showNotificationsSilent();
     const modal = document.getElementById("modal");
     if (modal && !modal.classList.contains("hidden")) showNotifications();
@@ -200,9 +248,9 @@ async function acceptTrade(tid) {
 }
 
 async function declineTrade(tid) {
-  try { 
-    await api("trade/decline", {trade_id: tid}); 
-    toast("❌ Отклонён"); 
+  try {
+    await api("trade/decline", {trade_id: tid});
+    toast("❌ Отклонён");
     closeModal();
     loadPeople();
     if (typeof showNotificationsSilent === 'function') showNotificationsSilent();
