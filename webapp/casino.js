@@ -7,11 +7,21 @@ state.rouletteChoice = 'red';
 state.rouletteNumber = null;
 
 // ═══════════ МОНЕТКА: накопительный угол ═══════════
-// Каждый бросок добавляет +1800° (5 оборотов) к текущему углу
-// плюс доводит до 0° (Орёл) или 180° (Решка). Так CSS-transition
-// всегда видит изменение transform и запускается заново — даже
-// если два раза подряд выпал «Орёл».
-state.coinAngle = 0;
+state.coinAngle = state.coinAngle || 0;
+
+// ═══════════ КОЛЕСО ФОРТУНЫ ═══════════
+const WHEEL_SECTORS = [1, 3, 1, 5, 1, 3, 10, 1, 3, 5, 1, 3, 20, 1, 3, 5, 10, 1, 5, 1];
+const WHEEL_MULTIPLIERS = {1: 2, 3: 4, 5: 6, 10: 11, 20: 21};
+const WHEEL_COLORS = {
+  1: "#4a5568",
+  3: "#27ae60",
+  5: "#3498db",
+  10: "#9b59b6",
+  20: "#f39c12",
+};
+state.wheelAngle = state.wheelAngle || 0;
+state.wheelChoice = state.wheelChoice || 1;
+state.wheelLastResult = state.wheelLastResult || null;
 
 // Флаг «идёт запрос/анимация» — блокирует повторные клики
 state.casinoBusy = false;
@@ -66,22 +76,32 @@ function renderCasino() {
     el.classList.toggle('active', el.dataset.game === state.casinoGame);
   });
 
-  // Управление видимостью общего bet-panel и result
   const isBJ = state.casinoGame === 'blackjack';
+  const isWheel = state.casinoGame === 'wheel';
+
+  // bet-panel виден для всего, кроме блекджека (у него свой ввод ставки)
   const betPanel = document.querySelector('.bet-panel');
-  const resultEl = document.getElementById('casino-result');
   if (betPanel) betPanel.style.display = isBJ ? 'none' : '';
+
+  // Общий result-баннер не нужен для блекджека и колеса
+  const resultEl = document.getElementById('casino-result');
   if (resultEl) {
-    resultEl.style.display = isBJ ? 'none' : '';
+    const hideResult = isBJ || isWheel;
+    resultEl.style.display = hideResult ? 'none' : '';
     resultEl.textContent = '';
     resultEl.style.color = '#fff';
   }
+
+  // Текст кнопки PLAY: для колеса "КРУТИТЬ"
+  const playBtn = document.getElementById('btn-play-casino');
+  if (playBtn) {
+    playBtn.textContent = isWheel ? '🎡 КРУТИТЬ' : '🎲 ИГРАТЬ';
+  }
+
   stage.classList.toggle('bj-stage', isBJ);
+  stage.classList.toggle('wheel-stage', isWheel);
 
   if (state.casinoGame === 'coin') {
-    // Монета НЕ кликабельна — игру запускает только кнопка «Играть».
-    // Текущий угол монеты сохраняется через inline-style,
-    // чтобы при возврате из другой игры монета осталась в нужной позиции.
     stage.innerHTML = `
       <div style="display:flex;gap:8px;margin-bottom:15px;width:100%;max-width:300px;">
         <button class="btn ${state.coinChoice==='Орёл'?'btn-primary':'btn-secondary'}" style="flex:1;" onclick="state.coinChoice='Орёл';renderCasino()">🦅 Орёл</button>
@@ -132,14 +152,19 @@ function renderCasino() {
     `;
   } else if (state.casinoGame === 'blackjack') {
     renderBlackjackStage(stage);
+  } else if (state.casinoGame === 'wheel') {
+    renderWheelStage(stage);
   }
 }
 
 async function playCasino() {
-  // Уже идёт запрос/анимация — игнорируем клик (без toast, чтобы не спамить)
+  // Для колеса — отдельная логика
+  if (state.casinoGame === 'wheel') {
+    return spinWheel();
+  }
+
   if (state.casinoBusy) return;
 
-  // КД ещё не прошёл — показываем таймер
   if (state.casinoLocked && Date.now() - state.casinoLockTime < 5000) {
     toast(`⏳ Кд ${Math.ceil((state.casinoLockTime + 5000 - Date.now())/1000)}с`, "error");
     return;
@@ -155,8 +180,6 @@ async function playCasino() {
   resEl.textContent = "Крутим...";
   resEl.style.color = "#fff";
 
-  // Ставим лок СРАЗУ (как на бэкенде: last_casino = now при старте игры).
-  // Кнопку не дизейблим — иначе клик по ней не проходит и toast с КД не покажется.
   state.casinoBusy = true;
   state.casinoLocked = true;
   state.casinoLockTime = Date.now();
@@ -178,12 +201,11 @@ async function playCasino() {
       const coin = document.getElementById('coin-el');
       if (coin) {
         const isHeads = d.result.includes("Орёл");
-        // Накопительный угол: текущий + 5 оборотов + доводка до нужной стороны.
         const current = state.coinAngle || 0;
-        const currentMod = ((current % 360) + 360) % 360;   // 0..359
-        const targetMod = isHeads ? 0 : 180;                 // 0 = Орёл, 180 = Решка
-        const delta = (targetMod - currentMod + 360) % 360;  // сколько добавить
-        const target = current + 1800 + delta;               // всегда > текущего
+        const currentMod = ((current % 360) + 360) % 360;
+        const targetMod = isHeads ? 0 : 180;
+        const delta = (targetMod - currentMod + 360) % 360;
+        const target = current + 1800 + delta;
         state.coinAngle = target;
         coin.style.transform = `rotateY(${target}deg)`;
       }
@@ -233,8 +255,220 @@ async function playCasino() {
   } catch(e) {
     resEl.textContent = e.message || "Ошибка сервера";
     toast("Ошибка казино: " + e.message, "error");
-    // Игра не состоялась (бэкенд вернул ошибку ДО обновления last_casino) —
-    // снимаем лок, чтобы можно было сразу попробовать снова.
+    state.casinoLocked = false;
+    state.casinoLockTime = 0;
+  } finally {
+    state.casinoBusy = false;
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  КОЛЕСО ФОРТУНЫ
+// ══════════════════════════════════════════════════════════════
+
+function buildWheelSVG(chosenValue) {
+  const cx = 150, cy = 150, r = 138;
+  const N = WHEEL_SECTORS.length;
+  const sectorAngle = 360 / N;
+  const half = sectorAngle / 2;
+
+  let svg = `<svg viewBox="0 0 300 300" width="300" height="300" class="wheel-svg">`;
+
+  // Градиенты
+  svg += `<defs>
+    <radialGradient id="wheelHub" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#e74c3c"/>
+      <stop offset="100%" stop-color="#8b0000"/>
+    </radialGradient>
+    <linearGradient id="wheelRim" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f39c12"/>
+      <stop offset="50%" stop-color="#ffd700"/>
+      <stop offset="100%" stop-color="#b8860b"/>
+    </linearGradient>
+  </defs>`;
+
+  // Внешний золотой обод
+  svg += `<circle cx="${cx}" cy="${cy}" r="${r + 9}" fill="url(#wheelRim)"/>`;
+  svg += `<circle cx="${cx}" cy="${cy}" r="${r + 2}" fill="#1a0f2e"/>`;
+
+  // Сектора
+  WHEEL_SECTORS.forEach((val, i) => {
+    const centerDeg = -90 + i * sectorAngle;
+    const startDeg = centerDeg - half;
+    const endDeg = centerDeg + half;
+    const startRad = startDeg * Math.PI / 180;
+    const endRad = endDeg * Math.PI / 180;
+    const x1 = cx + r * Math.cos(startRad);
+    const y1 = cy + r * Math.sin(startRad);
+    const x2 = cx + r * Math.cos(endRad);
+    const y2 = cy + r * Math.sin(endRad);
+    const color = WHEEL_COLORS[val];
+    const isChosen = (chosenValue !== null && val === chosenValue);
+    const strokeColor = isChosen ? '#fff' : '#0a0a0a';
+    const strokeWidth = isChosen ? 2.5 : 1.2;
+    const fillOpacity = (i % 2 === 0) ? 1 : 0.88;
+
+    svg += `<path d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 0,1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${color}" fill-opacity="${fillOpacity}" stroke="${strokeColor}" stroke-width="${strokeWidth}"/>`;
+    if (isChosen) {
+      svg += `<path d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 0,1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="rgba(255,255,255,0.15)" pointer-events="none"/>`;
+    }
+  });
+
+  // Метки (без поворота — читаются горизонтально)
+  WHEEL_SECTORS.forEach((val, i) => {
+    const centerDeg = -90 + i * sectorAngle;
+    const centerRad = centerDeg * Math.PI / 180;
+    const labelR = r * 0.76;
+    const lx = cx + labelR * Math.cos(centerRad);
+    const ly = cy + labelR * Math.sin(centerRad);
+    svg += `<text x="${lx.toFixed(2)}" y="${ly.toFixed(2)}" text-anchor="middle" dominant-baseline="central" font-size="18" font-weight="900" font-family="Arial, sans-serif" fill="#fff" stroke="#000" stroke-width="2.5" paint-order="stroke fill">${val}</text>`;
+    const multR = r * 0.52;
+    const mx = cx + multR * Math.cos(centerRad);
+    const my = cy + multR * Math.sin(centerRad);
+    svg += `<text x="${mx.toFixed(2)}" y="${my.toFixed(2)}" text-anchor="middle" dominant-baseline="central" font-size="10" font-weight="700" font-family="Arial, sans-serif" fill="#fff" opacity="0.85">x${WHEEL_MULTIPLIERS[val]}</text>`;
+  });
+
+  // Центральный хаб
+  svg += `<circle cx="${cx}" cy="${cy}" r="34" fill="url(#wheelHub)" stroke="url(#wheelRim)" stroke-width="3"/>`;
+  svg += `<circle cx="${cx}" cy="${cy}" r="26" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1"/>`;
+  svg += `<text x="${cx}" y="${cy - 4}" text-anchor="middle" dominant-baseline="central" font-size="13" font-weight="900" fill="#fff" letter-spacing="0.5">21</text>`;
+  svg += `<text x="${cx}" y="${cy + 11}" text-anchor="middle" dominant-baseline="central" font-size="9" font-weight="700" fill="#ffd700" letter-spacing="0.5">★</text>`;
+
+  svg += `</svg>`;
+  return svg;
+}
+
+function renderWheelStage(stage) {
+  const choiceButtonsHtml = Object.keys(WHEEL_MULTIPLIERS).map(valStr => {
+    const v = parseInt(valStr);
+    const color = WHEEL_COLORS[v];
+    const isActive = state.wheelChoice === v;
+    return `<button class="wheel-choice ${isActive ? 'active' : ''}" style="--wc:${color}" onclick="pickWheelChoice(${v})">
+      <div class="wc-val">${v}</div>
+      <div class="wc-mult">x${WHEEL_MULTIPLIERS[v]}</div>
+    </button>`;
+  }).join('');
+
+  let resultHtml = '';
+  if (state.wheelLastResult) {
+    const r = state.wheelLastResult;
+    const cls = r.won ? 'win' : 'lose';
+    const msg = r.won
+      ? `🎉 ПОБЕДА! Выпало ${r.sector_value} — выплата ${fmtMoney(r.win)}₽ (x${r.multiplier})`
+      : `😢 Выпало ${r.sector_value}. Ты ставил на ${r.choice} (x${WHEEL_MULTIPLIERS[r.choice]})`;
+    resultHtml = `<div class="wheel-result ${cls}">${msg}</div>`;
+  }
+
+  stage.innerHTML = `
+    <div class="wheel-wrap">
+      <div class="wheel-pointer"></div>
+      <div class="wheel-rotator" id="wheel-rotator" style="transform: rotate(${state.wheelAngle || 0}deg)">
+        ${buildWheelSVG(state.wheelChoice)}
+      </div>
+    </div>
+    <div class="wheel-choices">${choiceButtonsHtml}</div>
+    ${resultHtml}
+  `;
+}
+
+function pickWheelChoice(val) {
+  state.wheelChoice = val;
+  state.wheelLastResult = null;
+  renderCasino();
+}
+
+async function spinWheel() {
+  if (state.casinoBusy) {
+    toast("🎡 Уже крутится...", "error");
+    return;
+  }
+  if (state.casinoLocked && Date.now() - state.casinoLockTime < 5000) {
+    toast(`⏳ Кд ${Math.ceil((state.casinoLockTime + 5000 - Date.now())/1000)}с`, "error");
+    return;
+  }
+  if (!state.wheelChoice) {
+    toast("Выбери сектор", "error");
+    return;
+  }
+  const betInput = document.getElementById("bet-input");
+  const bet = parseInt(betInput?.value) || 0;
+  if (bet <= 0) { toast("Введи ставку", "error"); return; }
+  if (bet > state.player.balance) { toast("Не хватает денег", "error"); return; }
+
+  state.casinoBusy = true;
+  state.casinoLocked = true;
+  state.casinoLockTime = Date.now();
+  state.wheelLastResult = null;
+
+  // Убираем прошлый баннер результата, если был
+  const prevResult = document.querySelector('#casino-stage .wheel-result');
+  if (prevResult) prevResult.remove();
+
+  try {
+    const d = await api("casino/wheel/play", { bet, choice: state.wheelChoice });
+
+    // Анимация: вычисляем угол так, чтобы сектор i (с центра в -90+i*18)
+    // оказался под указателем (на -90°). Требуемый поворот = -i*18°.
+    // Добавляем 6 полных оборотов и доводку от текущего угла.
+    const i = d.sector_index;
+    const N = WHEEL_SECTORS.length;
+    const sectorAngle = 360 / N;
+    const targetMod = (((-i * sectorAngle) % 360) + 360) % 360;
+    const current = state.wheelAngle || 0;
+    const currentMod = ((current % 360) + 360) % 360;
+    const delta = (targetMod - currentMod + 360) % 360;
+    const finalAngle = current + 360 * 6 + delta;
+    state.wheelAngle = finalAngle;
+
+    const rotator = document.getElementById('wheel-rotator');
+    if (rotator) {
+      rotator.style.transition = 'transform 4.5s cubic-bezier(0.15, 0.8, 0.25, 1)';
+      rotator.style.transform = `rotate(${finalAngle}deg)`;
+    }
+
+    await new Promise(r => setTimeout(r, 4600));
+
+    if (d.player) {
+      state.player = d.player;
+      document.getElementById('money').textContent = fmtMoney(state.player.balance);
+    }
+
+    state.wheelLastResult = {
+      won: d.won,
+      sector_value: d.sector_value,
+      choice: d.choice,
+      win: d.win,
+      multiplier: d.multiplier,
+    };
+
+    // Показываем результат под колесом (без полной перерисовки — сохраняем позицию)
+    if (state.casinoGame === 'wheel') {
+      const stage = document.getElementById('casino-stage');
+      if (stage) {
+        const old = stage.querySelector('.wheel-result');
+        if (old) old.remove();
+        const cls = d.won ? 'win' : 'lose';
+        const msg = d.won
+          ? `🎉 ПОБЕДА! Выпало ${d.sector_value} — выплата ${fmtMoney(d.win)}₽ (x${d.multiplier})`
+          : `😢 Выпало ${d.sector_value}. Ты ставил на ${d.choice} (x${WHEEL_MULTIPLIERS[d.choice]})`;
+        const div = document.createElement('div');
+        div.className = `wheel-result ${cls}`;
+        div.textContent = msg;
+        const choices = stage.querySelector('.wheel-choices');
+        if (choices) choices.after(div);
+        else stage.appendChild(div);
+      }
+    }
+
+    if (d.won) {
+      if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+      if (tg) tg.HapticFeedback?.notificationOccurred("success");
+    } else {
+      if (navigator.vibrate) navigator.vibrate(200);
+      if (tg) tg.HapticFeedback?.notificationOccurred("error");
+    }
+  } catch(e) {
+    toast(e.message, "error");
     state.casinoLocked = false;
     state.casinoLockTime = 0;
   } finally {
@@ -324,6 +558,10 @@ function renderBlackjackStage(stage) {
           <button onclick="bjSetBet(5000)">5К</button>
           <button onclick="bjSetBet('max')">MAX</button>
         </div>
+        <div class="bj-quick-bets">
+          <button onclick="bjHalveBet()">➗ ÷2</button>
+          <button onclick="bjDoubleBet()">✖️ x2</button>
+        </div>
         <button class="bj-start-btn" onclick="bjStart()">🃏 РАЗДАТЬ</button>
       </div>
     `;
@@ -394,6 +632,20 @@ function bjSetBet(v) {
   if (!inp) return;
   if (v === 'max') inp.value = state.player.balance;
   else inp.value = v;
+}
+
+function bjDoubleBet() {
+  const inp = document.getElementById('bj-bet-input');
+  if (!inp) return;
+  const cur = parseInt(inp.value) || 0;
+  inp.value = Math.max(1, cur * 2);
+}
+
+function bjHalveBet() {
+  const inp = document.getElementById('bj-bet-input');
+  if (!inp) return;
+  const cur = parseInt(inp.value) || 0;
+  inp.value = Math.max(1, Math.floor(cur / 2));
 }
 
 async function bjStart() {

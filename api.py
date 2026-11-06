@@ -69,6 +69,9 @@ def setup_routes(app):
     R.add_post("/api/casino/blackjack/double", api_economy.api_blackjack_double)
     R.add_post("/api/casino/blackjack/cancel", api_economy.api_blackjack_cancel)
 
+    # ═══ КОЛЕСО ФОРТУНЫ ═══
+    R.add_post("/api/casino/wheel/play", api_economy.api_wheel_play)
+
     R.add_post("/api/location", api_social.api_location)
     R.add_post("/api/move", api_social.api_move)
     R.add_post("/api/player_view", api_social.api_player_view)

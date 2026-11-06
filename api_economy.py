@@ -1,5 +1,5 @@
 # api_economy.py
-"""Экономика: магазин, работа, бизнесы, казино, блекджек, кредит, крипта, кейсы, рефералы, магазин банды."""
+"""Экономика: магазин, работа, бизнесы, казино, блекджек, колесо, кредит, крипта, кейсы, рефералы, магазин банды."""
 import json, random, time
 from aiohttp import web
 from database import db
@@ -65,7 +65,6 @@ async def migrate_crypto_v1():
 
 # ═══════════ ХЕЛПЕР: ЛИМИТЫ КЕЙСОВ ═══════════
 async def _ensure_system_stats_table():
-    """Гарантированно создаёт таблицу system_stats, если её нет (на случай если миграция не сработала)."""
     try:
         await db.execute(
             "CREATE TABLE IF NOT EXISTS system_stats (key TEXT PRIMARY KEY, value INTEGER DEFAULT 0)"
@@ -83,13 +82,6 @@ async def _get_case_opened(cid):
         return 0
 
 async def _try_inc_case_opened(cid, limit):
-    """Атомарно увеличивает счётчик открытий кейса, если не превышен лимит.
-    Возвращает новое значение, либо None если лимит исчерпан / ошибка.
-
-    Защита от race condition: одиночный UPDATE с условием value < limit
-    в SQLite сериализуется, поэтому даже при одновременных запросах
-    лимит не может быть превышен.
-    """
     await _ensure_system_stats_table()
     key = f"case_open_{cid}"
     try:
@@ -417,10 +409,62 @@ async def api_casino_play(request):
         ach.append("big_winner")
     return web.json_response({"player": _player_json(p), "win": win_amount, "net": net, "result": result_text, "new_achievements": ach})
 
+# ═══════════ КОЛЕСО ФОРТУНЫ ═══════════
+# 20 секторов: 8x1, 5x3, 4x5, 2x10, 1x20 — редкие разнесены по кругу
+WHEEL_SECTORS = [1, 3, 1, 5, 1, 3, 10, 1, 3, 5, 1, 3, 20, 1, 3, 5, 10, 1, 5, 1]
+WHEEL_MULTIPLIERS = {1: 2, 3: 4, 5: 6, 10: 11, 20: 21}
+
+async def api_wheel_play(request):
+    ud = await _user(request); uid = ud["id"]
+    body = await request.json()
+    try: bet = int(body.get("bet", 0))
+    except: bet = 0
+    try: choice = int(body.get("choice", 0))
+    except: choice = 0
+    if bet <= 0: return web.json_response({"error": "Ставка должна быть > 0"}, status=400)
+    if choice not in WHEEL_MULTIPLIERS:
+        return web.json_response({"error": "Неверный сектор"}, status=400)
+    p = await _player(uid)
+    if p["balance"] < bet: return web.json_response({"error": "Не хватает денег"}, status=400)
+    now_cd = int(time.time())
+    if now_cd - p.get("last_casino", 0) < 5:
+        return web.json_response({"error": f"Кд {5 - (now_cd - p.get('last_casino', 0))}с"}, status=400)
+
+    sector_idx = random.randint(0, len(WHEEL_SECTORS) - 1)
+    sector_value = WHEEL_SECTORS[sector_idx]
+
+    won = (sector_value == choice)
+    win_amount = bet * WHEEL_MULTIPLIERS[choice] if won else 0
+    net = win_amount - bet
+
+    await db.execute(
+        "UPDATE players SET balance=balance+?, casino_plays=casino_plays+1, last_casino=? WHERE user_id=?",
+        (net, now_cd, uid))
+
+    credit_paid = await _forced_credit_collect(uid) if net > 0 else 0
+    p = await _player(uid)
+    ach = await _check_achievements(uid, p)
+    if win_amount >= 100000 and "big_winner" not in _json_ach(p):
+        await _save_ach(uid, _json_ach(p) + ["big_winner"])
+        ach.append("big_winner")
+
+    return web.json_response({
+        "player": _player_json(p),
+        "sector_index": sector_idx,
+        "sector_value": sector_value,
+        "choice": choice,
+        "won": won,
+        "win": win_amount,
+        "net": net,
+        "multiplier": WHEEL_MULTIPLIERS[choice] if won else 0,
+        "new_achievements": ach,
+        "credit_paid": credit_paid,
+    })
+
 # ═══════════ БЛЭКДЖЕК ═══════════
 BJ_SUITS = ["♠", "♥", "♦", "♣"]
 BJ_RANKS = ["A","2","3","4","5","6","7","8","9","10","J","Q","K"]
-BJ_DEALER_STAND = 18  # дилер стоит на 18+ (по ТЗ)
+BJ_DEALER_STAND = 18
 
 def _bj_new_deck():
     deck = [{"rank": r, "suit": s} for s in BJ_SUITS for r in BJ_RANKS]
@@ -428,7 +472,6 @@ def _bj_new_deck():
     return deck
 
 def _bj_hand_value(cards):
-    """Возвращает (total, is_soft). Soft — есть туз, считающийся за 11 и не перебор."""
     total = 0
     aces = 0
     for c in cards:
@@ -456,7 +499,6 @@ def _bj_game_state(g, reveal=False, message=None):
     dealer = json.loads(g["dealer_cards"])
     p_total, p_soft = _bj_hand_value(player)
     finished = g["status"] == "finished"
-    # Скрываем вторую карту дилера пока не revealed / не finished
     show_dealer = bool(reveal or finished)
     if show_dealer:
         dealer_display = dealer
@@ -488,7 +530,6 @@ def _bj_game_state(g, reveal=False, message=None):
     }
 
 async def _bj_delete_stale(uid):
-    """Удаляет игру, если она старше 1 часа (зависшая)."""
     try:
         row = await db.fetchone(
             "SELECT user_id FROM blackjack_games WHERE user_id=? "
@@ -526,7 +567,6 @@ async def api_blackjack_start(request):
     p = await _player(uid)
     if p["balance"] < bet: return web.json_response({"error": "Не хватает денег"}, status=400)
 
-    # Списываем ставку
     await db.execute("UPDATE players SET balance=balance-? WHERE user_id=?", (bet, uid))
 
     deck = _bj_new_deck()
@@ -615,7 +655,6 @@ async def api_blackjack_stand(request):
 
     p_total, _ = _bj_hand_value(player)
     if p_total > 21:
-        # На всякий случай (не должно случаться)
         await db.execute(
             "UPDATE blackjack_games SET status='finished', result='bust', payout=0 WHERE user_id=?",
             (uid,))
@@ -627,7 +666,6 @@ async def api_blackjack_stand(request):
             "game": _bj_game_state(g, reveal=True, message="💥 Перебор"),
         })
 
-    # Дилер добирает до BJ_DEALER_STAND (18)
     while True:
         d_total, _ = _bj_hand_value(dealer)
         if d_total >= BJ_DEALER_STAND: break
