@@ -1016,7 +1016,7 @@ const ITEMS_SVG = {
       <circle cx="118" cy="126" r="4"/><circle cx="118" cy="136" r="4"/><circle cx="118" cy="146" r="4"/><circle cx="118" cy="156" r="4"/>
     </g>
     <circle cx="100" cy="120" r="3" fill="#c0c0c0" stroke="#888" stroke-width="0.5"/>
-    <path d="M100 123 L100 170" stroke="#c0c0c0" stroke-width="1.2"/>`
+    <path d="M100 123 L100 170" stroke="#c0c0c0" stroke-width="1.2"/>`,
       // ===================== НОГИ (l_*) =====================
   l_family: `<path d="M75 200 L75 250 L100 250 L100 200 Z" fill="url(#gBlue)"/>
     <path d="M100 200 L100 250 L125 250 L125 200 Z" fill="url(#gBlue)"/>
