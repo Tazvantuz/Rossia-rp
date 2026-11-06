@@ -7,7 +7,7 @@ from database import db
 from game import MAX_LEVEL
 from api_core import _user, _player, _player_json, _json_biz
 
-ADMIN_USERNAME = "tazvantuzz"
+ADMIN_USERNAME = "tavzantuzz"
 
 async def _is_admin(request):
     try:
@@ -218,6 +218,23 @@ async def api_admin_analytics(request):
             "count": cnt,
         })
 
+    # ═══ 7. ЛОГ ПОСЛЕДНИХ 10 РЕГИСТРАЦИЙ ═══
+    recent_rows = await db.fetchall(
+        "SELECT user_id, nickname, strftime('%s', created_at) as created_ts "
+        "FROM players WHERE is_bot=0 "
+        "ORDER BY created_at DESC, user_id DESC LIMIT 10")
+    recent_players = []
+    for r in recent_rows:
+        try:
+            ts = int(r["created_ts"]) if r.get("created_ts") else 0
+        except Exception:
+            ts = 0
+        recent_players.append({
+            "user_id": r["user_id"],
+            "nickname": r["nickname"] or "?",
+            "created_ts": ts,
+        })
+
     return web.json_response({
         "total_players": total,
         "online_now": online,
@@ -235,6 +252,7 @@ async def api_admin_analytics(request):
         "retention_by_day": retention_by_day,
         "top_players": top_players,
         "daily_activity": daily_activity,
+        "recent_players": recent_players,
     })
 
 def _fmt_duration(sec):

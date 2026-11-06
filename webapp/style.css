@@ -637,7 +637,9 @@ input[type=number]{-moz-appearance:textfield}
 .chat-tab.active { background: var(--button); color: #fff; }
 .my-msg { background: rgba(82, 136, 193, 0.2) !important; align-self: flex-end; border: 1px solid var(--button); }
 
+/* ═══ ONLINE STATUS ═══ */
 .online-badge { display: inline-flex; align-items: center; gap: 5px; background: var(--bg-2); padding: 6px 10px; border-radius: 20px; font-size: 12px; font-weight: 700; color: var(--text); flex-shrink: 0; }
+.online-label { font-size: 11px; font-weight: 600; color: var(--hint); margin-right: 1px; letter-spacing: 0.2px; }
 .online-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
 .online-dot.on { background: #2ecc71; box-shadow: 0 0 6px rgba(46,204,113,.7); }
 .online-dot.off { background: #7f8c8d; }
@@ -687,6 +689,8 @@ input[type=number]{-moz-appearance:textfield}
   .topbar { gap: 6px; padding: 12px 10px 10px; }
   .money-box { padding: 5px 8px; font-size: 12px; }
   .online-badge { padding: 4px 7px; font-size: 11px; gap: 4px; }
+  /* На узких экранах убираем «Онлайн:», оставляем только ● и цифру */
+  .online-label { display: none; }
   .online-dot { width: 7px; height: 7px; }
   .tg-group-btn { width: 34px; height: 34px; }
   .tg-group-btn svg { width: 18px; height: 18px; }

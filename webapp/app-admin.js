@@ -106,6 +106,30 @@ async function adminDeletePlayer(id, nick) {
 }
 
 // ══════════════════════════════════════════════════════════════
+//  ХЕЛПЕР: формат времени "сегодня/вчера/DD.MM" + HH:MM
+// ══════════════════════════════════════════════════════════════
+function _fmtRegTime(ts) {
+  if (!ts) return "—";
+  const d = new Date(ts * 1000);
+  const now = new Date();
+  const sameDay = d.getFullYear() === now.getFullYear()
+                && d.getMonth() === now.getMonth()
+                && d.getDate() === now.getDate();
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  const isYesterday = d.getFullYear() === yesterday.getFullYear()
+                    && d.getMonth() === yesterday.getMonth()
+                    && d.getDate() === yesterday.getDate();
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  if (sameDay) return `сегодня, ${hh}:${mm}`;
+  if (isYesterday) return `вчера, ${hh}:${mm}`;
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mo = String(d.getMonth() + 1).padStart(2, "0");
+  return `${dd}.${mo}, ${hh}:${mm}`;
+}
+
+// ══════════════════════════════════════════════════════════════
 //  АНАЛИТИКА
 // ══════════════════════════════════════════════════════════════
 async function showAdminAnalytics() {
@@ -122,6 +146,24 @@ async function showAdminAnalytics() {
     `;
 
     const retentionColor = d.retention_pct >= 30 ? '#2ecc71' : d.retention_pct >= 15 ? '#f39c12' : '#e74c3c';
+
+    // Лог последних 10 регистраций
+    let recentHtml = "";
+    if (d.recent_players && d.recent_players.length > 0) {
+      recentHtml = d.recent_players.map((p, i) => {
+        const timeStr = _fmtRegTime(p.created_ts);
+        const medal = i === 0 ? "🆕" : (i + 1);
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:#111;border-radius:8px;margin-bottom:4px;border-left:3px solid ${i === 0 ? '#2ecc71' : '#333'};">
+          <div style="display:flex;align-items:center;gap:8px;min-width:0;">
+            <div style="font-size:11px;color:#666;min-width:20px;text-align:center;">${medal}</div>
+            <div style="font-weight:700;color:#fff;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(p.nickname)}</div>
+          </div>
+          <div style="font-size:11px;color:#888;white-space:nowrap;margin-left:8px;font-variant-numeric:tabular-nums;">${timeStr}</div>
+        </div>`;
+      }).join("");
+    } else {
+      recentHtml = '<div style="color:#888;text-align:center;padding:20px;font-size:12px;">Пока никто не регистрировался</div>';
+    }
 
     // График активности 7 дней
     let actChart = "";
@@ -179,6 +221,11 @@ async function showAdminAnalytics() {
         ${statCard("🟢", "Онлайн сейчас", d.online_now, "#2ecc71")}
         ${statCard("🆕", "Новых сегодня", d.new_today, "#3498db")}
         ${statCard("🔥", "Активных сегодня", d.active_today, "#f39c12")}
+      </div>
+
+      <h3 style="color:#fff;margin:16px 0 8px;font-size:14px;">🆕 Последние регистрации</h3>
+      <div style="background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:10px;margin-bottom:16px;">
+        ${recentHtml}
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
