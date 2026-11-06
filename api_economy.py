@@ -367,6 +367,8 @@ async def api_casino_play(request):
     now_cd = int(time.time())
     if now_cd - p.get("last_casino", 0) < 5: return web.json_response({"error": f"Кд {5 - (now_cd - p.get('last_casino', 0))}с"}, status=400)
     win_amount = 0; result_text = ""
+    roulette_number = None
+    roulette_color_val = None
     if game == "coin":
         choice = body.get("choice", "Орёл")
         side = random.choice(["Орёл", "Решка"])
@@ -382,6 +384,8 @@ async def api_casino_play(request):
     elif game == "roulette":
         choice = body.get("choice", "red"); number = body.get("number")
         n = random.randint(0, 36); color = roulette_color(n)
+        roulette_number = n
+        roulette_color_val = color
         result_text = f"Выпало {n} ({color})"
         if choice == "red" and color == "red": win_amount = bet * 2
         elif choice == "black" and color == "black": win_amount = bet * 2
@@ -412,7 +416,11 @@ async def api_casino_play(request):
     if win_amount >= 100000 and "big_winner" not in _json_ach(p):
         await _save_ach(uid, _json_ach(p) + ["big_winner"])
         ach.append("big_winner")
-    return web.json_response({"player": _player_json(p), "win": win_amount, "net": net, "result": result_text, "new_achievements": ach})
+    resp = {"player": _player_json(p), "win": win_amount, "net": net, "result": result_text, "new_achievements": ach}
+    if game == "roulette":
+        resp["number"] = roulette_number
+        resp["color"] = roulette_color_val
+    return web.json_response(resp)
 
 # ═══════════ КОЛЕСО ФОРТУНЫ ═══════════
 WHEEL_SECTORS = [1, 3, 1, 5, 1, 3, 10, 1, 3, 5, 1, 3, 20, 1, 3, 5, 10, 1, 5, 1]
@@ -773,7 +781,6 @@ async def api_blackjack_cancel(request):
 
 # ═══════════ ПРОМОКОДЫ ═══════════
 async def api_promo_apply(request):
-    """Игрок вводит промокод. Атомарно: списывает 1 использование и начисляет бонус."""
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     code = (body.get("code") or "").strip().upper()
