@@ -1,23 +1,36 @@
 // app-gang.js
 // Банды, гетто, кейсы, рефералы, магазин банды
 
+// ═══ FALLBACK на случай если бэкенд не пришлёт is_limited ═══
+const LIMITED_CASES_FALLBACK = { "anime_girls": 15 };
+
 async function loadCases() {
   try {
     const d = await api("cases/list");
     const el = $("#cases-list");
     el.innerHTML = d.cases.map(c => {
+        // Определяем, лимитирован ли кейс
+        const fbLimit = LIMITED_CASES_FALLBACK[c.case_id];
+        const isLimited = c.is_limited === true || (c.is_limited === undefined && !!fbLimit);
+        const totalLimit = c.limit || fbLimit || 0;
+        const openedCount = c.opened || 0;
+        const leftCount = (c.left !== undefined) ? c.left : Math.max(0, totalLimit - openedCount);
+        const soldOut = isLimited && leftCount <= 0;
+
         let limitBadge = "";
-        if (c.is_limited) {
-            const pct = (c.opened / c.limit) * 100;
+        if (isLimited) {
+            const pct = totalLimit > 0 ? Math.min(100, (openedCount / totalLimit) * 100) : 0;
             limitBadge = `
-              <div style="margin-top:8px;font-size:12px;color:#f39c12;font-weight:900;">🌟 ЛИМИТИРОВАННЫЙ</div>
-              <div style="width:100%;height:6px;background:#111;border-radius:3px;margin-top:4px;overflow:hidden;">
-                <div style="height:100%;width:${pct}%;background:#f39c12;"></div>
+              <div style="margin-top:8px;padding:6px 8px;background:rgba(231,76,60,0.12);border:1px solid #e74c3c;border-radius:8px;">
+                <div style="font-size:12px;color:#e74c3c;font-weight:900;text-align:center;letter-spacing:0.5px;">🔥 ЛИМИТИРОВАННЫЙ</div>
+                <div style="width:100%;height:5px;background:#111;border-radius:3px;margin-top:5px;overflow:hidden;">
+                  <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#e74c3c,#ff6b6b);"></div>
+                </div>
+                <div style="font-size:11px;color:#fff;text-align:center;margin-top:4px;">Осталось: <b style="color:#e74c3c;">${leftCount}/${totalLimit}</b></div>
               </div>
-              <div style="font-size:10px;color:#fff;text-align:right;margin-top:2px;">Осталось: ${c.left}/${c.limit}</div>
             `;
         }
-        const soldOut = c.is_limited && c.left <= 0;
+
         return `<div class="case-preview-card" onclick="showCaseDetail('${c.case_id}')" style="${soldOut ? 'opacity:0.5;filter:grayscale(1);' : ''}">
           <div class="case-preview-emoji">${c.emoji}</div>
           <div class="case-preview-info">
@@ -36,8 +49,14 @@ function showCaseDetail(cid) {
   const c = state.casesData.cases.find(x => x.case_id === cid);
   if (!c) return;
   const bal = state.casesData.balance;
-  const isSoldOut = c.is_limited && c.left <= 0;
-  
+
+  const fbLimit = LIMITED_CASES_FALLBACK[c.case_id];
+  const isLimited = c.is_limited === true || (c.is_limited === undefined && !!fbLimit);
+  const totalLimit = c.limit || fbLimit || 0;
+  const openedCount = c.opened || 0;
+  const leftCount = (c.left !== undefined) ? c.left : Math.max(0, totalLimit - openedCount);
+  const isSoldOut = isLimited && leftCount <= 0;
+
   const itemsHtml = c.items.map(it => {
     const preview = {...emptyOutfit()};
     const slotKey = SLOT_KEY[it.slot];
@@ -54,14 +73,18 @@ function showCaseDetail(cid) {
       <div class="case-modal-item-stats">${stats.join("<br>")}</div>
     </div>`;
   }).join("");
-  
+
   let limitHtml = "";
-  if (c.is_limited) {
+  if (isLimited) {
+      const pct = totalLimit > 0 ? Math.min(100, (openedCount / totalLimit) * 100) : 0;
       limitHtml = `
-        <div style="margin: 12px 0; padding: 10px; background: rgba(243,156,18,0.1); border: 1px solid #f39c12; border-radius: 8px;">
-          <div style="font-weight:900;color:#f39c12;text-align:center;">🌟 ЛИМИТИРОВАННЫЙ 🌟</div>
-          <div style="font-size:12px;color:#fff;text-align:center;margin-top:4px;">Глобальный лимит: ${c.limit} шт.</div>
-          <div style="font-size:14px;color:#fff;text-align:center;font-weight:bold;">Осталось: ${c.left}/${c.limit}</div>
+        <div style="margin: 12px 0; padding: 12px; background: rgba(231,76,60,0.12); border: 1px solid #e74c3c; border-radius: 10px;">
+          <div style="font-weight:900;color:#e74c3c;text-align:center;letter-spacing:0.5px;">🔥 ЛИМИТИРОВАННЫЙ 🔥</div>
+          <div style="font-size:12px;color:var(--hint);text-align:center;margin-top:6px;">Глобальный лимит: ${totalLimit} шт. на всю игру</div>
+          <div style="width:100%;height:8px;background:#111;border-radius:4px;margin-top:8px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#e74c3c,#ff6b6b);"></div>
+          </div>
+          <div style="font-size:16px;color:#fff;text-align:center;font-weight:900;margin-top:8px;">Осталось: <span style="color:#e74c3c;">${leftCount} / ${totalLimit}</span></div>
         </div>
       `;
   }
@@ -163,7 +186,7 @@ async function openCase(cid) {
 
   } catch(e) { 
     toast(e.message, "error"); 
-    loadCases(); // Обновляем данные, если лимит кончился
+    loadCases();
   }
 }
 
