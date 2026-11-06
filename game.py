@@ -172,11 +172,11 @@ def crypto_history_24h():
     now_hour = int(time.time() / 3600)
     return [crypto_price_at_hour(now_hour - i) for i in range(23, -1, -1)]
 
-# ═══════ КЕЙСОВЫЕ ПРЕДМЕТЫ (эксклюзив, нельзя купить/продать) ═══════
 CASE_ITEM_PREFIXES = ("h_case_", "b_case_", "l_case_", "rh_case_", "lh_case_")
 
 def is_case_item(iid):
-    """True если предмет падает только из кейса. Такие нельзя купить в магазине или продать."""
+    it = ITEMS.get(iid, {})
+    if it.get("is_case_only"): return True
     return iid.startswith(CASE_ITEM_PREFIXES)
 
 def item_json(iid):
@@ -376,7 +376,16 @@ for iid, data in LEGACY_CASE_ITEMS.items():
     if iid not in ITEMS:
         ITEMS[iid] = data
 
-# ═══════ 5 КЕЙСОВ ═══════
+# ═══════ ТЯНКИ ═══════
+TYANKA_ITEMS = {
+    "lh_tyanka": {"name":"Тянка в футболке","emoji":"👱‍♀️","slot":"left_hand","price":0,"rarity":"epic","desc":"Стоит рядом и смотрит","hp":1200,"damage":600,"is_case_only":True},
+    "lh_tyanka2": {"name":"Тянка на коленях","emoji":"👩‍🦰","slot":"left_hand","price":0,"rarity":"rare","desc":"Сидит рядом и держит","hp":800,"damage":300,"is_case_only":True},
+    "rh_miku": {"name":"Мику","emoji":"👩‍🎤","slot":"right_hand","price":0,"rarity":"uncommon","desc":"Поёт тебе, пока ты грабишь","hp":500,"damage":200,"is_case_only":True},
+    "rh_tyanka3": {"name":"Соник","emoji":"👙","slot":"right_hand","price":0,"rarity":"legendary","desc":"Согревает даже в лютый мороз","hp":2500,"damage":1200,"is_case_only":True},
+}
+ITEMS.update(TYANKA_ITEMS)
+
+# ═══════ 6 КЕЙСОВ ═══════
 CASES = {
   "basic": {"name":"Кейс новичка","emoji":"📦","price":2000,
     "items":[
@@ -418,6 +427,13 @@ CASES = {
       {"iid":"rh_case_top2_weapon","chance":20},
       {"iid":"lh_case_top2_artifact","chance":14},
     ]},
+  "anime_girls": {"name":"Кейс с тянками","emoji":"🌸","price":500000,
+    "items":[
+      {"iid":"lh_tyanka","chance":25},
+      {"iid":"lh_tyanka2","chance":25},
+      {"iid":"rh_miku","chance":25},
+      {"iid":"rh_tyanka3","chance":25},
+    ]},
 }
 
 # ═══════ БАНДЫ ═══════
@@ -437,21 +453,11 @@ GANG_TERRITORIES = [
 CAPTURE_HOURS = 1
 GANG_SEEDS_PER_TERR_PER_HOUR = 10
 
-# ═══════ ЦВЕТА ТЕГА БАНДЫ ═══════
 GANG_TAG_COLORS = [
-    "#f39c12",  # оранжевый (дефолт)
-    "#e74c3c",  # красный
-    "#e91e63",  # розовый
-    "#9b59b6",  # фиолетовый
-    "#3498db",  # синий
-    "#1abc9c",  # бирюзовый
-    "#2ecc71",  # зелёный
-    "#f1c40f",  # жёлтый
-    "#ecf0f1",  # белый
-    "#95a5a6",  # серый
+    "#f39c12", "#e74c3c", "#e91e63", "#9b59b6", "#3498db",
+    "#1abc9c", "#2ecc71", "#f1c40f", "#ecf0f1", "#95a5a6",
 ]
 
-# ═══════ PVP ═══════
 PVP_PARTS = ["head","torso","legs"]
 PVP_PARTS_NAMES = {"head":"Голова","torso":"Торс","legs":"Ноги"}
 PVP_BASE_HP = 100
@@ -471,29 +477,20 @@ def get_combat_stats(player):
 _CASE_PREFIXES = (
     "h_case_", "b_case_", "l_case_", "rh_case_", "lh_case_",
     "h_gang_", "b_gang_", "l_gang_", "rh_gang_", "lh_gang_",
+    "lh_tyanka", "rh_miku", "rh_tyanka3"
 )
 
 _RANGES = {
-    ("common", "head"):   (5, 12),
-    ("common", "body"):   (5, 15),
-    ("common", "legs"):   (5, 12),
-    ("common", "hand"):   (1, 5),
-    ("uncommon", "head"): (15, 30),
-    ("uncommon", "body"): (15, 32),
-    ("uncommon", "legs"): (15, 30),
-    ("uncommon", "hand"): (6, 14),
-    ("rare", "head"):     (40, 70),
-    ("rare", "body"):     (40, 65),
-    ("rare", "legs"):     (40, 70),
-    ("rare", "hand"):     (18, 30),
-    ("epic", "head"):     (85, 140),
-    ("epic", "body"):     (90, 150),
-    ("epic", "legs"):     (85, 130),
-    ("epic", "hand"):     (40, 70),
-    ("legendary", "head"):(200, 280),
-    ("legendary", "body"):(250, 350),
-    ("legendary", "legs"):(180, 250),
-    ("legendary", "hand"):(60, 150),
+    ("common", "head"):   (5, 12), ("common", "body"):   (5, 15),
+    ("common", "legs"):   (5, 12), ("common", "hand"):   (1, 5),
+    ("uncommon", "head"): (15, 30), ("uncommon", "body"): (15, 32),
+    ("uncommon", "legs"): (15, 30), ("uncommon", "hand"): (6, 14),
+    ("rare", "head"):     (40, 70), ("rare", "body"):     (40, 65),
+    ("rare", "legs"):     (40, 70), ("rare", "hand"):     (18, 30),
+    ("epic", "head"):     (85, 140), ("epic", "body"):     (90, 150),
+    ("epic", "legs"):     (85, 130), ("epic", "hand"):     (40, 70),
+    ("legendary", "head"):(200, 280), ("legendary", "body"):(250, 350),
+    ("legendary", "legs"):(180, 250), ("legendary", "hand"):(60, 150),
 }
 
 def _apply_balance():

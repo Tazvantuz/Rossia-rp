@@ -5,16 +5,29 @@ async function loadCases() {
   try {
     const d = await api("cases/list");
     const el = $("#cases-list");
-    el.innerHTML = d.cases.map(c => `
-      <div class="case-preview-card" onclick="showCaseDetail('${c.case_id}')">
-        <div class="case-preview-emoji">${c.emoji}</div>
-        <div class="case-preview-info">
-          <div class="case-preview-name">${c.name}</div>
-          <div class="case-preview-sub">5 уникальных предметов</div>
-        </div>
-        <div class="case-preview-price">${fmtMoney(c.price)}₽</div>
-      </div>
-    `).join("");
+    el.innerHTML = d.cases.map(c => {
+        let limitBadge = "";
+        if (c.is_limited) {
+            const pct = (c.opened / c.limit) * 100;
+            limitBadge = `
+              <div style="margin-top:8px;font-size:12px;color:#f39c12;font-weight:900;">🌟 ЛИМИТИРОВАННЫЙ</div>
+              <div style="width:100%;height:6px;background:#111;border-radius:3px;margin-top:4px;overflow:hidden;">
+                <div style="height:100%;width:${pct}%;background:#f39c12;"></div>
+              </div>
+              <div style="font-size:10px;color:#fff;text-align:right;margin-top:2px;">Осталось: ${c.left}/${c.limit}</div>
+            `;
+        }
+        const soldOut = c.is_limited && c.left <= 0;
+        return `<div class="case-preview-card" onclick="showCaseDetail('${c.case_id}')" style="${soldOut ? 'opacity:0.5;filter:grayscale(1);' : ''}">
+          <div class="case-preview-emoji">${c.emoji}</div>
+          <div class="case-preview-info">
+            <div class="case-preview-name">${c.name}</div>
+            <div class="case-preview-sub">${c.items.length} уникальных предметов</div>
+            ${limitBadge}
+          </div>
+          <div class="case-preview-price">${fmtMoney(c.price)}₽</div>
+        </div>`;
+    }).join("");
     state.casesData = d;
   } catch(e) { toast(e.message, "error"); }
 }
@@ -23,6 +36,8 @@ function showCaseDetail(cid) {
   const c = state.casesData.cases.find(x => x.case_id === cid);
   if (!c) return;
   const bal = state.casesData.balance;
+  const isSoldOut = c.is_limited && c.left <= 0;
+  
   const itemsHtml = c.items.map(it => {
     const preview = {...emptyOutfit()};
     const slotKey = SLOT_KEY[it.slot];
@@ -40,6 +55,17 @@ function showCaseDetail(cid) {
     </div>`;
   }).join("");
   
+  let limitHtml = "";
+  if (c.is_limited) {
+      limitHtml = `
+        <div style="margin: 12px 0; padding: 10px; background: rgba(243,156,18,0.1); border: 1px solid #f39c12; border-radius: 8px;">
+          <div style="font-weight:900;color:#f39c12;text-align:center;">🌟 ЛИМИТИРОВАННЫЙ 🌟</div>
+          <div style="font-size:12px;color:#fff;text-align:center;margin-top:4px;">Глобальный лимит: ${c.limit} шт.</div>
+          <div style="font-size:14px;color:#fff;text-align:center;font-weight:bold;">Осталось: ${c.left}/${c.limit}</div>
+        </div>
+      `;
+  }
+
   openModal(`
     <div style="text-align:center;margin-bottom:16px">
       <div style="font-size:56px">${c.emoji}</div>
@@ -47,8 +73,9 @@ function showCaseDetail(cid) {
       <div style="font-size:20px;font-weight:900;color:var(--money);margin-top:4px">${fmtMoney(c.price)}₽</div>
     </div>
     <div class="case-modal-items">${itemsHtml}</div>
-    <button class="btn btn-primary" onclick="openCase('${cid}')" ${bal < c.price ? 'disabled' : ''}>
-      ${bal < c.price ? '❌ Не хватает денег' : `🎁 Открыть за ${fmtMoney(c.price)}₽`}
+    ${limitHtml}
+    <button class="btn btn-primary" onclick="openCase('${cid}')" ${bal < c.price || isSoldOut ? 'disabled' : ''}>
+      ${isSoldOut ? '❌ ЛИМИТ ИСЧЕРПАН' : (bal < c.price ? '❌ Не хватает денег' : `🎁 Открыть за ${fmtMoney(c.price)}₽`)}
     </button>
   `);
 }
@@ -58,24 +85,21 @@ async function openCase(cid) {
   if (!c) return;
 
   try {
-    // 1. Запрос к API
     const d = await api("cases/open", {case_id: cid});
     state.player = d.player; 
     renderPlayer();
 
     const wonItem = d.won;
     const allItems = c.items; 
-    const WIN_INDEX = 45; // Индекс выигрышного элемента в ленте
-    const ITEM_WIDTH = 100; // Ширина одного блока (должна совпадать с CSS)
+    const WIN_INDEX = 45; 
+    const ITEM_WIDTH = 100; 
 
-    // 2. Генерируем ленту (60 элементов)
     let stripHtml = "";
     for (let i = 0; i < 60; i++) {
         let it;
         if (i === WIN_INDEX) {
-            it = wonItem; // Вставляем выигрыш
+            it = wonItem; 
         } else {
-            // Выбираем случайный предмет с учетом шансов
             let totalChance = allItems.reduce((sum, item) => sum + item.chance, 0);
             let r = Math.random() * totalChance;
             let acc = 0;
@@ -94,7 +118,6 @@ async function openCase(cid) {
         </div>`;
     }
 
-    // 3. Рендерим модалку с рулеткой
     openModal(`
         <div style="text-align:center; padding: 20px 0;">
             <h2 style="margin-bottom: 20px;">🎁 Крутим ${c.name}...</h2>
@@ -107,21 +130,17 @@ async function openCase(cid) {
         </div>
     `);
 
-    // 4. Запуск анимации
     setTimeout(() => {
         const containerWidth = document.getElementById("case-roll-container").offsetWidth;
         const strip = document.getElementById("case-roll-strip");
         
-        // Вычисляем позицию для центрирования выигрышного элемента
         const targetOffset = (WIN_INDEX * ITEM_WIDTH) + (ITEM_WIDTH / 2) - (containerWidth / 2);
-        // Добавляем рандомный отступ (-30 до +30 px), чтобы стрелка не всегда была ровно в центре предмета
         const randomOffset = Math.floor(Math.random() * 60) - 30;
         const finalTranslate = -(targetOffset + randomOffset);
 
         strip.style.transition = 'transform 5s cubic-bezier(0.1, 0.7, 0.1, 1)';
         strip.style.transform = `translateX(${finalTranslate}px)`;
 
-        // 5. Показ финального результата через 5 секунд
         setTimeout(() => {
             if (tg) tg.HapticFeedback?.notificationOccurred("success");
 
@@ -139,10 +158,13 @@ async function openCase(cid) {
                 ${_itemStatsHtml(wonItem, 'block')}
                 <button class="btn btn-primary" onclick="closeModal();loadCases()" style="margin-top:16px">Забрать</button>
               </div>`);
-        }, 5200); // 5 сек анимация + 200мс запас
-    }, 50); // Небольшая задержка, чтобы DOM успел отрисоваться
+        }, 5200); 
+    }, 50); 
 
-  } catch(e) { toast(e.message, "error"); }
+  } catch(e) { 
+    toast(e.message, "error"); 
+    loadCases(); // Обновляем данные, если лимит кончился
+  }
 }
 
 function showCreateGang() {

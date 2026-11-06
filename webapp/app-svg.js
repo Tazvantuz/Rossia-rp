@@ -1,6 +1,14 @@
 // app-svg.js
 const SKIN = "#e8b48a", SKIN_DARK = "#d4a17a", SKIN_LIGHT = "#f0c4a0";
 
+// ═══ КАСТОМНЫЕ КАРТИНКИ (ТЯНКИ) ═══
+const CUSTOM_IMAGES = {
+    "lh_tyanka": { url: "/assets/hands/lh_tyanka.png", x: -130, y: 20, w: 140, h: 380 },
+    "lh_tyanka2": { url: "/assets/hands/lh_tyanka2.png", x: -100, y: 160, w: 110, h: 240 },
+    "rh_miku": { url: "/assets/hands/rh_miku.png", x: 190, y: 20, w: 140, h: 380 },
+    "rh_tyanka3": { url: "/assets/hands/rh_tyanka3.png", x: 190, y: 20, w: 140, h: 380 }
+};
+
 function renderBaseBody() {
   return `
     <rect x="75" y="200" width="24" height="165" rx="10" fill="${SKIN}"/>
@@ -156,15 +164,10 @@ const ITEMS_SVG = {
   rh_case_dragon_sword: `<g transform="translate(140,197)"><rect x="-6" y="-3" width="12" height="20" rx="2" fill="#2c3e50"/><rect x="-6" y="-3" width="12" height="3" fill="#f39c12"/><path d="M-5 -3 L5 -3 L4 -65 L-4 -65 Z" fill="#d4d4d4"/><path d="M-4 -65 L4 -65 L3 -60 L-3 -60 Z" fill="#9a9a9a"/><path d="M-2 -55 L2 -55 M-2 -45 L2 -45 M-2 -35 L2 -35 M-2 -25 L2 -25 M-2 -15 L2 -15" stroke="#f39c12" stroke-width="1.2"/><circle cx="0" cy="-65" r="2" fill="#e74c3c"/><path d="M-8 17 L8 17" stroke="#f39c12" stroke-width="2"/></g>`,
   lh_case_brilliant: `<g transform="translate(45,190)"><rect x="0" y="0" width="30" height="22" rx="3" fill="#3498db"/><rect x="0" y="6" width="30" height="2" fill="#2874a6"/><circle cx="15" cy="-2" r="4" fill="none" stroke="#3498db" stroke-width="2"/><path d="M8 10 L12 16 L18 16 L22 10 Z" fill="#e74c3c"/><path d="M10 12 L14 14 L20 14 L22 12" stroke="#fff" stroke-width="0.5" fill="none"/><circle cx="15" cy="13" r="1" fill="#fff" opacity="0.9"/></g>`,
 
-  // ═══ НОВЫЕ КЕЙСОВЫЕ (legacy — есть у игроков) ═══
+  // ═══ НОВЫЕ КЕЙСОВЫЕ (legacy) ═══
   b_case_chains: `<path d="M70 95 L70 205 L130 205 L130 95 Z" fill="#1a1a1a"/><rect x="52" y="100" width="20" height="95" rx="8" fill="#1a1a1a"/><rect x="128" y="100" width="20" height="95" rx="8" fill="#1a1a1a"/><g stroke="#d4d4d4" stroke-width="2" fill="none"><circle cx="82" cy="125" r="4"/><circle cx="82" cy="135" r="4"/><circle cx="82" cy="145" r="4"/><circle cx="82" cy="155" r="4"/><circle cx="118" cy="125" r="4"/><circle cx="118" cy="135" r="4"/><circle cx="118" cy="145" r="4"/><circle cx="118" cy="155" r="4"/></g>`,
   h_case_crypto: `<circle cx="100" cy="55" r="32" fill="#f39c12"/><circle cx="100" cy="55" r="26" fill="#d68910"/><text x="100" y="65" text-anchor="middle" font-size="30" fill="#fff" font-weight="900">₿</text><circle cx="90" cy="50" r="2" fill="#1a1a1a"/><circle cx="110" cy="50" r="2" fill="#1a1a1a"/>`,
   h_case_dragon: `<path d="M68 42 Q100 15 132 42 L132 52 Q100 62 68 52 Z" fill="#2c3e50"/><path d="M78 32 Q82 18 88 28 L88 35 Z" fill="#1a252f"/><path d="M112 32 Q118 18 122 28 L122 35 Z" fill="#1a252f"/><ellipse cx="88" cy="50" rx="8" ry="5" fill="#e74c3c"/><ellipse cx="112" cy="50" rx="8" ry="5" fill="#e74c3c"/><circle cx="88" cy="50" r="2" fill="#000"/><circle cx="112" cy="50" r="2" fill="#000"/><path d="M95 60 Q100 62 105 60" stroke="#e74c3c" stroke-width="2" fill="none"/><path d="M98 52 L96 62 L100 60 Z" fill="#f39c12"/>`,
-
-  // ═══ НОВЫЕ КЕЙСОВЫЕ (из новых кейсов) ═══
-  lh_case_lucky: `<g transform="translate(45,190)"><circle cx="15" cy="10" r="14" fill="#ffd700"/><circle cx="15" cy="10" r="11" fill="#f1c40f"/><text x="15" y="16" text-anchor="middle" font-size="14" fill="#8b6914" font-weight="900">$</text><circle cx="10" cy="5" r="2" fill="#fff" opacity="0.7"/></g>`,
-  lh_case_pepper: `<g transform="translate(45,180)"><path d="M10 10 Q18 0 22 15 Q28 40 15 50 Q5 45 8 25 Z" fill="#e74c3c"/><path d="M15 5 Q18 0 22 2" stroke="#2ecc71" stroke-width="3" fill="none" stroke-linecap="round"/><circle cx="14" cy="20" r="2" fill="#8b0000" opacity="0.5"/><circle cx="16" cy="35" r="2" fill="#8b0000" opacity="0.5"/></g>`,
-  l_case_dragon_pants: `<rect x="75" y="205" width="24" height="160" rx="4" fill="#2c3e50"/><rect x="101" y="205" width="24" height="160" rx="4" fill="#2c3e50"/><path d="M80 220 Q85 240 82 270 Q88 290 85 320" stroke="#e74c3c" stroke-width="2" fill="none"/><path d="M106 220 Q111 240 108 270 Q114 290 111 320" stroke="#e74c3c" stroke-width="2" fill="none"/><circle cx="87" cy="230" r="2" fill="#f39c12"/><circle cx="87" cy="280" r="2" fill="#f39c12"/><circle cx="113" cy="230" r="2" fill="#f39c12"/><circle cx="113" cy="280" r="2" fill="#f39c12"/>`,
 
   // ═══ ТОП-1 КЕЙС (Максимус) ═══
   h_case_top1_head: `<path d="M60 30 Q100 0 140 30 L140 55 Q100 70 60 55 Z" fill="#1a0f2e" stroke="#ffd700" stroke-width="2"/><ellipse cx="100" cy="48" rx="35" ry="20" fill="#2c1810"/><circle cx="82" cy="45" r="5" fill="#ffd700"/><circle cx="118" cy="45" r="5" fill="#ffd700"/><circle cx="82" cy="45" r="2" fill="#1a1a1a"/><circle cx="118" cy="45" r="2" fill="#1a1a1a"/><path d="M100 20 L95 35 L105 35 Z" fill="#ffd700"/><circle cx="100" cy="18" r="3" fill="#e74c3c"/>`,
@@ -199,19 +202,34 @@ const ITEMS_SVG = {
 };
 
 function renderCharacterSVG(outfit, opts = {}) {
-  const w = opts.width || 140;
-  const h = opts.height || 280;
+  let w = opts.width || 140;
+  let h = opts.height || 280;
+  
   const head = outfit?.head_id?.item_id;
   const body = outfit?.body_id?.item_id;
   const legs = outfit?.legs_id?.item_id;
   const rh = outfit?.right_hand_id?.item_id;
   const lh = outfit?.left_hand_id?.item_id;
-  return `<svg viewBox="0 0 200 400" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+
+  const leftImg = lh ? CUSTOM_IMAGES[lh] : null;
+  const rightImg = rh ? CUSTOM_IMAGES[rh] : null;
+
+  let viewBox = "0 0 200 400";
+  
+  if (leftImg || rightImg) {
+      viewBox = "-160 0 520 400";
+      w = w * 2.6;
+      h = h * 1.0; 
+  }
+
+  return `<svg viewBox="${viewBox}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
+    ${leftImg ? `<image href="${leftImg.url}" x="${leftImg.x}" y="${leftImg.y}" width="${leftImg.w}" height="${leftImg.h}" />` : ''}
     ${renderBaseBody()}
     ${legs && ITEMS_SVG[legs] ? ITEMS_SVG[legs] : ''}
     ${body && ITEMS_SVG[body] ? ITEMS_SVG[body] : ''}
     ${rh && ITEMS_SVG[rh] ? ITEMS_SVG[rh] : ''}
     ${lh && ITEMS_SVG[lh] ? ITEMS_SVG[lh] : ''}
     ${head && ITEMS_SVG[head] ? ITEMS_SVG[head] : ''}
+    ${rightImg ? `<image href="${rightImg.url}" x="${rightImg.x}" y="${rightImg.y}" width="${rightImg.w}" height="${rightImg.h}" />` : ''}
   </svg>`;
 }
