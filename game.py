@@ -11,23 +11,32 @@ LOCATIONS = [
     {"id":2,"name":"Барвиха","emoji":"🏰","desc":"Элитный посёлок. Олигархи и блогеры."},
 ]
 
-SLOTS = ["head_id","body_id","legs_id","right_hand_id","left_hand_id"]
+SLOTS = ["head_id","body_id","legs_id","right_hand_id","left_hand_id","hair_id","shoes_id"]
 SLOT_NAMES = {
     "head_id":"Голова","body_id":"Тело","legs_id":"Ноги",
     "right_hand_id":"Правая рука","left_hand_id":"Левая рука",
+    "hair_id":"Причёска","shoes_id":"Обувь",
 }
 SLOT_DEFAULT_EMOJI = {
     "head_id":"😀","body_id":"🧍","legs_id":"🦵",
     "right_hand_id":"✋","left_hand_id":"✋",
+    "hair_id":"💇","shoes_id":"👟",
 }
 SLOT_CATEGORY = {
     "head_id":"head","body_id":"body","legs_id":"legs",
     "right_hand_id":"right_hand","left_hand_id":"left_hand",
+    "hair_id":"hair","shoes_id":"shoes",
 }
-CATEGORY_NAMES = {"head":"Голова","body":"Тело","legs":"Ноги",
-                  "right_hand":"Правая рука","left_hand":"Левая рука"}
-CATEGORY_EMOJI = {"head":"🧢","body":"👕","legs":"👖",
-                  "right_hand":"🤚","left_hand":"🖐"}
+CATEGORY_NAMES = {
+    "head":"Голова","body":"Тело","legs":"Ноги",
+    "right_hand":"Правая рука","left_hand":"Левая рука",
+    "hair":"Причёска","shoes":"Обувь",
+}
+CATEGORY_EMOJI = {
+    "head":"🧢","body":"👕","legs":"👖",
+    "right_hand":"🤚","left_hand":"🖐",
+    "hair":"💇","shoes":"👟",
+}
 SLOT_BY_CATEGORY = {v:k for k,v in SLOT_CATEGORY.items()}
 
 RARITIES = {
@@ -261,6 +270,25 @@ ITEMS.update({
     "lh_pizza": {"name":"Пицца","emoji":"🍕","slot":"left_hand","price":15000,"rarity":"epic","desc":"Итальянская"},
     "lh_teddy": {"name":"Мишка","emoji":"🧸","slot":"left_hand","price":80000,"rarity":"legendary","desc":"Милый"},
 })
+
+# ═══════ ПРИЧЁСКИ (новый слот, не дают статов) ═══════
+ITEMS.update({
+    "hair_short_black": {"name":"Короткая стрижка","emoji":"💇","slot":"hair","price":200,"rarity":"common","desc":"Аккуратно, по-мужски"},
+    "hair_curly_brown": {"name":"Кудри","emoji":"💇","slot":"hair","price":1500,"rarity":"uncommon","desc":"Завитки как у итальянца"},
+    "hair_long_red":    {"name":"Длинные рыжие","emoji":"💇","slot":"hair","price":5000,"rarity":"rare","desc":"Огненные волосы"},
+    "hair_mohawk_blue": {"name":"Ирокез синий","emoji":"💇","slot":"hair","price":15000,"rarity":"epic","desc":"Панк-рок жив"},
+    "hair_flowing_gold":{"name":"Золотые локоны","emoji":"💇","slot":"hair","price":50000,"rarity":"legendary","desc":"Как у полубога"},
+})
+
+# ═══════ КРОССОВКИ (новый слот, дают HP) ═══════
+ITEMS.update({
+    "shoes_worn":     {"name":"Стоптанные кеды","emoji":"👟","slot":"shoes","price":300,"rarity":"common","desc":"Ещё походят","hp":10},
+    "shoes_sneakers": {"name":"Серые кроссовки","emoji":"👟","slot":"shoes","price":2000,"rarity":"uncommon","desc":"Удобные для города","hp":25},
+    "shoes_nike":     {"name":"Nike Air","emoji":"👟","slot":"shoes","price":8000,"rarity":"rare","desc":"Свежие с салона","hp":50},
+    "shoes_jordan":   {"name":"Jordan Retro","emoji":"👟","slot":"shoes","price":25000,"rarity":"epic","desc":"Легендарные баскетбольные","hp":100},
+    "shoes_gold":     {"name":"Золотые кроссы","emoji":"👟","slot":"shoes","price":100000,"rarity":"legendary","desc":"Для настоящего короля","hp":200},
+})
+
 print("✅ Загружено предметов (базовые):", len(ITEMS))
 
 CREDIT_MAX = 15000
@@ -466,7 +494,7 @@ PVP_TURN_TIMEOUT = 30
 def get_combat_stats(player):
     hp = PVP_BASE_HP
     dmg = 5
-    for slot in ("weapon_id","armor_id","shield_id","head_id","body_id","legs_id","right_hand_id","left_hand_id"):
+    for slot in ("weapon_id","armor_id","shield_id","head_id","body_id","legs_id","right_hand_id","left_hand_id","shoes_id"):
         iid = player.get(slot)
         if iid and iid in ITEMS:
             hp += ITEMS[iid].get("hp", 0)
@@ -477,7 +505,8 @@ def get_combat_stats(player):
 _CASE_PREFIXES = (
     "h_case_", "b_case_", "l_case_", "rh_case_", "lh_case_",
     "h_gang_", "b_gang_", "l_gang_", "rh_gang_", "lh_gang_",
-    "lh_tyanka", "rh_miku", "rh_tyanka3"
+    "lh_tyanka", "rh_miku", "rh_tyanka3",
+    "hair_", "shoes_"
 )
 
 _RANGES = {

@@ -5,7 +5,7 @@ const initData = tg?.initData || "";
 
 let state = {
   player: null, location: null, shopItems: [], invItems: [],
-  shopFilter: "head", appearanceMode: "shop", casinoGame: "coin",
+  shopFilter: "hair", appearanceMode: "shop", casinoGame: "coin",
   casinoLocked: false, casinoLockTime: 0, openPMs: [],
   chatWith: 'global', jobsCache: null, businessesCache: null, casesData: null,
 };
@@ -216,19 +216,26 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 const SLOT_FILTERS = [
+  {id:"hair", name:"Причёска", emoji:"💇"},
   {id:"head", name:"Голова", emoji:"🧢"},
   {id:"body", name:"Тело", emoji:"👕"},
   {id:"legs", name:"Ноги", emoji:"👖"},
+  {id:"shoes", name:"Обувь", emoji:"👟"},
   {id:"right_hand", name:"Пр.рука", emoji:"🤚"},
   {id:"left_hand", name:"Лев.рука", emoji:"🖐"},
 ];
-const SLOT_KEY = {head:"head_id", body:"body_id", legs:"legs_id", right_hand:"right_hand_id", left_hand:"left_hand_id"};
+const SLOT_KEY = {
+  head:"head_id", body:"body_id", legs:"legs_id",
+  right_hand:"right_hand_id", left_hand:"left_hand_id",
+  hair:"hair_id", shoes:"shoes_id"
+};
 const SLOT_KEY_MAP = SLOT_KEY;
 
 function emptyOutfit() {
   return {
     head_id:{item_id:null}, body_id:{item_id:null}, legs_id:{item_id:null},
-    right_hand_id:{item_id:null}, left_hand_id:{item_id:null}
+    right_hand_id:{item_id:null}, left_hand_id:{item_id:null},
+    hair_id:{item_id:null}, shoes_id:{item_id:null}
   };
 }
 

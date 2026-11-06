@@ -19,6 +19,7 @@ CREATE TABLE IF NOT EXISTS players (
     location_id INTEGER DEFAULT 0,
     head_id TEXT, body_id TEXT, legs_id TEXT,
     right_hand_id TEXT, left_hand_id TEXT,
+    hair_id TEXT, shoes_id TEXT,
     current_job TEXT,
     last_work INTEGER DEFAULT 0,
     last_daily INTEGER DEFAULT 0,
@@ -198,6 +199,8 @@ class Database:
             "crypto_migrated INTEGER DEFAULT 0",
             "is_bot INTEGER DEFAULT 0",
             "seeds INTEGER DEFAULT 0",
+            "hair_id TEXT",
+            "shoes_id TEXT",
         ]
         for m in migrations:
             try:

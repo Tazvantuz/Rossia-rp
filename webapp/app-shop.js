@@ -13,15 +13,17 @@ async function loadAppearance() {
 function renderAppearance() {
   const container = $("#appearance-list");
   const filterEl = $("#appearance-filter");
+  const modeEl = document.getElementById("appearance-mode-switch");
 
-  const modeHtml = `<div class="mode-switch">
+  const modeHtml = `<div class="mode-switch" style="margin-bottom:12px;">
     <button class="mode-btn ${state.appearanceMode==='shop'?'active':''}" onclick="setAppearanceMode('shop')">🛒 Магазин</button>
     <button class="mode-btn ${state.appearanceMode==='inventory'?'active':''}" onclick="setAppearanceMode('inventory')">🎒 Инвентарь</button>
   </div>`;
 
   const filterHtml = SLOT_FILTERS.map(f=>`<button class="filter-btn ${state.shopFilter===f.id?'active':''}" onclick="setShopFilter('${f.id}')">${f.emoji} ${f.name}</button>`).join("");
 
-  filterEl.innerHTML = modeHtml + filterHtml;
+  if (modeEl) modeEl.innerHTML = modeHtml;
+  filterEl.innerHTML = filterHtml;
 
   const p = state.player;
   let listHtml = "";
@@ -244,7 +246,7 @@ async function doWork() {
 }
 
 // ══════════════════════════════════════════════════════════════
-//  БИЗНЕСЫ (с инфо о следующем уровне + суммарный доход/ч)
+//  БИЗНЕСЫ
 // ══════════════════════════════════════════════════════════════
 async function loadBusinesses() {
   try {
