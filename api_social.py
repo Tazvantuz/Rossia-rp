@@ -114,9 +114,10 @@ async def api_trade_send(request):
     body = await request.json()
     to_user = int(body.get("to_user",0))
     give_money = int(body.get("give_money",0))
-    give_items = body.get("give_items",[]) or []
+    # Дедуп: защита от двойного списания/начисления при повторяющихся item_id
+    give_items = list(dict.fromkeys(body.get("give_items",[]) or []))
     want_money = int(body.get("want_money",0))
-    want_items = body.get("want_items",[]) or []
+    want_items = list(dict.fromkeys(body.get("want_items",[]) or []))
     if to_user == uid or not to_user:
         return web.json_response({"error":"Нельзя"}, status=400)
     t = await _player(to_user)
@@ -225,8 +226,11 @@ async def api_trade_accept(request):
                           (tid, uid))
     if not t: return web.json_response({"error":"Нет"}, status=400)
     from_user = t["from_user"]
-    give_money = t["give_money"]; give_items = json.loads(t["give_items"] or "[]")
-    want_money = t["want_money"]; want_items = json.loads(t["want_items"] or "[]")
+    give_money = t["give_money"]
+    # Дедуп на случай, если старый трейд записан с дублями
+    give_items = list(dict.fromkeys(json.loads(t["give_items"] or "[]")))
+    want_money = t["want_money"]
+    want_items = list(dict.fromkeys(json.loads(t["want_items"] or "[]")))
     p_from = await _player(from_user); p_to = await _player(uid)
     if p_from["balance"] < give_money:
         return web.json_response({"error":"У отправителя нет денег"}, status=400)

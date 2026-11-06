@@ -31,7 +31,7 @@ async function adminSearch() {
   res.players.forEach(p => {
     list.innerHTML += `
       <div onclick="adminSelectPlayer(${p.user_id})" style="background:#222; padding:12px; border-radius:8px; cursor:pointer; display:flex; justify-content:space-between; align-items:center;">
-        <div style="font-weight:bold; color:#fff;">${p.nickname}</div>
+        <div style="font-weight:bold; color:#fff;">${escapeHtml(p.nickname)}</div>
         <div style="color:#f39c12; font-size:14px;">${fmtMoney(p.balance)}₽</div>
       </div>
     `;
@@ -48,7 +48,7 @@ async function adminSelectPlayer(id) {
   details.style.display = "block";
 
   details.innerHTML = `
-    <h4 style="color:#fff; margin-bottom:8px;">${p.nickname} (ID: ${p.user_id})</h4>
+    <h4 style="color:#fff; margin-bottom:8px;">${escapeHtml(p.nickname)} (ID: ${p.user_id})</h4>
     <div style="font-size:13px; color:#aaa; margin-bottom:12px;">
       Ур. ${p.level} | Баланс: <b style="color:#2ecc71;">${fmtMoney(p.balance)}₽</b><br>
       Банда: ${s.gang} | Казино: ${s.casino_plays} игр<br>
@@ -72,7 +72,7 @@ async function adminSelectPlayer(id) {
       </div>
     </div>
 
-    <button onclick="adminDeletePlayer(${p.user_id}, '${p.nickname}')" style="width:100%; background:#c0392b; color:#fff; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">
+    <button onclick='adminDeletePlayer(${p.user_id}, ${jsAttr(p.nickname)})' style="width:100%; background:#c0392b; color:#fff; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">
       🗑 УДАЛИТЬ АККАУНТ
     </button>
   `;
@@ -163,7 +163,7 @@ async function showAdminAnalytics() {
         <div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:#111;border-radius:8px;margin-bottom:4px;">
           <div style="display:flex;align-items:center;gap:8px;">
             <div style="font-size:14px;width:24px;">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</div>
-            <div style="font-weight:700;color:#fff;font-size:13px;">${p.nickname}</div>
+            <div style="font-weight:700;color:#fff;font-size:13px;">${escapeHtml(p.nickname)}</div>
           </div>
           <div style="font-size:13px;font-weight:800;color:#3498db;">${p.total_str}</div>
         </div>`).join("");

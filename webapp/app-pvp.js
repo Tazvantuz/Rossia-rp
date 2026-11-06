@@ -191,4 +191,8 @@ async function pvpDoAction(action, part) {
   } catch(e) { toast(e.message, "error"); }
 }
 
-setInterval(checkPvPChallenges, 5000);
+// Проверяем входящие вызовы раз в 5 сек, но только когда вкладка активна
+setInterval(() => {
+  if (document.hidden) return;
+  checkPvPChallenges();
+}, 5000);

@@ -61,6 +61,14 @@ def setup_routes(app):
     R.add_post("/api/gang/shop/items", api_economy.api_gang_shop_items)
     R.add_post("/api/gang/shop/buy", api_economy.api_gang_shop_buy)
 
+    # ═══ БЛЭКДЖЕК ═══
+    R.add_post("/api/casino/blackjack/state", api_economy.api_blackjack_state)
+    R.add_post("/api/casino/blackjack/start", api_economy.api_blackjack_start)
+    R.add_post("/api/casino/blackjack/hit", api_economy.api_blackjack_hit)
+    R.add_post("/api/casino/blackjack/stand", api_economy.api_blackjack_stand)
+    R.add_post("/api/casino/blackjack/double", api_economy.api_blackjack_double)
+    R.add_post("/api/casino/blackjack/cancel", api_economy.api_blackjack_cancel)
+
     R.add_post("/api/location", api_social.api_location)
     R.add_post("/api/move", api_social.api_move)
     R.add_post("/api/player_view", api_social.api_player_view)

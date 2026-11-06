@@ -89,7 +89,7 @@ function renderChatTabs() {
     for (const p of state.openPMs) {
       const isActive = Number(state.chatWith) === Number(p.uid);
       const unreadDot = (p.unread && p.unread > 0) ? `<span style="background:#e74c3c;color:#fff;border-radius:8px;padding:0 5px;font-size:10px;margin-left:4px;">${p.unread}</span>` : '';
-      const tagHtml = p.tag ? `<span class="gang-tag" style="color:${p.tag_color || '#f39c12'};border-color:${p.tag_color || '#f39c12'}">[${escapeHtml(p.tag)}]</span> ` : '';
+      const tagHtml = p.tag ? `<span class="gang-tag" style="color:${escapeHtml(p.tag_color || '#f39c12')};border-color:${escapeHtml(p.tag_color || '#f39c12')}">[${escapeHtml(p.tag)}]</span> ` : '';
       html += `<button class="chat-tab ${isActive ? 'active' : ''}" data-chat="${p.uid}" onclick="switchChat(${p.uid})">👤 ${tagHtml}${escapeHtml(p.name)}${unreadDot}</button>`;
     }
   }
@@ -177,17 +177,23 @@ async function loadFriends() {
     if (d.friends.length === 0) list.innerHTML = '<p style="color:var(--hint);text-align:center;">Пока нет друзей</p>';
     else {
       const sortedFriends = [...d.friends].sort((a, b) => (b.is_online ? 1 : 0) - (a.is_online ? 1 : 0));
-      list.innerHTML = sortedFriends.map(f => `
+      list.innerHTML = sortedFriends.map(f => {
+        // Безопасные литералы для inline-обработчиков
+        const nickJs = jsAttr(f.nickname);
+        const tagJs  = jsAttr(f.gang_tag || '');
+        const colJs  = jsAttr(f.gang_tag_color || '');
+        return `
         <div class="player-card" onclick="viewPlayer(${f.user_id})">
           <div class="player-avatar">👤</div>
           <div class="player-info">
             <div class="player-name">${formatNickWithTag(f.nickname, f.gang_tag, f.gang_tag_color)}</div>
             <div class="player-meta">Ур. ${f.level} · ${_onlineHtml(f.is_online)}${!f.is_online && f.last_seen ? ` · <span class="last-seen">${formatLastSeen(f.last_seen)}</span>` : ''}</div>
           </div>
-          <button class="btn btn-secondary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="event.stopPropagation(); openPM(${f.user_id}, '${f.nickname}', '${f.gang_tag || ''}', '${f.gang_tag_color || ''}')">✉️ ЛС</button>
-          <button class="btn btn-secondary" style="width:auto;padding:6px 8px;margin:0 0 0 4px;font-size:12px;color:var(--danger);" onclick="event.stopPropagation(); removeFriend(${f.user_id}, '${f.nickname}')">✕</button>
+          <button class="btn btn-secondary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick='event.stopPropagation(); openPM(${f.user_id}, ${nickJs}, ${tagJs}, ${colJs})'>✉️ ЛС</button>
+          <button class="btn btn-secondary" style="width:auto;padding:6px 8px;margin:0 0 0 4px;font-size:12px;color:var(--danger);" onclick='event.stopPropagation(); removeFriend(${f.user_id}, ${nickJs})'>✕</button>
         </div>
-      `).join("");
+      `;
+      }).join("");
     }
   } catch(e) { toast(e.message, "error"); }
 }

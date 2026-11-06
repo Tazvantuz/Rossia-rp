@@ -35,6 +35,14 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
+// Безопасное экранирование строки для вставки в onclick='...' (атрибут с ОДИНАРНЫМИ кавычками).
+// Возвращает JS-строковый литерал в двойных кавычках с экранированными одинарными,
+// чтобы не порвать HTML-атрибут и не выполнить инъекцию через ник.
+function jsAttr(s) {
+  const json = JSON.stringify(String(s == null ? "" : s));
+  return json.replace(/'/g, "\\'");
+}
+
 function fmtMoney(n) {
   if (n >= 1e9) return (n/1e9).toFixed(2)+"B";
   if (n >= 1e6) return (n/1e6).toFixed(2)+"M";
@@ -150,6 +158,9 @@ function closeModal() {
   if (typeof pvpTimerInterval !== 'undefined' && pvpTimerInterval && !pvpCurrentBattle) {
     clearInterval(pvpTimerInterval); pvpTimerInterval = null;
   }
+  // Останавливаем фоновые поллинги, которые стартуют вместе с модалкой
+  if (window._notifRefresh) { clearInterval(window._notifRefresh); window._notifRefresh = null; }
+  if (window._cryptoRefresh) { clearInterval(window._cryptoRefresh); window._cryptoRefresh = null; }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -379,6 +390,7 @@ async function refreshPlayer() {
       renderCharacterInto("#character-view");
       if (typeof loadWork === 'function') loadWork();
       if (typeof loadBusinesses === 'function') loadBusinesses();
+      if (d.credit_paid) checkCreditPaid(d);
     }
   } catch(e) { console.error("refreshPlayer error:", e); }
 }

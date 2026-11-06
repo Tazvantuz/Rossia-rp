@@ -140,6 +140,18 @@ CREATE TABLE IF NOT EXISTS system_stats (
     key TEXT PRIMARY KEY,
     value INTEGER DEFAULT 0
 );
+CREATE TABLE IF NOT EXISTS blackjack_games (
+    user_id INTEGER PRIMARY KEY,
+    bet INTEGER NOT NULL,
+    deck TEXT NOT NULL,
+    player_cards TEXT NOT NULL DEFAULT '[]',
+    dealer_cards TEXT NOT NULL DEFAULT '[]',
+    status TEXT DEFAULT 'player',
+    result TEXT DEFAULT NULL,
+    payout INTEGER DEFAULT 0,
+    doubled INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
 CREATE INDEX IF NOT EXISTS idx_activity_day ON player_daily_activity(day);
 CREATE INDEX IF NOT EXISTS idx_activity_user ON player_daily_activity(user_id);
 """
@@ -207,6 +219,35 @@ class Database:
             print("✅ Таблица system_stats готова")
         except Exception as e:
             print(f"⚠️ system_stats: {e}")
+
+        # ═══ blackjack_games — гарантированно создаём ═══
+        try:
+            await self.conn.execute(
+                "CREATE TABLE IF NOT EXISTS blackjack_games ("
+                " user_id INTEGER PRIMARY KEY,"
+                " bet INTEGER NOT NULL,"
+                " deck TEXT NOT NULL,"
+                " player_cards TEXT NOT NULL DEFAULT '[]',"
+                " dealer_cards TEXT NOT NULL DEFAULT '[]',"
+                " status TEXT DEFAULT 'player',"
+                " result TEXT DEFAULT NULL,"
+                " payout INTEGER DEFAULT 0,"
+                " doubled INTEGER DEFAULT 0,"
+                " created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
+            )
+            await self.conn.commit()
+            print("✅ Таблица blackjack_games готова")
+        except Exception as e:
+            print(f"⚠️ blackjack_games: {e}")
+
+        # ═══ Чистим зависшие блекджек-игры старше 1 часа ═══
+        try:
+            await self.conn.execute(
+                "DELETE FROM blackjack_games "
+                "WHERE strftime('%s','now') - strftime('%s', created_at) > 3600")
+            await self.conn.commit()
+        except Exception as e:
+            print(f"⚠️ blackjack cleanup: {e}")
 
         # ═══ Боты в оффлайн ═══
         try:

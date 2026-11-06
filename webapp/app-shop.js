@@ -370,7 +370,7 @@ async function collectBusiness() {
   try {
     const d = await api("collect_business", {});
     if (d.error) throw new Error(d.error);
-    const collected = d.collected || d.pending || 0;
+    const collected = d.collected || 0;
     if (collected > 0) toast(`💰 Собрано: ${fmtMoney(collected)}₽`, "success");
     else toast("Нечего собирать", "error");
     if (d.player) {

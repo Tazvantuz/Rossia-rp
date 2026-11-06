@@ -2,12 +2,24 @@
 // Люди, локации, трейды, профиль игрока, быстрые действия
 
 async function claimDaily() {
-  try { const d = await api("daily"); state.player = d.player; renderPlayer(); toast(`🎁 +${fmtMoney(d.reward)}₽`, "success"); }
+  try {
+    const d = await api("daily");
+    state.player = d.player;
+    renderPlayer();
+    toast(`🎁 +${fmtMoney(d.reward)}₽`, "success");
+    checkCreditPaid(d);
+  }
   catch(e) { toast(e.message, "error"); }
 }
 
 async function claimRoulette() {
-  try { const d = await api("roulette"); state.player = d.player; renderPlayer(); toast(`🎡 ${fmtMoney(d.prize)}₽!`, "success"); }
+  try {
+    const d = await api("roulette");
+    state.player = d.player;
+    renderPlayer();
+    toast(`🎡 ${fmtMoney(d.prize)}₽!`, "success");
+    checkCreditPaid(d);
+  }
   catch(e) { toast(e.message, "error"); }
 }
 
@@ -84,6 +96,10 @@ async function viewPlayer(uid) {
     const onlineInfo = d.is_online
       ? _onlineHtml(true)
       : `${_onlineHtml(false)}${d.last_seen ? ` · <span class="last-seen">🕐 Был(а) в сети: ${formatLastSeen(d.last_seen)}</span>` : ''}`;
+    // Безопасные литералы для inline-обработчиков (защита от ников с ' " < >)
+    const nickJs = jsAttr(d.nickname);
+    const tagJs  = jsAttr(d.gang_tag || '');
+    const colJs  = jsAttr(d.gang_tag_color || '');
     openModal(`
       <div class="shop-preview">${renderCharacterSVG(d.outfit, {width: 170, height: 340})}</div>
       <h2 style="text-align:center;margin-bottom:4px">${formatNickWithTag(d.nickname, d.gang_tag, d.gang_tag_color)}</h2>
@@ -97,13 +113,13 @@ async function viewPlayer(uid) {
         </div>
         <div style="font-size:20px;margin-top:8px">${ach}</div>
       </div>
-      ${!isMe ? `<button class="btn btn-primary" style="background:linear-gradient(135deg,#c0392b,#e74c3c);margin-bottom:8px" onclick="challengePvP(${uid}, '${d.nickname}')">⚔️ Гоп-стоп</button>` : ''}
-      ${!isMe ? `<button class="btn btn-primary" onclick="showTradeOffer(${uid}, '${d.nickname}')">🤝 Трейд</button>` : ''}
+      ${!isMe ? `<button class="btn btn-primary" style="background:linear-gradient(135deg,#c0392b,#e74c3c);margin-bottom:8px" onclick='challengePvP(${uid}, ${nickJs})'>⚔️ Гоп-стоп</button>` : ''}
+      ${!isMe ? `<button class="btn btn-primary" onclick='showTradeOffer(${uid}, ${nickJs})'>🤝 Трейд</button>` : ''}
       ${(!isMe && !d.is_friend && !d.friend_pending) ? `<button class="btn btn-secondary" onclick="sendFriendRequest(${uid})">➕ В друзья</button>` : ''}
       ${(!isMe && d.friend_pending) ? `<button class="btn btn-secondary" disabled>⏳ Заявка отправлена</button>` : ''}
-      ${(!isMe && d.is_friend) ? `<button class="btn btn-secondary" onclick="openPM(${uid}, '${d.nickname}', '${d.gang_tag || ''}', '${d.gang_tag_color || ''}')">✉️ Написать ЛС</button>` : ''}
-      ${(!isMe && d.is_friend) ? `<button class="btn btn-secondary" style="background:rgba(231,76,60,.15);color:var(--danger);border:1px solid rgba(231,76,60,.3);" onclick="removeFriend(${uid}, '${d.nickname}')">❌ Удалить из друзей</button>` : ''}
-      ${(!isMe && d.my_role && ['leader','deputy'].includes(d.my_role) && !d.target_in_gang) ? `<button class="btn btn-secondary" onclick="inviteToGang(${uid}, '${d.nickname}')">📨 Пригласить в банду</button>` : ''}
+      ${(!isMe && d.is_friend) ? `<button class="btn btn-secondary" onclick='openPM(${uid}, ${nickJs}, ${tagJs}, ${colJs})'>✉️ Написать ЛС</button>` : ''}
+      ${(!isMe && d.is_friend) ? `<button class="btn btn-secondary" style="background:rgba(231,76,60,.15);color:var(--danger);border:1px solid rgba(231,76,60,.3);" onclick='removeFriend(${uid}, ${nickJs})'>❌ Удалить из друзей</button>` : ''}
+      ${(!isMe && d.my_role && ['leader','deputy'].includes(d.my_role) && !d.target_in_gang) ? `<button class="btn btn-secondary" onclick='inviteToGang(${uid}, ${nickJs})'>📨 Пригласить в банду</button>` : ''}
       ${(!isMe && d.tg_username) ? `<a href="https://t.me/${escapeHtml(d.tg_username)}" target="_blank" rel="noopener" class="btn btn-secondary" style="text-decoration:none;text-align:center;display:block;background:linear-gradient(135deg,#0088cc,#005f8f);border:none;color:#fff;font-weight:700;margin-top:8px;">✈️ Telegram @${escapeHtml(d.tg_username)}</a>` : ''}
     `);
   } catch(e) { toast(e.message, "error"); }
@@ -215,7 +231,7 @@ async function showTradeOffer(uid, name) {
         <div class="trade-item-name">${i.name}</div>${_itemStatsHtml(i, 'mini')}
       </div>`).join("") : '<p style="color:var(--hint);padding:20px;text-align:center">У них пусто</p>';
     openModal(`
-      <h2 style="text-align:center;margin-bottom:16px">🤝 Трейд с ${name}</h2>
+      <h2 style="text-align:center;margin-bottom:16px">🤝 Трейд с ${escapeHtml(name)}</h2>
       <p style="font-weight:700;margin-bottom:6px">📤 Я даю</p>
       <input id="give-money" type="number" placeholder="Деньги ₽" style="width:100%;padding:10px;background:var(--bg-3);border:none;border-radius:8px;color:#fff;margin-bottom:6px" value="0">
       <div class="trade-inventory" id="give-inv">${myItemsHtml || '<p style="color:var(--hint);text-align:center;padding:10px">Твой инвентарь пуст</p>'}</div>
