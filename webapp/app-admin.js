@@ -1,20 +1,14 @@
 // app-admin.js
 // Админ-панель, аналитика, финальная инициализация (boot)
 
-// ══════════════════════════════════════════════════════════════
-//  ПРОВЕРКА ДОСТУПА
-// ══════════════════════════════════════════════════════════════
 function checkAdminAccess() {
   const user = tg?.initDataUnsafe?.user;
   if (user && user.username === "tazvantuzz") {
-    const btn = document.getElementById("btn-admin-panel");
-    if (btn) btn.style.display = "block";
+    const sec = document.getElementById("more-admin-section");
+    if (sec) sec.classList.remove("hidden");
   }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ПОИСК ИГРОКА
-// ══════════════════════════════════════════════════════════════
 async function adminSearch() {
   const q = document.getElementById("admin-search-input").value;
   if (!q) return;
@@ -92,9 +86,7 @@ async function adminSetLevel(id) {
     await api("admin/set_level", { target_id: id, level: lvl });
     toast(`Уровень изменен на ${lvl}`, "success");
     adminSelectPlayer(id);
-  } catch(e) {
-    toast(e.message, "error");
-  }
+  } catch(e) { toast(e.message, "error"); }
 }
 
 async function adminDeletePlayer(id, nick) {
@@ -105,9 +97,6 @@ async function adminDeletePlayer(id, nick) {
   adminSearch();
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ХЕЛПЕР: формат времени "сегодня/вчера/DD.MM" + HH:MM
-// ══════════════════════════════════════════════════════════════
 function _fmtRegTime(ts) {
   if (!ts) return "—";
   const d = new Date(ts * 1000);
@@ -129,14 +118,10 @@ function _fmtRegTime(ts) {
   return `${dd}.${mo}, ${hh}:${mm}`;
 }
 
-// ══════════════════════════════════════════════════════════════
-//  АНАЛИТИКА
-// ══════════════════════════════════════════════════════════════
 async function showAdminAnalytics() {
   try {
     const d = await api("admin/analytics", {});
 
-    // Карточки с общими цифрами
     const statCard = (icon, label, value, color) => `
       <div style="background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:14px;text-align:center;">
         <div style="font-size:24px;">${icon}</div>
@@ -147,7 +132,6 @@ async function showAdminAnalytics() {
 
     const retentionColor = d.retention_pct >= 30 ? '#2ecc71' : d.retention_pct >= 15 ? '#f39c12' : '#e74c3c';
 
-    // Лог последних 10 регистраций
     let recentHtml = "";
     if (d.recent_players && d.recent_players.length > 0) {
       recentHtml = d.recent_players.map((p, i) => {
@@ -165,7 +149,6 @@ async function showAdminAnalytics() {
       recentHtml = '<div style="color:#888;text-align:center;padding:20px;font-size:12px;">Пока никто не регистрировался</div>';
     }
 
-    // График активности 7 дней
     let actChart = "";
     if (d.daily_activity && d.daily_activity.length > 0) {
       const maxC = Math.max(...d.daily_activity.map(x => x.count), 1);
@@ -181,7 +164,6 @@ async function showAdminAnalytics() {
       }).join("");
     }
 
-    // Retention по дням
     let retHtml = "";
     if (d.retention_by_day && d.retention_by_day.length > 0) {
       retHtml = d.retention_by_day.map(r => {
@@ -198,7 +180,6 @@ async function showAdminAnalytics() {
       retHtml = `<div style="color:#888;text-align:center;padding:20px;font-size:12px;">Данных пока нет. Появятся через 2+ дня работы</div>`;
     }
 
-    // Топ игроков
     let topHtml = "";
     if (d.top_players && d.top_players.length > 0) {
       topHtml = d.top_players.map((p, i) => `

@@ -10,6 +10,21 @@ let state = {
   chatWith: 'global', jobsCache: null, businessesCache: null, casesData: null,
 };
 
+// ══════════════════════════════════════════════════════════════
+//  НАВИГАЦИЯ: main tabs и под-разделы
+// ══════════════════════════════════════════════════════════════
+const MAIN_TABS = ['home', 'casino', 'cases', 'chat', 'more'];
+const SUB_TAB_TITLES = {
+  appearance: '👕 Шмот',
+  work: '💼 Работа',
+  business: '🏢 Бизнес',
+  people: '👥 Люди',
+  friends: '🤝 Друзья',
+  referral: '🎁 Рефералы',
+  gang: '🚬 Банда',
+  ghetto: '🗺️ Гетто',
+};
+
 function formatNickWithTag(name, tag, color) {
   const safeName = escapeHtml(name || "");
   if (!tag) return safeName;
@@ -35,9 +50,6 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Безопасное экранирование строки для вставки в onclick='...' (атрибут с ОДИНАРНЫМИ кавычками).
-// Возвращает JS-строковый литерал в двойных кавычках с экранированными одинарными,
-// чтобы не порвать HTML-атрибут и не выполнить инъекцию через ник.
 function jsAttr(s) {
   const json = JSON.stringify(String(s == null ? "" : s));
   return json.replace(/'/g, "\\'");
@@ -117,12 +129,31 @@ function show(id) {
 }
 
 function showTab(tab) {
+  const isMain = MAIN_TABS.includes(tab);
+
   if (tab === "home" && state.player) {
     setTimeout(() => renderCharacterInto("#character-view"), 0);
   }
   $$(".tab-content").forEach(c=>c.classList.remove("active"));
-  $(`.tab-content[data-tab="${tab}"]`).classList.add("active");
-  $$(".nav-btn").forEach(b=>b.classList.toggle("active", b.dataset.nav===tab));
+  const section = $(`.tab-content[data-tab="${tab}"]`);
+  if (section) section.classList.add("active");
+
+  // Nav: если под-раздел — активируем "more"
+  const navTab = isMain ? tab : 'more';
+  $$(".nav-btn").forEach(b=>b.classList.toggle("active", b.dataset.nav===navTab));
+
+  // Subtab-header: показываем только для под-разделов
+  const subHeader = document.getElementById("subtab-header");
+  const subTitle = document.getElementById("subtab-title");
+  if (subHeader && subTitle) {
+    if (!isMain) {
+      subHeader.classList.remove("hidden");
+      subTitle.textContent = SUB_TAB_TITLES[tab] || '';
+    } else {
+      subHeader.classList.add("hidden");
+    }
+  }
+
   if (typeof stopChatPolling === "function") stopChatPolling();
   if (tab==="appearance" && typeof loadAppearance === 'function') loadAppearance();
   if (tab==="work" && typeof loadWork === 'function') loadWork();
@@ -158,9 +189,16 @@ function closeModal() {
   if (typeof pvpTimerInterval !== 'undefined' && pvpTimerInterval && !pvpCurrentBattle) {
     clearInterval(pvpTimerInterval); pvpTimerInterval = null;
   }
-  // Останавливаем фоновые поллинги, которые стартуют вместе с модалкой
   if (window._notifRefresh) { clearInterval(window._notifRefresh); window._notifRefresh = null; }
   if (window._cryptoRefresh) { clearInterval(window._cryptoRefresh); window._cryptoRefresh = null; }
+}
+
+function openTgLink(url) {
+  if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.openTelegramLink) {
+    window.Telegram.WebApp.openTelegramLink(url);
+  } else {
+    window.open(url, '_blank');
+  }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -288,6 +326,142 @@ function notifyAchievements(list) {
   toast("🏆 Достижение: "+names.join(", "), "success");
 }
 
+// ══════════════════════════════════════════════════════════════
+//  ONBOARDING
+// ══════════════════════════════════════════════════════════════
+let _onbStep = 0;
+const ONB_STEPS = [
+  { emoji: '👋', title: 'Добро пожаловать!', text: 'Ты начинаешь с 1000₽ и старой майки. Цель — стать олигархом. Погнали!' },
+  { emoji: '💼', title: 'Шаг 1: работа', text: 'Найди работу — курьер, грузчик, дальше больше. Каждый клик приносит деньги и опыт.' },
+  { emoji: '🏢', title: 'Шаг 2: бизнесы', text: 'Накопи на первый бизнес — шаурмечная приносит доход даже когда ты оффлайн.' },
+  { emoji: '🎁', title: 'И это только начало', text: 'Казино, банды, войны за территории, кейсы с лимитками, PvP-гоп-стоп. Дальше — сам.' },
+];
+
+function showOnboarding() {
+  if (!state.player) return;
+  const key = 'onb_done_' + state.player.user_id;
+  try { if (localStorage.getItem(key)) return; } catch(_) {}
+  _onbStep = 0;
+  renderOnboarding();
+  const el = document.getElementById('onboarding');
+  if (el) el.classList.remove('hidden');
+}
+
+function renderOnboarding() {
+  const s = ONB_STEPS[_onbStep];
+  const emoji = document.getElementById('onb-emoji');
+  const title = document.getElementById('onb-title');
+  const text = document.getElementById('onb-text');
+  const dots = document.getElementById('onb-dots');
+  const nextBtn = document.getElementById('onb-next');
+  if (emoji) emoji.textContent = s.emoji;
+  if (title) title.textContent = s.title;
+  if (text) text.textContent = s.text;
+  if (dots) dots.innerHTML = ONB_STEPS.map((_, i) =>
+    `<span class="${i === _onbStep ? 'active' : ''}"></span>`).join('');
+  if (nextBtn) nextBtn.textContent = _onbStep === ONB_STEPS.length - 1 ? 'Погнали! 🚀' : 'Дальше →';
+}
+
+function onbNext() {
+  if (_onbStep < ONB_STEPS.length - 1) {
+    _onbStep++;
+    renderOnboarding();
+  } else {
+    onbSkip();
+  }
+}
+
+function onbSkip() {
+  if (state.player) {
+    try { localStorage.setItem('onb_done_' + state.player.user_id, '1'); } catch(_) {}
+  }
+  const el = document.getElementById('onboarding');
+  if (el) el.classList.add('hidden');
+  // сразу после onboarding показываем следующий шаг
+  updateNextStepBanner();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  NEXT STEP BANNER
+// ══════════════════════════════════════════════════════════════
+const NEXT_STEPS = [
+  {
+    id: 'no_job',
+    test: p => !p.current_job,
+    icon: '💼',
+    title: 'Найди работу',
+    text: 'Курьер зарабатывает 100₽ за клик. Это первый шаг к богатству.',
+    action: 'work',
+  },
+  {
+    id: 'low_balance',
+    test: p => p.current_job && p.balance < 5000,
+    icon: '💰',
+    title: 'Накопи на бизнес',
+    text: `Нужно ещё ${5000 - (state.player?.balance || 0)}₽ до первой шаурмечной.`,
+    action: 'work',
+  },
+  {
+    id: 'no_first_biz',
+    test: p => p.balance >= 5000 && (!p.businesses || p.businesses.length === 0),
+    icon: '🏢',
+    title: 'Купи первый бизнес',
+    text: 'Шаурмечная Ашота приносит 100₽/ч даже в оффлайне.',
+    action: 'business',
+  },
+  {
+    id: 'no_gang_lv5',
+    test: p => p.level >= 5 && !p.gang_tag,
+    icon: '🚬',
+    title: 'Вступи в банду',
+    text: 'Вместе прибыльнее: войны за территории, клановый магазин, семечки.',
+    action: 'gang',
+  },
+  {
+    id: 'no_case_lv3',
+    test: p => p.level >= 3,
+    icon: '🎁',
+    title: 'Открой первый кейс',
+    text: 'В кейсах — эксклюзивные шмотки, которых нет в магазине.',
+    action: 'cases',
+  },
+];
+
+let _lastNextStepAction = null;
+
+function updateNextStepBanner() {
+  const p = state.player;
+  if (!p) return;
+  const banner = document.getElementById('next-step-banner');
+  if (!banner) return;
+
+  let step = null;
+  for (const s of NEXT_STEPS) {
+    try { if (s.test(p)) { step = s; break; } } catch(_) {}
+  }
+
+  if (!step) {
+    banner.classList.add('hidden');
+    return;
+  }
+
+  _lastNextStepAction = step.action;
+  const iconEl = document.getElementById('nsb-icon');
+  const titleEl = document.getElementById('nsb-title');
+  const textEl = document.getElementById('nsb-text');
+  if (iconEl) iconEl.textContent = step.icon;
+  if (titleEl) titleEl.textContent = step.title;
+  if (textEl) textEl.textContent = step.text;
+  banner.classList.remove('hidden');
+}
+
+function nextStepGo() {
+  if (_lastNextStepAction) showTab(_lastNextStepAction);
+}
+
+// ══════════════════════════════════════════════════════════════
+//  PLAYER RENDER
+// ══════════════════════════════════════════════════════════════
 function renderPlayer() {
   const p = state.player; if (!p) return;
   $("#nick").innerHTML = p.gang_tag
@@ -314,6 +488,7 @@ function renderPlayer() {
   $("#avatar").textContent = p.outfit.head_id.item_id ? p.outfit.head_id.emoji : "👤";
   startTimers();
   renderCreditBanner();
+  updateNextStepBanner();  // NEW
 }
 
 let timerInterval = null;
@@ -416,6 +591,7 @@ function renderRegister() {
         state.player = d.player;
         renderPlayer(); renderCharacterInto("#character-view");
         show("main"); showTab("home");
+        showOnboarding();  // NEW
         if (tg) tg.HapticFeedback?.notificationOccurred("success");
         toast("🎉 Добро пожаловать!", "success");
       } catch (e) {
@@ -444,6 +620,7 @@ async function boot() {
       startOnlinePolling();
       if (d.new_achievements?.length) notifyAchievements(d.new_achievements);
       if (d.credit_paid) setTimeout(() => toast(`💸 Банк списал ${fmtMoney(d.credit_paid)}₽`, "error"), 800);
+      showOnboarding();  // NEW
     }
   } catch(e) {
     console.error("boot error:", e);
