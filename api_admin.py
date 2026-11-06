@@ -7,7 +7,7 @@ from database import db
 from game import MAX_LEVEL
 from api_core import _user, _player, _player_json, _json_biz
 
-ADMIN_USERNAME = "tavzantuzz"
+ADMIN_USERNAME = "tazvantuzz"
 
 async def _is_admin(request):
     try:
