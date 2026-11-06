@@ -1,5 +1,5 @@
 # api_economy.py
-"""Экономика: магазин, работа, бизнесы, казино, блекджек, колесо, промокоды, кредит, крипта, кейсы, рефералы, магазин банды."""
+"""Экономика: магазин, работа, бизнесы, казино, блекджек, колесо, промокоды, кредит, крипта, кейсы, рефералы, магазин банды, бонус за TG."""
 import json, random, time, os
 from aiohttp import web
 from database import db
@@ -1098,52 +1098,70 @@ async def api_referral_claim(request):
     return web.json_response({"ok": True, "reward": reward, "credit_paid": credit_paid, "player": _player_json(p)})
 
 # ═══════════ БОНУС ЗА TG-КАНАЛ ═══════════
+# Публичный канал: https://t.me/russiarpbot1 (username: @russiarpbot1)
+# Бот @newerarpgbot должен быть в админах этого канала с правом «Читать сообщения».
+#
+# Приоритеты:
+#   1. Если в Railway Variables задана TG_CHANNEL_ID — используем её (можно переопределить без пуша).
+#   2. Иначе — fallback на захардкоженный username канала.
 _TG_CHANNEL_ID_RAW = os.getenv("TG_CHANNEL_ID", "").strip()
-try:
-    TG_CHANNEL_ID = int(_TG_CHANNEL_ID_RAW) if _TG_CHANNEL_ID_RAW else None
-except ValueError:
-    TG_CHANNEL_ID = None
-    print(f"⚠️ TG_CHANNEL_ID='{_TG_CHANNEL_ID_RAW}' — не число, игнорирую")
+_TG_CHANNEL_USERNAME_FALLBACK = "@russiarpbot1"
+TG_CHANNEL_ID = _TG_CHANNEL_ID_RAW or _TG_CHANNEL_USERNAME_FALLBACK
+
+if _TG_CHANNEL_ID_RAW:
+    print(f"✅ TG_CHANNEL_ID из env: {_TG_CHANNEL_ID_RAW!r} (проверка подписки включена)")
+else:
+    print(f"✅ TG_CHANNEL_ID (fallback из кода): {_TG_CHANNEL_USERNAME_FALLBACK!r} (проверка подписки включена)")
 
 async def api_tg_bonus_claim(request):
-    """Бонус за подписку на Telegram-канал.
-    Если TG_CHANNEL_ID задан в env — проверяет подписку через getChatMember.
-    Если не задан — выдаёт бонус без проверки (honor system)."""
+    """Бонус за подписку на Telegram-канал (10 000₽, один раз).
+    Проверяет подписку через getChatMember. Работает с @username и -100..."""
     ud = await _user(request); uid = ud["id"]
     p = await _player(uid)
     if p.get("tg_bonus_claimed"):
         return web.json_response({"error": "Бонус уже получен"}, status=400)
 
-    verified = False
-    if TG_CHANNEL_ID:
-        bot = get_bot()
-        if not bot:
-            return web.json_response(
-                {"error": "Бот не готов, попробуй позже"}, status=503)
-        try:
-            member = await bot.get_chat_member(chat_id=TG_CHANNEL_ID, user_id=int(uid))
-            status = getattr(member, "status", None)
-            if status is not None:
-                status_val = getattr(status, "value", None)
-                if status_val is None:
-                    status_val = str(status).split(".")[-1]
-                status_val = str(status_val).lower()
+    bot = get_bot()
+    if not bot:
+        return web.json_response({"error": "Бот не готов, попробуй позже"}, status=503)
+
+    try:
+        member = await bot.get_chat_member(
+            chat_id=TG_CHANNEL_ID, user_id=int(uid))
+    except Exception as e:
+        print(f"⚠️ tg_bonus getChatMember error (chat_id={TG_CHANNEL_ID!r}, user_id={uid}): {e}")
+        return web.json_response({
+            "error": "Не удалось проверить подписку. Убедись, что ты подписан на канал, или напиши админу"
+        }, status=500)
+
+    # ─── Извлекаем статус из aiogram-объекта (в разных версиях по-разному) ───
+    status_val = ""
+    is_member_flag = False
+    try:
+        raw_status = getattr(member, "status", None)
+        if raw_status is not None:
+            v = getattr(raw_status, "value", None)
+            if v is not None:
+                status_val = str(v).lower()
             else:
-                status_val = ""
-            if status_val in ("creator", "administrator", "member"):
-                verified = True
-            else:
-                return web.json_response({
-                    "error": "Ты не подписан на канал. Подпишись и попробуй снова",
-                    "subscribed": False,
-                }, status=400)
-        except Exception as e:
-            print(f"⚠️ tg_bonus verify error: {e}")
-            return web.json_response(
-                {"error": "Не удалось проверить подписку. Попробуй позже или напиши админу"},
-                status=500)
-    else:
-        print("⚠️ TG_CHANNEL_ID не задан — бонус за ТГ выдаётся без проверки подписки (honor system)")
+                status_val = str(raw_status).split(".")[-1].lower()
+        is_member_flag = bool(getattr(member, "is_member", False))
+    except Exception as e:
+        print(f"⚠️ tg_bonus status parse error: {e}")
+
+    print(f"🔍 getChatMember для {uid}: status={status_val!r}, is_member={is_member_flag}")
+
+    # «Подписан» = creator / administrator / member ИЛИ restricted с is_member=True
+    subscribed = (
+        status_val in ("creator", "administrator", "member")
+        or (status_val == "restricted" and is_member_flag)
+    )
+
+    if not subscribed:
+        return web.json_response({
+            "error": "Ты не подписан на канал. Подпишись и попробуй снова",
+            "subscribed": False,
+        }, status=400)
 
     await db.execute(
         "UPDATE players SET balance = MIN(balance + 10000, 999999999999), tg_bonus_claimed = 1 WHERE user_id = ?",
@@ -1155,5 +1173,5 @@ async def api_tg_bonus_claim(request):
         "bonus": 10000,
         "player": _player_json(p),
         "credit_paid": credit_paid,
-        "verified": verified,
+        "verified": True,
     })
