@@ -128,13 +128,12 @@ html{overflow-x:hidden}
   background:radial-gradient(circle at 30% 20%,rgba(243,156,18,.15),transparent 50%),
              radial-gradient(circle at 70% 80%,rgba(82,136,193,.15),transparent 50%);
   pointer-events:none}
-.character-view{min-width:150px;display:flex;align-items:center;justify-content:center;
-  position:relative;z-index:1;overflow-x:auto;scrollbar-width:none}
-.character-view::-webkit-scrollbar{display:none}
+.character-view{display:flex;align-items:center;justify-content:center;
+  position:relative;z-index:1;overflow:visible;flex-shrink:0}
 .character-view svg{display:block;filter:drop-shadow(0 4px 8px rgba(0,0,0,.4))}
 .character-view.equip-flash{animation:equipBounce .55s cubic-bezier(.4,0,.6,1)}
 @keyframes equipBounce{0%{transform:scale(1)}30%{transform:scale(1.08);filter:drop-shadow(0 0 20px gold)}60%{transform:scale(1.03)}100%{transform:scale(1)}}
-.character-info{flex:1;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1}
+.character-info{flex:1;display:flex;flex-direction:column;justify-content:center;position:relative;z-index:1;min-width:0}
 .char-name{font-size:18px;font-weight:800}
 .char-level{font-size:13px;color:var(--hint);margin-top:4px}
 .char-stats{font-size:11px;margin-top:6px;padding:4px 8px;
@@ -1154,7 +1153,6 @@ input[type=number]{-moz-appearance:textfield}
   .more-card-icon { font-size: 34px; }
   .more-card-title { font-size: 13px; }
   .character-card { flex-direction: row; }
-  .character-view { min-width: 180px; }
   .character-info { align-items: flex-start; text-align: left; }
   .modal { align-items: center; }
   .modal-content { border-radius: 20px; padding: 28px 24px;

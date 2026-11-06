@@ -308,7 +308,7 @@ function stopOnlinePolling() {
 function renderCharacterInto(selector) {
   const el = $(selector);
   if (!el || !state.player) return;
-  el.innerHTML = renderCharacterSVG(state.player.outfit, {width: 150, height: 300});
+  el.innerHTML = renderCharacterSVG(state.player.outfit);
 }
 
 function flashCharacter() {

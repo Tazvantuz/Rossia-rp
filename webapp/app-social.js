@@ -19,14 +19,14 @@ async function claimRoulette() {
     renderPlayer();
     toast(`🎡 ${fmtMoney(d.prize)}₽!`, "success");
     checkCreditPaid(d);
-  }
-  catch(e) { toast(e.message, "error"); }
+  } catch(e) { toast(e.message, "error"); }
 }
 
 // ══════════════════════════════════════════════════════════════
-//  БОНУС ЗА ПОДПИСКУ НА TELEGRAM-КАНАЛ
+//  БОНУС ЗА ПОДПИСКУ НА TELEGRAM-ГРУППУ
+//  Проверка на бэкенде через getChatMember(chat_id="@russiarpbot1").
 // ══════════════════════════════════════════════════════════════
-const TG_BONUS_CHANNEL_URL = "https://t.me/+Wnms2IVth_s3ZWQy";
+const TG_BONUS_CHANNEL_URL = "https://t.me/russiarpbot1";
 
 function claimTgBonus() {
   const p = state.player;
@@ -41,14 +41,14 @@ function claimTgBonus() {
       <div style="font-size:64px;line-height:1;margin-bottom:8px;">🎁</div>
       <div style="font-size:32px;font-weight:900;color:var(--money);">10 000₽</div>
       <div style="color:var(--hint);margin-top:10px;font-size:13px;line-height:1.5;">
-        Подпишись на наш Telegram-канал<br>и получи бонус на баланс
+        Подпишись на нашу Telegram-группу<br>и получи бонус на баланс
       </div>
     </div>
     <a href="${TG_BONUS_CHANNEL_URL}" rel="noopener"
        onclick="event.preventDefault(); openTgLink('${TG_BONUS_CHANNEL_URL}');"
        class="btn btn-primary"
        style="display:block;text-align:center;text-decoration:none;background:linear-gradient(135deg,#0088cc,#00a8e8);color:#fff;font-weight:800;">
-      📢 Подписаться на канал
+      📢 Открыть группу
     </a>
     <button class="btn btn-primary" style="margin-top:8px;background:linear-gradient(135deg,#27ae60,#229954);" onclick="claimTgBonusConfirm()">
       ✅ Я подписался — получить бонус
