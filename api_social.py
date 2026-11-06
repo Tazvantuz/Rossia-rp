@@ -19,6 +19,41 @@ KNOWN_BOT_IDS = {9900000001, 9900000002, 9900000003, 9900000004, 9900000005}
 def _is_known_bot(user_id):
     return user_id in KNOWN_BOT_IDS
 
+# ═══════════ АТОМАРНЫЕ ХЕЛПЕРЫ ДЛЯ ТРЕЙДОВ ═══════════
+async def _atomic_withdraw_money(uid, amount):
+    """Атомарно списывает деньги, только если баланс >= amount.
+    Возвращает True при успехе, False если не хватает (ничего не списано)."""
+    if amount <= 0:
+        return True
+    try:
+        async with db.conn.execute(
+            "UPDATE players SET balance = balance - ? WHERE user_id = ? AND balance >= ?",
+            (amount, uid, amount)) as cur:
+            rowcount = cur.rowcount
+        await db.conn.commit()
+        return rowcount > 0
+    except Exception as e:
+        print(f"⚠️ _atomic_withdraw_money({uid},{amount}): {e}")
+        return False
+
+async def _atomic_withdraw_item(uid, iid, qty=1):
+    """Атомарно списывает qty предметов, если quantity >= qty.
+    Возвращает True при успехе, False если нет (ничего не списано)."""
+    if qty <= 0:
+        return True
+    try:
+        async with db.conn.execute(
+            "UPDATE inventory SET quantity = quantity - ? "
+            "WHERE user_id = ? AND item_id = ? AND quantity >= ?",
+            (qty, uid, iid, qty)) as cur:
+            rowcount = cur.rowcount
+        await db.conn.commit()
+        return rowcount > 0
+    except Exception as e:
+        print(f"⚠️ _atomic_withdraw_item({uid},{iid},{qty}): {e}")
+        return False
+
+# ═══════════ ЛОКАЦИИ ═══════════
 async def api_location(request):
     ud = await _user(request); uid = ud["id"]
     p = await _player(uid)
@@ -109,6 +144,7 @@ async def api_player_items(request):
             items.append(ij)
     return web.json_response({"items": items})
 
+# ═══════════ ТРЕЙДЫ ═══════════
 async def api_trade_send(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
@@ -219,55 +255,153 @@ async def api_trades_list(request):
     return web.json_response({"incoming": inc_enriched, "outgoing": out_enriched})
 
 async def api_trade_accept(request):
+    """Атомарное принятие трейда: все операции с деньгами/предметами защищены
+    от race condition (двойное нажатие, минус на балансе, дюп предметов)."""
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
-    tid = int(body.get("trade_id",0))
-    t = await db.fetchone("SELECT * FROM trades WHERE trade_id=? AND to_user=? AND status='pending'",
-                          (tid, uid))
-    if not t: return web.json_response({"error":"Нет"}, status=400)
-    from_user = t["from_user"]
-    give_money = t["give_money"]
-    # Дедуп на случай, если старый трейд записан с дублями
-    give_items = list(dict.fromkeys(json.loads(t["give_items"] or "[]")))
-    want_money = t["want_money"]
-    want_items = list(dict.fromkeys(json.loads(t["want_items"] or "[]")))
-    p_from = await _player(from_user); p_to = await _player(uid)
-    if p_from["balance"] < give_money:
-        return web.json_response({"error":"У отправителя нет денег"}, status=400)
-    if p_to["balance"] < want_money:
-        return web.json_response({"error":"У тебя нет денег"}, status=400)
-    for iid in give_items:
-        if not await _has_inv(from_user, iid):
-            return web.json_response({"error":"У отправителя нет предмета"}, status=400)
-    for iid in want_items:
-        if not await _has_inv(uid, iid):
-            return web.json_response({"error":f"У тебя нет предмета"}, status=400)
-    if give_money: await db.execute("UPDATE players SET balance=balance-? WHERE user_id=?", (give_money, from_user))
-    if give_money: await db.execute("UPDATE players SET balance=balance+? WHERE user_id=?", (give_money, uid))
-    if want_money: await db.execute("UPDATE players SET balance=balance-? WHERE user_id=?", (want_money, uid))
-    if want_money: await db.execute("UPDATE players SET balance=balance+? WHERE user_id=?", (want_money, from_user))
-    for iid in give_items:
-        await _remove_inv(from_user, iid, 1); await _add_inv(uid, iid, 1)
-    for iid in want_items:
-        await _remove_inv(uid, iid, 1); await _add_inv(from_user, iid, 1)
-    await db.execute("UPDATE trades SET status='accepted' WHERE trade_id=?", (tid,))
-    await db.execute("UPDATE players SET trades_done=trades_done+1 WHERE user_id IN (?,?)",
-                     (from_user, uid))
-    await _cleanup_trade_notifs(uid, tid)
-    p_to2 = await _player(uid)
-    await _check_achievements(uid, p_to2)
-    await _check_achievements(from_user, await _player(from_user))
-    return web.json_response({"player": _player_json(p_to2), "success": True})
+    try:
+        tid = int(body.get("trade_id", 0))
+    except:
+        tid = 0
+    if not tid:
+        return web.json_response({"error": "Неверный trade_id"}, status=400)
+
+    # ─── Список того, что нужно откатить при любой неудаче ───
+    withdrawn_money = []   # [(uid, amount)]
+    withdrawn_items = []   # [(uid, iid)]
+    trade_claimed = False
+
+    async def rollback():
+        # Возвращаем предметы
+        for r_uid, r_iid in withdrawn_items:
+            try:
+                await _add_inv(r_uid, r_iid, 1)
+            except Exception as e:
+                print(f"⚠️ trade rollback item {r_uid}/{r_iid}: {e}")
+        # Возвращаем деньги
+        for r_uid, r_amt in withdrawn_money:
+            try:
+                await db.execute(
+                    "UPDATE players SET balance = balance + ? WHERE user_id = ?",
+                    (r_amt, r_uid))
+            except Exception as e:
+                print(f"⚠️ trade rollback money {r_uid}/{r_amt}: {e}")
+        # Возвращаем трейд в pending, если он уже был заклеймлен
+        if trade_claimed:
+            try:
+                await db.execute(
+                    "UPDATE trades SET status='pending' WHERE trade_id=? AND status='accepted'",
+                    (tid,))
+            except Exception as e:
+                print(f"⚠️ trade rollback status {tid}: {e}")
+
+    try:
+        # ═══ 1. АТОМАРНО захватываем трейд — защита от двойного accept ═══
+        async with db.conn.execute(
+            "UPDATE trades SET status='accepted' "
+            "WHERE trade_id=? AND to_user=? AND status='pending'",
+            (tid, uid)) as cur:
+            claimed_rowcount = cur.rowcount
+        await db.conn.commit()
+
+        if claimed_rowcount == 0:
+            return web.json_response(
+                {"error": "Трейд не найден или уже обработан"}, status=400)
+        trade_claimed = True
+
+        # ═══ 2. Читаем актуальные данные трейда ═══
+        t = await db.fetchone("SELECT * FROM trades WHERE trade_id=?", (tid,))
+        if not t:
+            await rollback()
+            return web.json_response({"error": "Трейд исчез"}, status=400)
+
+        from_user = int(t["from_user"])
+        give_money = int(t["give_money"] or 0)
+        want_money = int(t["want_money"] or 0)
+        give_items = list(dict.fromkeys(json.loads(t.get("give_items") or "[]")))
+        want_items = list(dict.fromkeys(json.loads(t.get("want_items") or "[]")))
+
+        # ═══ 3. Атомарно списываем деньги у отправителя ═══
+        if give_money > 0:
+            if not await _atomic_withdraw_money(from_user, give_money):
+                await rollback()
+                return web.json_response(
+                    {"error": "У отправителя трейда недостаточно денег"}, status=400)
+            withdrawn_money.append((from_user, give_money))
+
+        # ═══ 4. Атомарно списываем деньги у получателя ═══
+        if want_money > 0:
+            if not await _atomic_withdraw_money(uid, want_money):
+                await rollback()
+                return web.json_response(
+                    {"error": "У тебя недостаточно денег"}, status=400)
+            withdrawn_money.append((uid, want_money))
+
+        # ═══ 5. Атомарно списываем предметы у отправителя ═══
+        for iid in give_items:
+            if not await _atomic_withdraw_item(from_user, iid, 1):
+                await rollback()
+                return web.json_response(
+                    {"error": f"У отправителя нет предмета: {iid}"}, status=400)
+            withdrawn_items.append((from_user, iid))
+
+        # ═══ 6. Атомарно списываем предметы у получателя ═══
+        for iid in want_items:
+            if not await _atomic_withdraw_item(uid, iid, 1):
+                await rollback()
+                return web.json_response(
+                    {"error": f"У тебя нет предмета: {iid}"}, status=400)
+            withdrawn_items.append((uid, iid))
+
+        # Убираем строки с нулевым количеством
+        await db.execute("DELETE FROM inventory WHERE quantity<=0")
+
+        # ═══ 7. Начисляем всё получателям (эти операции уже не могут упасть) ═══
+        if give_money > 0:
+            await db.execute(
+                "UPDATE players SET balance = MIN(balance + ?, 999999999999) WHERE user_id = ?",
+                (give_money, uid))
+        if want_money > 0:
+            await db.execute(
+                "UPDATE players SET balance = MIN(balance + ?, 999999999999) WHERE user_id = ?",
+                (want_money, from_user))
+        for iid in give_items:
+            await _add_inv(uid, iid, 1)
+        for iid in want_items:
+            await _add_inv(from_user, iid, 1)
+
+        # ═══ 8. Счётчик трейдов ═══
+        await db.execute(
+            "UPDATE players SET trades_done=trades_done+1 WHERE user_id IN (?,?)",
+            (from_user, uid))
+
+        # ═══ 9. Уведомление трейда — удалить ═══
+        await _cleanup_trade_notifs(uid, tid)
+
+        # ═══ 10. Достижения ═══
+        p_to2 = await _player(uid)
+        await _check_achievements(uid, p_to2)
+        await _check_achievements(from_user, await _player(from_user))
+
+        return web.json_response({"player": _player_json(p_to2), "success": True})
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        await rollback()
+        return web.json_response({"error": f"Ошибка сервера: {e}"}, status=500)
 
 async def api_trade_decline(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     tid = int(body.get("trade_id",0))
-    await db.execute("UPDATE trades SET status='declined' WHERE trade_id=? AND (to_user=? OR from_user=?)",
-                     (tid, uid, uid))
+    await db.execute(
+        "UPDATE trades SET status='declined' WHERE trade_id=? AND (to_user=? OR from_user=?)",
+        (tid, uid, uid))
     await _cleanup_trade_notifs(uid, tid)
     return web.json_response({"ok": True})
 
+# ═══════════ ЛИДЕРБОРД ═══════════
 async def api_leaderboard(request):
     ud = await _user(request)
     try: body = await request.json()
@@ -333,6 +467,7 @@ async def api_leaderboard(request):
         result = []
     return web.json_response({"leaders": result, "category": category})
 
+# ═══════════ ДРУЗЬЯ ═══════════
 async def api_friend_search(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json(); q = body.get("query", "").strip()
@@ -442,6 +577,7 @@ async def api_friend_list(request):
             r["is_online"] = (r.get("last_seen") or 0) > now - 120
     return web.json_response({"friends": friends, "requests": reqs})
 
+# ═══════════ ЧАТ ═══════════
 async def api_chat_pm_send(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json(); to_id = int(body.get("to_id", 0)); msg = (body.get("message") or "").strip()
@@ -517,6 +653,7 @@ async def api_chat_get(request):
     rows.reverse()
     return web.json_response({"messages": rows})
 
+# ═══════════ УВЕДОМЛЕНИЯ ═══════════
 async def api_notifications_get(request):
     from api_pvp import _cleanup_stale_pvp
     ud = await _user(request); uid = ud["id"]
