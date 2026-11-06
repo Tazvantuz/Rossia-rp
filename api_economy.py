@@ -20,7 +20,12 @@ from api_core import (
 
 # ═══════════ КЕЙСЫ: ЛИМИТЫ ═══════════
 CASE_LIMITS = {
-    "anime_girls": 15
+    "anime_girls": 15,
+    "basic":       50,
+    "rare":        50,
+    "legendary":   50,
+    "top1":        50,
+    "top2":        50,
 }
 
 # ═══════════ КРИПТО-БАЛАНСИРОВКА ═══════════

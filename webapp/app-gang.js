@@ -2,7 +2,14 @@
 // Банды, гетто, кейсы, рефералы, магазин банды
 
 // ═══ FALLBACK на случай если бэкенд не пришлёт is_limited ═══
-const LIMITED_CASES_FALLBACK = { "anime_girls": 15 };
+const LIMITED_CASES_FALLBACK = {
+  "anime_girls": 15,
+  "basic":       50,
+  "rare":        50,
+  "legendary":   50,
+  "top1":        50,
+  "top2":        50,
+};
 
 async function loadCases() {
   try {
@@ -666,6 +673,7 @@ async function claimRefReward(milestone) {
     toast(`🎉 +${d.reward}₽!`, "success");
     state.player.balance += d.reward;
     document.getElementById("money").textContent = fmtMoney(state.player.balance);
+    checkCreditPaid(d);
     renderReferral();
   } catch(e) { toast(e.message, "error"); }
 }
