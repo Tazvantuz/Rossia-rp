@@ -848,3 +848,184 @@ html { overflow-x: hidden; }
 
 /* ═══ Плавное появление onboarding ═══ */
 .hidden { display: none !important; }
+/* ═══════════════════════════════════════════════════════════════
+   ПРОМОКОДЫ
+   ═══════════════════════════════════════════════════════════════ */
+
+.promo-input-box {
+  background: var(--bg-2);
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1.5px solid rgba(243,156,18,0.3);
+}
+
+#promo-input {
+  width: 100%;
+  padding: 14px;
+  background: var(--bg-3);
+  border: 2px solid transparent;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  text-align: center;
+  letter-spacing: 2px;
+  outline: none;
+  transition: border-color 0.2s;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", monospace;
+}
+#promo-input:focus { border-color: var(--money); }
+#promo-input::placeholder {
+  color: var(--hint);
+  font-weight: 600;
+  letter-spacing: 1px;
+  opacity: 0.6;
+}
+
+.promo-result {
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: 800;
+  text-align: center;
+  margin-bottom: 16px;
+  font-size: 14px;
+  line-height: 1.4;
+  animation: fadeIn 0.3s;
+}
+.promo-result.success {
+  background: rgba(46,204,113,0.15);
+  color: #2ecc71;
+  border: 1.5px solid rgba(46,204,113,0.4);
+}
+.promo-result.error {
+  background: rgba(231,76,60,0.15);
+  color: #e74c3c;
+  border: 1.5px solid rgba(231,76,60,0.4);
+}
+
+.promo-info-box {
+  background: var(--bg-2);
+  border-radius: 14px;
+  padding: 16px;
+  margin-top: 16px;
+}
+.promo-info-title {
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--money);
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.promo-info-text {
+  font-size: 12px;
+  color: var(--hint);
+  line-height: 1.7;
+}
+.promo-info-btn {
+  display: block;
+  margin-top: 12px;
+  padding: 10px;
+  text-align: center;
+  background: linear-gradient(135deg, #0088cc, #00a8e8);
+  color: #fff;
+  text-decoration: none;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+}
+.promo-info-btn:active { opacity: 0.85; }
+
+.more-card-promo {
+  border-color: rgba(243,156,18,0.4);
+  background: linear-gradient(135deg, rgba(243,156,18,0.12), rgba(231,76,60,0.08));
+}
+
+/* Админ-панель: промокоды */
+.promo-admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.promo-admin-form input {
+  padding: 10px;
+  background: #111;
+  border: 1px solid #333;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 13px;
+  outline: none;
+}
+.promo-admin-form input:focus { border-color: #f39c12; }
+.promo-admin-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.promo-admin-create {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #27ae60, #229954);
+  color: #fff;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+.promo-admin-create:active { transform: scale(0.97); }
+
+.promo-admin-list { display: flex; flex-direction: column; gap: 8px; }
+.promo-admin-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: #111;
+  border-radius: 10px;
+  border-left: 3px solid #9b59b6;
+  gap: 8px;
+}
+.promo-admin-code {
+  font-weight: 900;
+  font-size: 13px;
+  color: #fff;
+  font-family: monospace;
+  letter-spacing: 0.5px;
+  word-break: break-all;
+  flex: 1;
+  min-width: 0;
+}
+.promo-admin-info {
+  font-size: 10px;
+  color: var(--hint);
+  margin-top: 2px;
+  font-weight: 600;
+}
+.promo-admin-bonus {
+  color: #2ecc71;
+  font-weight: 800;
+  font-size: 12px;
+}
+.promo-admin-delete {
+  background: rgba(231,76,60,0.2);
+  border: 1px solid rgba(231,76,60,0.5);
+  color: #e74c3c;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 900;
+  flex-shrink: 0;
+}
+.promo-admin-delete:active { transform: scale(0.9); }
+.promo-admin-empty {
+  text-align: center;
+  color: #666;
+  padding: 20px;
+  font-size: 12px;
+}

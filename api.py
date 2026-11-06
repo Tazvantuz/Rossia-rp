@@ -28,6 +28,12 @@ def setup_routes(app):
     R.add_post("/api/admin/delete", api_admin.api_admin_delete)
     R.add_post("/api/admin/set_level", api_admin.api_admin_set_level)
 
+    # ═══ ПРОМОКОДЫ ═══
+    R.add_post("/api/promo/apply", api_economy.api_promo_apply)
+    R.add_post("/api/admin/promo/list", api_admin.api_admin_promo_list)
+    R.add_post("/api/admin/promo/create", api_admin.api_admin_promo_create)
+    R.add_post("/api/admin/promo/delete", api_admin.api_admin_promo_delete)
+
     R.add_post("/api/me", api_core.api_me)
     R.add_post("/api/register", api_core.api_register)
     R.add_post("/api/reset", api_core.api_reset)

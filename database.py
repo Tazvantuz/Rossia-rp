@@ -152,8 +152,23 @@ CREATE TABLE IF NOT EXISTS blackjack_games (
     doubled INTEGER DEFAULT 0,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
+CREATE TABLE IF NOT EXISTS promo_codes (
+    code TEXT PRIMARY KEY,
+    bonus INTEGER NOT NULL,
+    uses_left INTEGER NOT NULL,
+    uses_total INTEGER NOT NULL,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS promo_used (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT NOT NULL,
+    user_id INTEGER NOT NULL,
+    used_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(code, user_id)
+);
 CREATE INDEX IF NOT EXISTS idx_activity_day ON player_daily_activity(day);
 CREATE INDEX IF NOT EXISTS idx_activity_user ON player_daily_activity(user_id);
+CREATE INDEX IF NOT EXISTS idx_promo_used_user ON promo_used(user_id);
 """
 
 KNOWN_BOT_IDS = (9900000001, 9900000002, 9900000003, 9900000004, 9900000005)
@@ -210,7 +225,6 @@ class Database:
                 await self.conn.commit()
             except: pass
 
-        # ═══ system_stats — на всякий случай создаём явно ещё раз ═══
         try:
             await self.conn.execute(
                 "CREATE TABLE IF NOT EXISTS system_stats (key TEXT PRIMARY KEY, value INTEGER DEFAULT 0)"
@@ -220,7 +234,6 @@ class Database:
         except Exception as e:
             print(f"⚠️ system_stats: {e}")
 
-        # ═══ blackjack_games — гарантированно создаём ═══
         try:
             await self.conn.execute(
                 "CREATE TABLE IF NOT EXISTS blackjack_games ("
@@ -240,7 +253,28 @@ class Database:
         except Exception as e:
             print(f"⚠️ blackjack_games: {e}")
 
-        # ═══ Чистим зависшие блекджек-игры старше 1 часа ═══
+        try:
+            await self.conn.execute(
+                "CREATE TABLE IF NOT EXISTS promo_codes ("
+                " code TEXT PRIMARY KEY,"
+                " bonus INTEGER NOT NULL,"
+                " uses_left INTEGER NOT NULL,"
+                " uses_total INTEGER NOT NULL,"
+                " created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
+            )
+            await self.conn.execute(
+                "CREATE TABLE IF NOT EXISTS promo_used ("
+                " id INTEGER PRIMARY KEY AUTOINCREMENT,"
+                " code TEXT NOT NULL,"
+                " user_id INTEGER NOT NULL,"
+                " used_at TEXT DEFAULT CURRENT_TIMESTAMP,"
+                " UNIQUE(code, user_id))"
+            )
+            await self.conn.commit()
+            print("✅ Таблицы promo_codes/promo_used готовы")
+        except Exception as e:
+            print(f"⚠️ promo tables: {e}")
+
         try:
             await self.conn.execute(
                 "DELETE FROM blackjack_games "
@@ -249,7 +283,6 @@ class Database:
         except Exception as e:
             print(f"⚠️ blackjack cleanup: {e}")
 
-        # ═══ Боты в оффлайн ═══
         try:
             ids_ph = ",".join("?" * len(KNOWN_BOT_IDS))
             await self.conn.execute(

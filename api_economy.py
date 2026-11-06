@@ -1,5 +1,5 @@
 # api_economy.py
-"""Экономика: магазин, работа, бизнесы, казино, блекджек, колесо, кредит, крипта, кейсы, рефералы, магазин банды."""
+"""Экономика: магазин, работа, бизнесы, казино, блекджек, колесо, промокоды, кредит, крипта, кейсы, рефералы, магазин банды."""
 import json, random, time
 from aiohttp import web
 from database import db
@@ -410,7 +410,6 @@ async def api_casino_play(request):
     return web.json_response({"player": _player_json(p), "win": win_amount, "net": net, "result": result_text, "new_achievements": ach})
 
 # ═══════════ КОЛЕСО ФОРТУНЫ ═══════════
-# 20 секторов: 8x1, 5x3, 4x5, 2x10, 1x20 — редкие разнесены по кругу
 WHEEL_SECTORS = [1, 3, 1, 5, 1, 3, 10, 1, 3, 5, 1, 3, 20, 1, 3, 5, 10, 1, 5, 1]
 WHEEL_MULTIPLIERS = {1: 2, 3: 4, 5: 6, 10: 11, 20: 21}
 
@@ -767,6 +766,66 @@ async def api_blackjack_cancel(request):
     await db.execute("DELETE FROM blackjack_games WHERE user_id=?", (uid,))
     return web.json_response({"ok": True})
 
+# ═══════════ ПРОМОКОДЫ ═══════════
+async def api_promo_apply(request):
+    """Игрок вводит промокод. Атомарно: списывает 1 использование и начисляет бонус."""
+    ud = await _user(request); uid = ud["id"]
+    body = await request.json()
+    code = (body.get("code") or "").strip().upper()
+    if not code:
+        return web.json_response({"error": "Введи промокод"}, status=400)
+    if len(code) > 64:
+        return web.json_response({"error": "Слишком длинный код"}, status=400)
+
+    row = await db.fetchone("SELECT * FROM promo_codes WHERE code=?", (code,))
+    if not row:
+        return web.json_response({"error": "Промокод не найден"}, status=404)
+    if row["uses_left"] <= 0:
+        return web.json_response({"error": "Промокод больше не действует"}, status=400)
+
+    already = await db.fetchone(
+        "SELECT id FROM promo_used WHERE code=? AND user_id=?", (code, uid))
+    if already:
+        return web.json_response({"error": "Ты уже активировал этот промокод"}, status=400)
+
+    try:
+        cur = await db.conn.execute(
+            "UPDATE promo_codes SET uses_left = uses_left - 1 WHERE code=? AND uses_left > 0",
+            (code,))
+        await db.conn.commit()
+        if cur.rowcount == 0:
+            return web.json_response({"error": "Промокод больше не действует"}, status=400)
+        try:
+            await db.conn.execute(
+                "INSERT INTO promo_used (code, user_id) VALUES (?, ?)", (code, uid))
+            await db.conn.commit()
+        except Exception:
+            await db.conn.execute(
+                "UPDATE promo_codes SET uses_left = uses_left + 1 WHERE code=?", (code,))
+            await db.conn.commit()
+            return web.json_response({"error": "Ты уже активировал этот промокод"}, status=400)
+    except Exception as e:
+        print(f"⚠️ promo apply: {e}")
+        return web.json_response({"error": "Ошибка сервера"}, status=500)
+
+    bonus = int(row["bonus"] or 0)
+    await db.execute("UPDATE players SET balance = balance + ? WHERE user_id=?", (bonus, uid))
+    credit_paid = await _forced_credit_collect(uid)
+    p = await _player(uid)
+    pj = _player_json(p)
+    try:
+        await _check_achievements(uid, p)
+    except Exception:
+        pass
+    return web.json_response({
+        "ok": True,
+        "bonus": bonus,
+        "player": pj,
+        "credit_paid": credit_paid,
+        "message": f"✅ +{bonus}₽ зачислено на баланс!",
+    })
+
+# ═══════════ ЕЖЕДНЕВНОЕ / РУЛЕТКА / КРАЖА ═══════════
 async def api_daily(request):
     ud = await _user(request); uid = ud["id"]
     p = await _player(uid)

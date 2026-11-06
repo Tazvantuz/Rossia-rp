@@ -1,5 +1,5 @@
 // app-admin.js
-// Админ-панель, аналитика, финальная инициализация (boot)
+// Админ-панель, аналитика, промокоды, boot
 
 function checkAdminAccess() {
   const user = tg?.initDataUnsafe?.user;
@@ -35,12 +35,10 @@ async function adminSearch() {
 async function adminSelectPlayer(id) {
   const res = await api("admin/player_info", { target_id: id });
   if (res.error) return toast(res.error, "error");
-
   const p = res.player;
   const s = res.stats;
   const details = document.getElementById("admin-player-details");
   details.style.display = "block";
-
   details.innerHTML = `
     <h4 style="color:#fff; margin-bottom:8px;">${escapeHtml(p.nickname)} (ID: ${p.user_id})</h4>
     <div style="font-size:13px; color:#aaa; margin-bottom:12px;">
@@ -48,7 +46,6 @@ async function adminSelectPlayer(id) {
       Банда: ${s.gang} | Казино: ${s.casino_plays} игр<br>
       Бизнесы: ${s.businesses}
     </div>
-
     <div style="margin-bottom:12px;">
       <div style="font-size:12px; color:#aaa; margin-bottom:4px;">Изменить баланс:</div>
       <div style="display:flex; gap:8px;">
@@ -57,7 +54,6 @@ async function adminSelectPlayer(id) {
         <button class="btn btn-secondary" onclick="adminChangeBalance(${p.user_id}, -1)">-</button>
       </div>
     </div>
-
     <div style="margin-bottom:16px;">
       <div style="font-size:12px; color:#aaa; margin-bottom:4px;">Установить уровень (сбросит XP):</div>
       <div style="display:flex; gap:8px;">
@@ -65,7 +61,6 @@ async function adminSelectPlayer(id) {
         <button class="btn btn-primary" onclick="adminSetLevel(${p.user_id})">OK</button>
       </div>
     </div>
-
     <button onclick='adminDeletePlayer(${p.user_id}, ${jsAttr(p.nickname)})' style="width:100%; background:#c0392b; color:#fff; border:none; padding:12px; border-radius:8px; font-weight:bold; cursor:pointer;">
       🗑 УДАЛИТЬ АККАУНТ
     </button>
@@ -97,6 +92,105 @@ async function adminDeletePlayer(id, nick) {
   adminSearch();
 }
 
+// ══════════════════════════════════════════════════════════════
+//  ПРОМОКОДЫ (админ)
+// ══════════════════════════════════════════════════════════════
+async function showAdminPromos() {
+  const el = document.getElementById('admin-player-details');
+  if (el) el.style.display = 'none';
+  const results = document.getElementById('admin-results');
+  if (results) results.innerHTML = '';
+
+  openModal(`
+    <h2 style="margin-bottom:16px;">🎁 Промокоды</h2>
+
+    <div class="promo-admin-form">
+      <input id="promo-new-code" type="text" placeholder="КОД (например PARTNER_50K)"
+             maxlength="64" style="text-transform:uppercase" autocapitalize="characters">
+      <div class="promo-admin-form-row">
+        <input id="promo-new-bonus" type="number" placeholder="Бонус ₽" min="1" value="50000">
+        <input id="promo-new-uses" type="number" placeholder="Использований" min="1" value="100">
+      </div>
+      <button class="promo-admin-create" onclick="adminCreatePromo()">➕ Создать промокод</button>
+    </div>
+
+    <h3 style="color:#fff;margin:16px 0 8px;font-size:14px;">📋 Все промокоды</h3>
+    <div id="promo-admin-list" class="promo-admin-list">
+      <div class="promo-admin-empty">Загрузка...</div>
+    </div>
+
+    <button class="btn btn-secondary" style="margin-top:16px" onclick="closeModal()">Закрыть</button>
+  `);
+
+  await refreshAdminPromos();
+}
+
+async function refreshAdminPromos() {
+  const box = document.getElementById('promo-admin-list');
+  if (!box) return;
+  try {
+    const d = await api("admin/promo/list", {});
+    const list = d.promo_codes || [];
+    if (list.length === 0) {
+      box.innerHTML = '<div class="promo-admin-empty">Пока нет промокодов. Создай первый!</div>';
+      return;
+    }
+    box.innerHTML = list.map(p => {
+      const left = p.uses_left;
+      const total = p.uses_total;
+      const inactive = left <= 0;
+      return `<div class="promo-admin-item" style="border-left-color:${inactive ? '#555' : '#9b59b6'};${inactive ? 'opacity:0.55;' : ''}">
+        <div style="flex:1;min-width:0;">
+          <div class="promo-admin-code">${escapeHtml(p.code)}</div>
+          <div class="promo-admin-info">
+            <span class="promo-admin-bonus">+${fmtMoney(p.bonus)}₽</span>
+            · использовано ${total - left} из ${total}
+            ${inactive ? ' · <b style="color:#e74c3c;">исчерпан</b>' : ''}
+          </div>
+        </div>
+        <button class="promo-admin-delete" onclick='adminDeletePromo(${jsAttr(p.code)})' title="Удалить">✕</button>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    box.innerHTML = `<div class="promo-admin-empty" style="color:#e74c3c;">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+async function adminCreatePromo() {
+  const codeEl = document.getElementById('promo-new-code');
+  const bonusEl = document.getElementById('promo-new-bonus');
+  const usesEl = document.getElementById('promo-new-uses');
+  if (!codeEl || !bonusEl || !usesEl) return;
+  const code = (codeEl.value || '').trim().toUpperCase();
+  const bonus = parseInt(bonusEl.value) || 0;
+  const uses = parseInt(usesEl.value) || 0;
+  if (!code) { toast("Введи код", "error"); return; }
+  if (bonus <= 0) { toast("Бонус должен быть > 0", "error"); return; }
+  if (uses <= 0) { toast("Количество использований > 0", "error"); return; }
+  try {
+    await api("admin/promo/create", { code, bonus, uses });
+    toast(`✅ Промокод ${code} создан`, "success");
+    codeEl.value = '';
+    await refreshAdminPromos();
+  } catch(e) {
+    toast(e.message, "error");
+  }
+}
+
+async function adminDeletePromo(code) {
+  if (!confirm(`Удалить промокод ${code}? Все активации этого кода будут потеряны.`)) return;
+  try {
+    await api("admin/promo/delete", { code });
+    toast("❌ Удалён", "success");
+    await refreshAdminPromos();
+  } catch(e) {
+    toast(e.message, "error");
+  }
+}
+
+// ══════════════════════════════════════════════════════════════
+//  АНАЛИТИКА
+// ══════════════════════════════════════════════════════════════
 function _fmtRegTime(ts) {
   if (!ts) return "—";
   const d = new Date(ts * 1000);
@@ -121,7 +215,6 @@ function _fmtRegTime(ts) {
 async function showAdminAnalytics() {
   try {
     const d = await api("admin/analytics", {});
-
     const statCard = (icon, label, value, color) => `
       <div style="background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:14px;text-align:center;">
         <div style="font-size:24px;">${icon}</div>
@@ -129,7 +222,6 @@ async function showAdminAnalytics() {
         <div style="font-size:20px;font-weight:900;color:${color || '#fff'};margin-top:4px;">${value}</div>
       </div>
     `;
-
     const retentionColor = d.retention_pct >= 30 ? '#2ecc71' : d.retention_pct >= 15 ? '#f39c12' : '#e74c3c';
 
     let recentHtml = "";
@@ -169,10 +261,8 @@ async function showAdminAnalytics() {
       retHtml = d.retention_by_day.map(r => {
         const color = r.pct >= 50 ? '#2ecc71' : r.pct >= 25 ? '#f39c12' : '#e74c3c';
         return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px;background:#111;border-radius:8px;margin-bottom:4px;">
-          <div>
-            <div style="font-weight:700;color:#fff;font-size:13px;">${r.date}</div>
-            <div style="font-size:11px;color:#888;">${r.new} новых → ${r.returned} вернулось</div>
-          </div>
+          <div><div style="font-weight:700;color:#fff;font-size:13px;">${r.date}</div>
+          <div style="font-size:11px;color:#888;">${r.new} новых → ${r.returned} вернулось</div></div>
           <div style="font-size:16px;font-weight:900;color:${color};">${r.pct}%</div>
         </div>`;
       }).join("");
@@ -196,50 +286,41 @@ async function showAdminAnalytics() {
 
     openModal(`
       <h2 style="margin-bottom:16px;">📊 Аналитика игроков</h2>
-
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
         ${statCard("👥", "Всего игроков", d.total_players)}
         ${statCard("🟢", "Онлайн сейчас", d.online_now, "#2ecc71")}
         ${statCard("🆕", "Новых сегодня", d.new_today, "#3498db")}
         ${statCard("🔥", "Активных сегодня", d.active_today, "#f39c12")}
       </div>
-
       <h3 style="color:#fff;margin:16px 0 8px;font-size:14px;">🆕 Последние регистрации</h3>
       <div style="background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:10px;margin-bottom:16px;">
         ${recentHtml}
       </div>
-
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
         ${statCard("📅", "За неделю", d.active_week, "#9b59b6")}
         ${statCard("⏱", "Ср. сессия", d.avg_session_str, "#3498db")}
         ${statCard("📊", "Медиана", d.median_session_str, "#3498db")}
         ${statCard("🕐", "Всего часов", d.total_hours_played + "ч", "#f39c12")}
       </div>
-
       <div style="background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:14px;margin-bottom:16px;text-align:center;">
         <div style="font-size:11px;color:#888;text-transform:uppercase;letter-spacing:0.5px;">🔄 Возвращаемость (retention)</div>
         <div style="font-size:36px;font-weight:900;color:${retentionColor};margin:8px 0;">${d.retention_pct}%</div>
         <div style="font-size:12px;color:#888;">${d.returned_count} из ${d.players_with_activity} игроков вернулись хотя бы раз</div>
       </div>
-
       <h3 style="color:#fff;margin:16px 0 8px;font-size:14px;">📈 Активность 7 дней</h3>
       <div style="background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:12px;margin-bottom:16px;">
         <div style="display:flex;gap:4px;align-items:flex-end;height:100px;">
           ${actChart || '<div style="color:#888;width:100%;text-align:center;font-size:12px;align-self:center;">Данных нет</div>'}
         </div>
       </div>
-
       <h3 style="color:#fff;margin:16px 0 8px;font-size:14px;">📊 Retention по дням (7 дней)</h3>
       <div style="margin-bottom:16px;">${retHtml}</div>
-
       <h3 style="color:#fff;margin:16px 0 8px;font-size:14px;">🏆 Топ-10 игроков по времени</h3>
       <div style="margin-bottom:16px;">${topHtml}</div>
-
       <div style="font-size:11px;color:#666;text-align:center;padding:8px;line-height:1.4;">
         💡 Данные собираются с момента деплоя аналитики.<br>
         Retention первых дней = 0%, потому что "вернуться" можно только на следующий день.
       </div>
-
       <button class="btn btn-secondary" style="margin-top:8px" onclick="closeModal()">Закрыть</button>
     `);
   } catch(e) {
@@ -247,7 +328,4 @@ async function showAdminAnalytics() {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  BOOT — ФИНАЛЬНЫЙ ЗАПУСК (всё загружено)
-// ══════════════════════════════════════════════════════════════
 boot();

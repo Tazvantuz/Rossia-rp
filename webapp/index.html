@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>РП Россия</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=14">
+<link rel="stylesheet" href="style.css?v=15">
 </head>
 <body>
 <div id="app">
@@ -67,7 +67,6 @@
       </div>
     </div>
 
-    <!-- HOME -->
     <section class="tab-content active" data-tab="home">
       <div class="character-card">
         <div class="character-view" id="character-view"></div>
@@ -109,7 +108,6 @@
       <button class="btn btn-secondary" id="roulette-btn" onclick="claimRoulette()">🎡 Рулетка дня <span id="roulette-timer" class="badge-timer"></span></button>
     </section>
 
-    <!-- APPEARANCE -->
     <section class="tab-content" data-tab="appearance">
       <h2 class="section-title">👕 Магазин одежды</h2>
       <div class="filter-row" id="appearance-filter"></div>
@@ -118,7 +116,6 @@
       <div id="inventory-list"></div>
     </section>
 
-    <!-- WORK -->
     <section class="tab-content" data-tab="work">
       <h2 class="section-title">💼 Работа</h2>
       <div id="job-current-box"></div>
@@ -126,7 +123,6 @@
       <div id="jobs-list"></div>
     </section>
 
-    <!-- BUSINESS -->
     <section class="tab-content" data-tab="business">
       <h2 class="section-title">🏢 Бизнесы</h2>
       <div class="business-header" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;background:var(--bg-2);padding:16px;border-radius:16px;gap:12px;">
@@ -140,7 +136,6 @@
       <div id="businesses-list"></div>
     </section>
 
-    <!-- CASINO -->
     <section class="tab-content" data-tab="casino">
       <h2 class="section-title">🎰 Казино "У Ашота"</h2>
       <div class="casino-menu" id="casino-menu">
@@ -171,7 +166,6 @@
       </div>
     </section>
 
-    <!-- PEOPLE -->
     <section class="tab-content" data-tab="people">
       <h2 class="section-title">👥 Люди</h2>
       <div class="location-tabs" id="location-tabs"></div>
@@ -183,7 +177,6 @@
       <div id="trades-outgoing"></div>
     </section>
 
-    <!-- REFERRAL -->
     <section class="tab-content" data-tab="referral">
       <h2 class="section-title">👥 Реферальная система</h2>
       <div class="ref-hero">
@@ -208,19 +201,16 @@
       <div id="ref-milestones" class="ref-milestones"></div>
     </section>
 
-    <!-- CASES -->
     <section class="tab-content" data-tab="cases">
       <h2 class="section-title">🎁 Кейсы</h2>
       <p style="color:var(--hint);margin-bottom:12px;font-size:13px">Только уникальные предметы!</p>
       <div id="cases-list" class="cases-grid"></div>
     </section>
 
-    <!-- GANG -->
     <section class="tab-content" data-tab="gang">
       <div id="gang-content"></div>
     </section>
 
-    <!-- GHETTO -->
     <section class="tab-content" data-tab="ghetto">
       <h2 class="section-title">🗺️ Карта Гетто</h2>
       <div id="ghetto-map-container" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:16px;">
@@ -228,7 +218,6 @@
       </div>
     </section>
 
-    <!-- FRIENDS -->
     <section class="tab-content" data-tab="friends">
       <h2 class="section-title">🤝 Друзья</h2>
       <div style="display:flex; gap:8px; margin-bottom:16px;">
@@ -241,7 +230,6 @@
       <div id="friend-list"></div>
     </section>
 
-    <!-- CHAT -->
     <section class="tab-content" data-tab="chat">
       <h2 class="section-title">💬 Чат</h2>
       <div class="chat-tabs" id="chat-tabs">
@@ -254,7 +242,38 @@
       </div>
     </section>
 
-    <!-- MORE -->
+    <!-- ПРОМОКОДЫ -->
+    <section class="tab-content" data-tab="promo">
+      <h2 class="section-title">🎁 Промокоды</h2>
+      <p style="color:var(--hint);margin-bottom:16px;font-size:13px;line-height:1.5;">
+        Введи промокод и получи бонус на баланс.<br>
+        Каждый код можно активировать <b>только один раз</b>.
+      </p>
+
+      <div class="promo-input-box">
+        <input id="promo-input" type="text" maxlength="64" placeholder="ВВЕДИ КОД"
+               autocomplete="off" autocapitalize="characters"
+               style="text-transform:uppercase">
+        <button class="btn btn-primary" onclick="applyPromo()" id="btn-apply-promo">✅ Активировать</button>
+      </div>
+
+      <div id="promo-result-box" class="promo-result hidden"></div>
+
+      <div class="promo-info-box">
+        <div class="promo-info-title">💡 Где брать промокоды?</div>
+        <div class="promo-info-text">
+          • В нашем Telegram-канале<br>
+          • В каналах-партнёров (посты с игрой «РП Россия»)<br>
+          • В ивентах и розыгрышах
+        </div>
+        <a href="https://t.me/+Wnms2IVth_s3ZWQy" rel="noopener"
+           onclick="event.preventDefault(); openTgLink('https://t.me/+Wnms2IVth_s3ZWQy');"
+           class="promo-info-btn">
+          📢 Перейти в канал
+        </a>
+      </div>
+    </section>
+
     <section class="tab-content" data-tab="more">
       <h2 class="section-title">⚙️ Ещё</h2>
 
@@ -293,6 +312,14 @@
           <div class="more-card-icon">💸</div>
           <div class="more-card-title">Кредит</div>
           <div class="more-card-badge hidden" id="credit-badge"></div>
+        </div>
+      </div>
+
+      <h3 class="more-group-title">🎁 Бонусы</h3>
+      <div class="more-grid">
+        <div class="more-card more-card-promo" onclick="showTab('promo')">
+          <div class="more-card-icon">🎁</div>
+          <div class="more-card-title">Промокоды</div>
         </div>
       </div>
 
@@ -353,7 +380,6 @@
   </div>
 </div>
 
-<!-- Модалка -->
 <div id="modal" class="modal hidden">
   <div class="modal-content">
     <div class="modal-close" id="modal-close">✕</div>
@@ -363,7 +389,6 @@
 
 <div id="toast" class="toast hidden"></div>
 
-<!-- Onboarding -->
 <div id="onboarding" class="onboarding hidden">
   <div class="onb-card">
     <div class="onb-emoji" id="onb-emoji">👋</div>
@@ -375,32 +400,37 @@
   </div>
 </div>
 
-<!-- Admin panel -->
 <div id="admin-panel" class="modal hidden">
   <div class="modal-content" style="max-height: 90vh; overflow-y: auto;">
     <div class="modal-close" onclick="document.getElementById('admin-panel').classList.add('hidden')">✕</div>
     <h3 style="color:#e74c3c; margin-bottom:16px;">🛠 Админ-панель</h3>
+
     <button class="btn btn-secondary" onclick="showAdminAnalytics()" style="width:100%;margin-bottom:12px;background:linear-gradient(135deg,#3498db,#2980b9);color:#fff;border:none;font-weight:700;">📊 Аналитика игроков</button>
+
+    <button class="btn btn-secondary" onclick="showAdminPromos()" style="width:100%;margin-bottom:12px;background:linear-gradient(135deg,#9b59b6,#8e44ad);color:#fff;border:none;font-weight:700;">🎁 Промокоды</button>
+
     <div style="display:flex; gap:8px; margin-bottom:16px;">
       <input type="text" id="admin-search-input" placeholder="Ник игрока..." style="flex:1; background:#111; border:1px solid #333; color:#fff; padding:10px; border-radius:8px;">
       <button class="btn btn-primary" onclick="adminSearch()" style="padding:10px 16px;">Найти</button>
     </div>
+
     <div id="admin-results" style="display:flex; flex-direction:column; gap:8px; margin-bottom:16px;"></div>
+
     <div id="admin-player-details" style="display:none; background:#1e1e1e; border:1px solid #e74c3c; border-radius:12px; padding:16px;"></div>
   </div>
 </div>
 
-<script src="app-svg.js?v=14"></script>
-<script src="app-core.js?v=14"></script>
-<script src="app-shop.js?v=14"></script>
-<script src="app-social.js?v=14"></script>
-<script src="app-chat.js?v=14"></script>
-<script src="app-profile.js?v=14"></script>
-<script src="app-crypto.js?v=14"></script>
-<script src="app-gang.js?v=14"></script>
-<script src="app-pvp.js?v=14"></script>
-<script src="app-admin.js?v=14"></script>
-<script src="casino.js?v=14"></script>
-<script src="gang.js?v=14"></script>
+<script src="app-svg.js?v=15"></script>
+<script src="app-core.js?v=15"></script>
+<script src="app-shop.js?v=15"></script>
+<script src="app-social.js?v=15"></script>
+<script src="app-chat.js?v=15"></script>
+<script src="app-profile.js?v=15"></script>
+<script src="app-crypto.js?v=15"></script>
+<script src="app-gang.js?v=15"></script>
+<script src="app-pvp.js?v=15"></script>
+<script src="app-admin.js?v=15"></script>
+<script src="casino.js?v=15"></script>
+<script src="gang.js?v=15"></script>
 </body>
 </html>

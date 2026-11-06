@@ -1,5 +1,5 @@
 # api_admin.py
-"""Админ-панель + аналитика игроков (боты исключены)."""
+"""Админ-панель + аналитика игроков + управление промокодами (боты исключены)."""
 import json, time
 from urllib.parse import parse_qsl
 from aiohttp import web
@@ -99,7 +99,7 @@ async def api_admin_set_level(request):
     await db.execute("UPDATE players SET level = ?, xp = 0 WHERE user_id = ?", (new_level, target_id))
     return web.json_response({"success": True})
 
-# ═══════════ АНАЛИТИКА (только реальные игроки, is_bot=0) ═══════════
+# ═══════════ АНАЛИТИКА ═══════════
 async def api_admin_analytics(request):
     if not await _is_admin(request):
         return web.json_response({"error": "Доступ запрещен"}, status=403)
@@ -107,7 +107,6 @@ async def api_admin_analytics(request):
     now = int(time.time())
     today_day = now // 86400
 
-    # ═══ 1. ОБЩИЕ ЦИФРЫ (только реальные игроки) ═══
     total = (await db.fetchone(
         "SELECT COUNT(*) as c FROM players WHERE is_bot=0"))["c"]
     online = (await db.fetchone(
@@ -117,7 +116,6 @@ async def api_admin_analytics(request):
         "SELECT COUNT(*) as c FROM players WHERE strftime('%s', created_at) > ? AND is_bot=0",
         (today_day * 86400,)))["c"]
 
-    # ═══ 2. АКТИВНЫЕ (player_daily_activity — там только реальные) ═══
     active_today = (await db.fetchone(
         "SELECT COUNT(DISTINCT pda.user_id) as c FROM player_daily_activity pda "
         "JOIN players p ON p.user_id = pda.user_id "
@@ -128,7 +126,6 @@ async def api_admin_analytics(request):
         "JOIN players p ON p.user_id = pda.user_id "
         "WHERE pda.day>=? AND p.is_bot=0", (week_start,)))["c"]
 
-    # ═══ 3. СЕССИИ ═══
     sessions_rows = await db.fetchall(
         "SELECT pda.user_id, pda.day, pda.requests, pda.first_seen, pda.last_seen "
         "FROM player_daily_activity pda "
@@ -147,7 +144,6 @@ async def api_admin_analytics(request):
     else:
         avg_sec = median_sec = total_hours = 0
 
-    # ═══ 4. RETENTION ═══
     players_first = await db.fetchall(
         "SELECT pda.user_id, MIN(pda.day) as first_day "
         "FROM player_daily_activity pda "
@@ -185,7 +181,6 @@ async def api_admin_analytics(request):
                 "pct": round(pct, 1),
             })
 
-    # ═══ 5. ТОП-10 ═══
     top_rows = await db.fetchall(
         "SELECT pda.user_id, p.nickname, "
         "SUM(MIN(pda.requests * 30, 28800)) as total_sec "
@@ -205,7 +200,6 @@ async def api_admin_analytics(request):
             "total_str": f"{hours}ч {mins}м" if hours > 0 else f"{mins}м",
         })
 
-    # ═══ 6. ГРАФИК 7 ДНЕЙ ═══
     daily_activity = []
     for i in range(6, -1, -1):
         d = today_day - i
@@ -218,7 +212,6 @@ async def api_admin_analytics(request):
             "count": cnt,
         })
 
-    # ═══ 7. ЛОГ ПОСЛЕДНИХ 10 РЕГИСТРАЦИЙ ═══
     recent_rows = await db.fetchall(
         "SELECT user_id, nickname, strftime('%s', created_at) as created_ts "
         "FROM players WHERE is_bot=0 "
@@ -261,3 +254,57 @@ def _fmt_duration(sec):
     h = sec // 3600
     m = (sec % 3600) // 60
     return f"{h}ч {m}м" if m > 0 else f"{h}ч"
+
+# ═══════════ ПРОМОКОДЫ (админ) ═══════════
+async def api_admin_promo_list(request):
+    if not await _is_admin(request):
+        return web.json_response({"error": "Доступ запрещен"}, status=403)
+    rows = await db.fetchall(
+        "SELECT code, bonus, uses_left, uses_total, created_at "
+        "FROM promo_codes ORDER BY created_at DESC LIMIT 200")
+    return web.json_response({"promo_codes": rows})
+
+async def api_admin_promo_create(request):
+    if not await _is_admin(request):
+        return web.json_response({"error": "Доступ запрещен"}, status=403)
+    body = await request.json()
+    code = (body.get("code") or "").strip().upper()
+    if not code:
+        return web.json_response({"error": "Введи код"}, status=400)
+    if len(code) > 64:
+        return web.json_response({"error": "Код длиннее 64 символов"}, status=400)
+    if not all(c.isalnum() or c in "_-" for c in code):
+        return web.json_response({"error": "Только латиница, цифры, _ и -"}, status=400)
+    try: bonus = int(body.get("bonus", 0))
+    except: bonus = 0
+    try: uses = int(body.get("uses", 1))
+    except: uses = 1
+    if bonus <= 0:
+        return web.json_response({"error": "Бонус должен быть > 0"}, status=400)
+    if bonus > 100000000:
+        return web.json_response({"error": "Слишком большой бонус"}, status=400)
+    if uses <= 0:
+        return web.json_response({"error": "Количество использований > 0"}, status=400)
+    if uses > 100000:
+        return web.json_response({"error": "Слишком много использований"}, status=400)
+    existing = await db.fetchone("SELECT code FROM promo_codes WHERE code=?", (code,))
+    if existing:
+        return web.json_response({"error": "Такой код уже существует"}, status=400)
+    await db.execute(
+        "INSERT INTO promo_codes (code, bonus, uses_left, uses_total) VALUES (?,?,?,?)",
+        (code, bonus, uses, uses))
+    row = await db.fetchone(
+        "SELECT code, bonus, uses_left, uses_total, created_at FROM promo_codes WHERE code=?",
+        (code,))
+    return web.json_response({"ok": True, "promo": row})
+
+async def api_admin_promo_delete(request):
+    if not await _is_admin(request):
+        return web.json_response({"error": "Доступ запрещен"}, status=403)
+    body = await request.json()
+    code = (body.get("code") or "").strip().upper()
+    if not code:
+        return web.json_response({"error": "Не указан код"}, status=400)
+    await db.execute("DELETE FROM promo_codes WHERE code=?", (code,))
+    await db.execute("DELETE FROM promo_used WHERE code=?", (code,))
+    return web.json_response({"ok": True})

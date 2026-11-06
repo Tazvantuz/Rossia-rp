@@ -10,9 +10,6 @@ let state = {
   chatWith: 'global', jobsCache: null, businessesCache: null, casesData: null,
 };
 
-// ══════════════════════════════════════════════════════════════
-//  НАВИГАЦИЯ: main tabs и под-разделы
-// ══════════════════════════════════════════════════════════════
 const MAIN_TABS = ['home', 'casino', 'cases', 'chat', 'more'];
 const SUB_TAB_TITLES = {
   appearance: '👕 Шмот',
@@ -23,6 +20,7 @@ const SUB_TAB_TITLES = {
   referral: '🎁 Рефералы',
   gang: '🚬 Банда',
   ghetto: '🗺️ Гетто',
+  promo: '🎁 Промокоды',
 };
 
 function formatNickWithTag(name, tag, color) {
@@ -138,11 +136,9 @@ function showTab(tab) {
   const section = $(`.tab-content[data-tab="${tab}"]`);
   if (section) section.classList.add("active");
 
-  // Nav: если под-раздел — активируем "more"
   const navTab = isMain ? tab : 'more';
   $$(".nav-btn").forEach(b=>b.classList.toggle("active", b.dataset.nav===navTab));
 
-  // Subtab-header: показываем только для под-разделов
   const subHeader = document.getElementById("subtab-header");
   const subTitle = document.getElementById("subtab-title");
   if (subHeader && subTitle) {
@@ -168,6 +164,10 @@ function showTab(tab) {
   if (tab==="gang" && typeof loadGang === 'function') loadGang();
   if (tab==="friends" && typeof loadFriends === 'function') loadFriends();
   if (tab==="home" && typeof loadNotifications === 'function') loadNotifications();
+  if (tab==="promo") {
+    const resultBox = document.getElementById('promo-result-box');
+    if (resultBox) resultBox.classList.add('hidden');
+  }
   window.scrollTo(0,0);
 }
 
@@ -326,6 +326,41 @@ function notifyAchievements(list) {
   toast("🏆 Достижение: "+names.join(", "), "success");
 }
 
+async function applyPromo() {
+  const inp = document.getElementById('promo-input');
+  const btn = document.getElementById('btn-apply-promo');
+  const box = document.getElementById('promo-result-box');
+  if (!inp || !btn) return;
+  const code = (inp.value || '').trim().toUpperCase();
+  if (!code) { toast("Введи промокод", "error"); return; }
+  btn.disabled = true;
+  if (box) box.classList.add('hidden');
+  try {
+    const d = await api("promo/apply", { code });
+    if (d.player) {
+      state.player = d.player;
+      renderPlayer();
+    }
+    if (box) {
+      box.className = 'promo-result success';
+      box.textContent = d.message || `✅ +${fmtMoney(d.bonus)}₽ на баланс!`;
+      box.classList.remove('hidden');
+    }
+    inp.value = '';
+    if (tg) tg.HapticFeedback?.notificationOccurred("success");
+    checkCreditPaid(d);
+  } catch(e) {
+    if (box) {
+      box.className = 'promo-result error';
+      box.textContent = e.message || "Ошибка";
+      box.classList.remove('hidden');
+    }
+    if (tg) tg.HapticFeedback?.notificationOccurred("error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
 // ══════════════════════════════════════════════════════════════
 //  ONBOARDING
 // ══════════════════════════════════════════════════════════════
@@ -377,7 +412,6 @@ function onbSkip() {
   }
   const el = document.getElementById('onboarding');
   if (el) el.classList.add('hidden');
-  // сразу после onboarding показываем следующий шаг
   updateNextStepBanner();
 }
 
@@ -488,7 +522,7 @@ function renderPlayer() {
   $("#avatar").textContent = p.outfit.head_id.item_id ? p.outfit.head_id.emoji : "👤";
   startTimers();
   renderCreditBanner();
-  updateNextStepBanner();  // NEW
+  updateNextStepBanner();
 }
 
 let timerInterval = null;
@@ -591,7 +625,7 @@ function renderRegister() {
         state.player = d.player;
         renderPlayer(); renderCharacterInto("#character-view");
         show("main"); showTab("home");
-        showOnboarding();  // NEW
+        showOnboarding();
         if (tg) tg.HapticFeedback?.notificationOccurred("success");
         toast("🎉 Добро пожаловать!", "success");
       } catch (e) {
@@ -620,7 +654,7 @@ async function boot() {
       startOnlinePolling();
       if (d.new_achievements?.length) notifyAchievements(d.new_achievements);
       if (d.credit_paid) setTimeout(() => toast(`💸 Банк списал ${fmtMoney(d.credit_paid)}₽`, "error"), 800);
-      showOnboarding();  // NEW
+      showOnboarding();
     }
   } catch(e) {
     console.error("boot error:", e);
