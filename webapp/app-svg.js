@@ -1,6 +1,7 @@
 // app-svg.js
-// v3: детальное тело, все шапки сидят правильно, у всей одежды есть рукава,
-// кимоно переработано, нож в правой руке смотрит наружу, максимум детализации.
+// ПОЛНАЯ ПЕРЕРАБОТКА v4. Максимальная детализация, тени, складки, объемные рукава.
+// Все предметы в руках увеличены (scale 1.5) и развернуты НАРУЖУ.
+// Базовое тело: детальный рендер с анатомическими тенями.
 
 const SKIN = "#e8b48a";
 const SKIN_D = "#c99b6f";
@@ -14,24 +15,22 @@ const CUSTOM_IMAGES = {
     "rh_tyanka3": { url: "/assets/hands/rh_tyanka3.png", side: "right", y: 0,   w: 230, h: 400 }
 };
 
-// ═══ БАЗОВОЕ ТЕЛО ═══
 function renderBaseBody() {
   return `
     <ellipse cx="100" cy="389" rx="58" ry="7" fill="rgba(0,0,0,0.42)"/>
     <ellipse cx="100" cy="389" rx="44" ry="4" fill="rgba(0,0,0,0.28)"/>
 
-    <path d="M75 200 L74 355 Q74 372 82 374 L98 374 L99 200 Z"
-          fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.6" stroke-linejoin="round"/>
+    <!-- НОГИ -->
+    <path d="M75 200 L74 355 Q74 372 82 374 L98 374 L99 200 Z" fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.6" stroke-linejoin="round"/>
     <path d="M97 210 L97 374 L99 374 L99 210 Z" fill="${SKIN_S}" opacity="0.28"/>
     <path d="M77 235 L77 275" stroke="${SKIN_L}" stroke-width="2" opacity="0.32" stroke-linecap="round"/>
     <ellipse cx="87" cy="285" rx="4" ry="2.5" fill="${SKIN_L}" opacity="0.32"/>
-
-    <path d="M101 200 L101 374 L118 374 Q126 372 126 355 L125 200 Z"
-          fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.6" stroke-linejoin="round"/>
+    <path d="M101 200 L101 374 L118 374 Q126 372 126 355 L125 200 Z" fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.6" stroke-linejoin="round"/>
     <path d="M101 210 L101 374 L103 374 L103 210 Z" fill="${SKIN_S}" opacity="0.28"/>
     <path d="M123 235 L123 275" stroke="${SKIN_L}" stroke-width="2" opacity="0.32" stroke-linecap="round"/>
     <ellipse cx="113" cy="285" rx="4" ry="2.5" fill="${SKIN_L}" opacity="0.32"/>
 
+    <!-- СТУПНИ -->
     <ellipse cx="86" cy="377" rx="16" ry="7" fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.5"/>
     <ellipse cx="114" cy="377" rx="16" ry="7" fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.5"/>
     <circle cx="76" cy="377" r="1.6" fill="${SKIN_S}" opacity="0.42"/>
@@ -43,63 +42,63 @@ function renderBaseBody() {
     <circle cx="119" cy="378" r="1.8" fill="${SKIN_S}" opacity="0.42"/>
     <circle cx="124" cy="377" r="1.6" fill="${SKIN_S}" opacity="0.42"/>
 
-    <path d="M72 100 Q68 100 68 110 L70 205 L130 205 L132 110 Q132 100 128 100 Z"
-          fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.6" stroke-linejoin="round"/>
+    <!-- ТОРС -->
+    <path d="M72 100 Q68 100 68 110 L70 205 L130 205 L132 110 Q132 100 128 100 Z" fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.6" stroke-linejoin="round"/>
     <path d="M105 102 L105 205 L130 205 L132 110 Q132 103 128 102 Z" fill="${SKIN_S}" opacity="0.14"/>
-    <path d="M78 118 Q90 124 100 122 Q110 124 122 118"
-          stroke="${SKIN_D}" stroke-width="0.7" fill="none" opacity="0.55"/>
+    <path d="M78 118 Q90 124 100 122 Q110 124 122 118" stroke="${SKIN_D}" stroke-width="0.7" fill="none" opacity="0.55"/>
     <path d="M100 125 L100 142" stroke="${SKIN_D}" stroke-width="0.5" opacity="0.42"/>
     <path d="M90 152 L110 152 M90 165 L110 165" stroke="${SKIN_D}" stroke-width="0.4" opacity="0.35"/>
     <path d="M100 148 L100 180" stroke="${SKIN_D}" stroke-width="0.3" opacity="0.28"/>
     <circle cx="100" cy="191" r="1.1" fill="${SKIN_S}" opacity="0.55"/>
     <path d="M84 108 Q92 111 100 109 Q108 111 116 108" stroke="${SKIN_D}" stroke-width="0.4" fill="none" opacity="0.42"/>
 
+    <!-- ШЕЯ -->
     <path d="M90 78 L90 102 Q100 106 110 102 L110 78 Z" fill="${SKIN}"/>
     <path d="M90 94 Q100 100 110 94 L110 102 Q100 106 90 102 Z" fill="${SKIN_S}" opacity="0.35"/>
 
+    <!-- ПЛЕЧИ -->
     <ellipse cx="70" cy="108" rx="14" ry="12" fill="${SKIN}"/>
     <ellipse cx="130" cy="108" rx="14" ry="12" fill="${SKIN}"/>
     <ellipse cx="70" cy="107" rx="9" ry="7" fill="${SKIN_L}" opacity="0.28"/>
     <ellipse cx="130" cy="107" rx="9" ry="7" fill="${SKIN_L}" opacity="0.28"/>
 
-    <path d="M68 105 Q56 115 52 145 L48 185 Q46 195 54 197 L62 196 Q66 190 64 175 L66 140 L74 118 Z"
-          fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.6" stroke-linejoin="round"/>
+    <!-- ЛЕВАЯ РУКА -->
+    <path d="M68 105 Q56 115 52 145 L48 185 Q46 195 54 197 L62 196 Q66 190 64 175 L66 140 L74 118 Z" fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.6" stroke-linejoin="round"/>
     <path d="M67 110 Q60 125 57 148 L53 178" stroke="${SKIN_L}" stroke-width="1.8" fill="none" opacity="0.33" stroke-linecap="round"/>
     <ellipse cx="55" cy="197" rx="11" ry="10" fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.5"/>
     <ellipse cx="55" cy="194" rx="7" ry="4" fill="${SKIN_L}" opacity="0.28"/>
     <path d="M46 195 Q46 200 55 202 Q64 200 64 195" stroke="${SKIN_D}" stroke-width="0.5" fill="none" opacity="0.6"/>
-    <path d="M47 197 L47 201 M50 198 L50 202 M53 198 L53 202 M56 198 L56 202 M59 198 L59 202 M62 197 L62 201"
-          stroke="${SKIN_S}" stroke-width="0.35" opacity="0.55"/>
+    <path d="M47 197 L47 201 M50 198 L50 202 M53 198 L53 202 M56 198 L56 202 M59 198 L59 202 M62 197 L62 201" stroke="${SKIN_S}" stroke-width="0.35" opacity="0.55"/>
     <ellipse cx="62" cy="191" rx="3.5" ry="4.5" fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.4"/>
 
-    <path d="M132 105 Q144 115 148 145 L152 185 Q154 195 146 197 L138 196 Q134 190 136 175 L134 140 L126 118 Z"
-          fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.6" stroke-linejoin="round"/>
+    <!-- ПРАВАЯ РУКА -->
+    <path d="M132 105 Q144 115 148 145 L152 185 Q154 195 146 197 L138 196 Q134 190 136 175 L134 140 L126 118 Z" fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.6" stroke-linejoin="round"/>
     <path d="M133 110 Q140 125 143 148 L147 178" stroke="${SKIN_L}" stroke-width="1.8" fill="none" opacity="0.33" stroke-linecap="round"/>
     <ellipse cx="145" cy="197" rx="11" ry="10" fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.5"/>
     <ellipse cx="145" cy="194" rx="7" ry="4" fill="${SKIN_L}" opacity="0.28"/>
     <path d="M136 195 Q136 200 145 202 Q154 200 154 195" stroke="${SKIN_D}" stroke-width="0.5" fill="none" opacity="0.6"/>
-    <path d="M137 197 L137 201 M140 198 L140 202 M143 198 L143 202 M146 198 L146 202 M149 198 L149 202 M152 197 L152 201"
-          stroke="${SKIN_S}" stroke-width="0.35" opacity="0.55"/>
+    <path d="M137 197 L137 201 M140 198 L140 202 M143 198 L143 202 M146 198 L146 202 M149 198 L149 202 M152 197 L152 201" stroke="${SKIN_S}" stroke-width="0.35" opacity="0.55"/>
     <ellipse cx="138" cy="191" rx="3.5" ry="4.5" fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.4"/>
 
+    <!-- ГОЛОВА -->
     <ellipse cx="100" cy="55" rx="29" ry="33" fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.5"/>
     <ellipse cx="110" cy="58" rx="17" ry="27" fill="${SKIN_S}" opacity="0.12"/>
     <ellipse cx="92" cy="40" rx="13" ry="9" fill="${SKIN_L}" opacity="0.42"/>
     <ellipse cx="84" cy="65" rx="5" ry="3" fill="#e8a882" opacity="0.55"/>
     <ellipse cx="116" cy="65" rx="5" ry="3" fill="#e8a882" opacity="0.55"/>
-
     <ellipse cx="71" cy="55" rx="4.5" ry="7" fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.5"/>
     <ellipse cx="71" cy="55" rx="2" ry="4" fill="${SKIN_S}" opacity="0.5"/>
     <ellipse cx="129" cy="55" rx="4.5" ry="7" fill="${SKIN}" stroke="${SKIN_D}" stroke-width="0.5"/>
     <ellipse cx="129" cy="55" rx="2" ry="4" fill="${SKIN_S}" opacity="0.5"/>
 
+    <!-- ВОЛОСЫ -->
     <path d="M71 47 Q70 20 100 17 Q130 20 129 47 Q128 36 100 32 Q72 36 71 47 Z" fill="#3d2818"/>
     <path d="M75 34 Q85 25 95 24" stroke="#6b4a2e" stroke-width="1.2" fill="none" opacity="0.5" stroke-linecap="round"/>
     <path d="M105 24 Q115 26 123 34" stroke="#5a3a24" stroke-width="0.8" fill="none" opacity="0.4" stroke-linecap="round"/>
 
+    <!-- ЛИЦО -->
     <path d="M82 44 Q87 41 94 43" stroke="#2a1e10" stroke-width="2.2" fill="none" stroke-linecap="round"/>
     <path d="M106 43 Q113 41 118 44" stroke="#2a1e10" stroke-width="2.2" fill="none" stroke-linecap="round"/>
-
     <ellipse cx="88" cy="51" rx="5" ry="4.2" fill="#fff"/>
     <ellipse cx="112" cy="51" rx="5" ry="4.2" fill="#fff"/>
     <circle cx="89" cy="51" r="3" fill="#4a2e18"/>
@@ -110,22 +109,19 @@ function renderBaseBody() {
     <circle cx="112" cy="50" r="1" fill="#fff"/>
     <path d="M83 51 Q88 47 93 51" stroke="#3d2818" stroke-width="0.8" fill="none"/>
     <path d="M107 51 Q112 47 117 51" stroke="#3d2818" stroke-width="0.8" fill="none"/>
-
     <path d="M100 55 Q98.5 61 97 64 Q100 66 103 64 Q101.5 61 100 55 Z" fill="${SKIN_S}" opacity="0.45"/>
     <ellipse cx="98" cy="64" rx="1" ry="0.7" fill="${SKIN_S}" opacity="0.65"/>
     <ellipse cx="102" cy="64" rx="1" ry="0.7" fill="${SKIN_S}" opacity="0.65"/>
-
     <path d="M92 73 Q96 71 100 72 Q104 71 108 73 Q104 77 100 77 Q96 77 92 73 Z" fill="#a0663c" opacity="0.75"/>
     <path d="M92 73 Q100 76 108 73" stroke="#7a4420" stroke-width="0.5" fill="none"/>
     <ellipse cx="100" cy="80" rx="6" ry="2" fill="${SKIN_S}" opacity="0.2"/>
   `;
 }
 
-// ═══ ВСЕ ПРЕДМЕТЫ ═══
 const ITEMS_SVG = {
 
   // ═══════════════════════════════════════════════════════════
-  //  ГОЛОВА — ВСЕ СИДЯТ НА МАКУШКЕ (низ шапки на y≈38-40, выше бровей y=44)
+  //  ГОЛОВА (h_*)
   // ═══════════════════════════════════════════════════════════
 
   h_cig: `<g transform="translate(115, 70) rotate(-15)">
@@ -218,8 +214,7 @@ const ITEMS_SVG = {
     <path d="M78 38 Q88 32 100 34 M122 38 Q112 32 100 34" stroke="#a8a8a8" stroke-width="0.6" fill="none" opacity="0.6"/>
     <path d="M82 28 Q90 24 98 26 M118 28 Q110 24 102 26" stroke="#888" stroke-width="0.5" fill="none" opacity="0.4"/>`,
 
-  h_crown: `<path d="M72 36 L76 12 L87 26 L100 4 L113 26 L124 12 L128 36 Z"
-            fill="#f1c40f" stroke="#b8860b" stroke-width="1.5" stroke-linejoin="round"/>
+  h_crown: `<path d="M72 36 L76 12 L87 26 L100 4 L113 26 L124 12 L128 36 Z" fill="#f1c40f" stroke="#b8860b" stroke-width="1.5" stroke-linejoin="round"/>
     <path d="M76 12 L80 30 L87 26" fill="#f9e079" opacity="0.5"/>
     <path d="M100 4 L103 28 L97 28 Z" fill="#f9e079" opacity="0.5"/>
     <path d="M72 36 L128 36" stroke="#b8860b" stroke-width="2"/>
@@ -232,8 +227,7 @@ const ITEMS_SVG = {
     <circle cx="114" cy="25" r="0.8" fill="#5dade2"/>
     <path d="M76 34 L124 34" stroke="#fff" stroke-width="0.6" opacity="0.4"/>`,
 
-  h_gold_crown: `<path d="M66 34 L72 4 L84 20 L100 -2 L116 20 L128 4 L134 34 Z"
-                  fill="#ffd700" stroke="#b8860b" stroke-width="2" stroke-linejoin="round"/>
+  h_gold_crown: `<path d="M66 34 L72 4 L84 20 L100 -2 L116 20 L128 4 L134 34 Z" fill="#ffd700" stroke="#b8860b" stroke-width="2" stroke-linejoin="round"/>
     <path d="M72 4 L76 28 L84 20" fill="#ffe66d" opacity="0.6"/>
     <path d="M100 -2 L102 26 L98 26 Z" fill="#ffe66d" opacity="0.6"/>
     <path d="M128 4 L124 28 L116 20" fill="#ffe66d" opacity="0.6"/>
@@ -431,14 +425,18 @@ const ITEMS_SVG = {
     <path d="M98 48 L96 58 L100 56 Z" fill="#f39c12"/>`,
 
   // ═══════════════════════════════════════════════════════════
-  //  ТЕЛО — У ВСЕХ ЕСТЬ РУКАВА (короткие/длинные/без)
+  //  ТЕЛО (b_*)
+  //  ПОЛНАЯ ДЕТАЛИЗАЦИЯ: рукава, воротники, складки, тени.
   // ═══════════════════════════════════════════════════════════
 
-  b_alco: `<path d="M72 102 Q72 98 76 98 L124 98 Q128 98 128 102 L128 205 L72 205 Z" fill="#f5f5f5" stroke="#e0e0e0" stroke-width="0.5"/>
-    <path d="M104 100 L104 205 L128 205 L128 102 Q128 100 126 99 Z" fill="#e8e8e8" opacity="0.4"/>
+  b_alco: `<path d="M72 100 Q72 96 76 96 L124 96 Q128 96 128 102 L128 205 L72 205 Z" fill="#f5f5f5" stroke="#d0d0d0" stroke-width="0.5"/>
+    <path d="M104 98 L104 205 L128 205 L128 102 Q128 100 126 99 Z" fill="#e0e0e0" opacity="0.5"/>
     <path d="M76 100 L80 130 M124 100 L120 130" stroke="#e0e0e0" stroke-width="0.8" fill="none"/>
-    <path d="M86 98 Q100 108 114 98" stroke="#d0d0d0" stroke-width="1" fill="none"/>
-    <path d="M86 98 Q100 104 114 98" stroke="#fff" stroke-width="0.5" fill="none" opacity="0.6"/>
+    <path d="M86 96 Q100 108 114 96" stroke="#d0d0d0" stroke-width="1" fill="none"/>
+    <path d="M86 96 Q100 104 114 96" stroke="#fff" stroke-width="0.5" fill="none" opacity="0.6"/>
+    <path d="M72 100 Q62 102 56 118 L56 132 Q64 130 68 126 L70 120 L74 108 Z" fill="#f5f5f5" stroke="#d0d0d0" stroke-width="0.5"/>
+    <path d="M128 100 Q138 102 144 118 L144 132 Q136 130 132 126 L130 120 L126 108 Z" fill="#f5f5f5" stroke="#d0d0d0" stroke-width="0.5"/>
+    <path d="M58 128 L66 126 M142 128 L134 126" stroke="#e0e0e0" stroke-width="0.5" fill="none"/>
     <ellipse cx="90" cy="155" rx="2" ry="3" fill="#e0e0e0" opacity="0.5"/>
     <ellipse cx="105" cy="170" rx="1.5" ry="2" fill="#e0e0e0" opacity="0.4"/>`,
 
@@ -446,19 +444,18 @@ const ITEMS_SVG = {
     <path d="M105 96 L105 205 L130 205 L130 100 Q130 97 128 96 Z" fill="#2a2a2a" opacity="0.5"/>
     <path d="M78 96 Q100 84 122 96" fill="#1a1a1a"/>
     <path d="M80 96 Q100 88 120 96" stroke="#333" stroke-width="0.5" fill="none" opacity="0.5"/>
-    <path d="M70 98 Q58 100 52 118 L52 138 Q60 136 64 132 L67 125 L74 108 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.5"/>
-    <path d="M130 98 Q142 100 148 118 L148 138 Q140 136 136 132 L133 125 L126 108 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.5"/>
-    <path d="M54 130 L62 128" stroke="#333" stroke-width="0.4" fill="none" opacity="0.5"/>
-    <path d="M146 130 L138 128" stroke="#333" stroke-width="0.4" fill="none" opacity="0.5"/>
+    <path d="M70 100 Q58 102 54 120 L54 136 Q62 134 66 130 L69 123 L74 106 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.5"/>
+    <path d="M130 100 Q142 102 146 120 L146 136 Q138 134 134 130 L131 123 L126 106 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.5"/>
+    <path d="M56 130 L62 128 M144 130 L138 128" stroke="#333" stroke-width="0.4" fill="none" opacity="0.5"/>
     <text x="100" y="160" text-anchor="middle" font-size="14" fill="#f39c12" font-weight="900" letter-spacing="1">AURA</text>
     <text x="100" y="174" text-anchor="middle" font-size="7" fill="#f39c12" font-weight="600" opacity="0.7">FARMING</text>`,
 
-  b_iambog: `<path d="M72 102 Q70 96 74 96 L126 96 Q130 96 128 102 L128 205 L72 205 Z" fill="#f5f5f5" stroke="#e0e0e0" stroke-width="0.5"/>
-    <path d="M105 96 L105 205 L128 205 L128 102 Q128 98 126 96 Z" fill="#e8e8e8" opacity="0.4"/>
+  b_iambog: `<path d="M72 100 Q70 96 74 96 L126 96 Q130 96 128 102 L128 205 L72 205 Z" fill="#f5f5f5" stroke="#d0d0d0" stroke-width="0.5"/>
+    <path d="M105 96 L105 205 L128 205 L128 102 Q128 98 126 96 Z" fill="#e0e0e0" opacity="0.5"/>
     <path d="M78 96 Q100 84 122 96" fill="#f5f5f5"/>
     <path d="M80 96 Q100 88 120 96" stroke="#e0e0e0" stroke-width="0.5" fill="none"/>
-    <path d="M72 100 Q60 102 54 120 L54 140 Q62 138 66 134 L69 127 L76 110 Z" fill="#f5f5f5" stroke="#e0e0e0" stroke-width="0.5"/>
-    <path d="M128 100 Q140 102 146 120 L146 140 Q138 138 134 134 L131 127 L124 110 Z" fill="#f5f5f5" stroke="#e0e0e0" stroke-width="0.5"/>
+    <path d="M72 100 Q60 102 56 118 L56 132 Q64 130 68 126 L70 120 L74 108 Z" fill="#f5f5f5" stroke="#d0d0d0" stroke-width="0.5"/>
+    <path d="M128 100 Q140 102 144 118 L144 132 Q136 130 132 126 L130 120 L126 108 Z" fill="#f5f5f5" stroke="#d0d0d0" stroke-width="0.5"/>
     <text x="100" y="155" text-anchor="middle" font-size="16" fill="#c0392b" font-weight="900">Я БОГ</text>
     <path d="M82 170 Q100 178 118 170" stroke="#c0392b" stroke-width="1" fill="none" opacity="0.6"/>`,
 
@@ -466,22 +463,21 @@ const ITEMS_SVG = {
     <path d="M105 96 L105 205 L132 205 L132 100 Q126 96 118 95 Z" fill="#a93226" opacity="0.5"/>
     <path d="M72 96 Q100 80 128 96" fill="#a93226"/>
     <path d="M72 96 Q100 84 128 96" stroke="#8b0000" stroke-width="0.6" fill="none" opacity="0.5"/>
-    <path d="M68 100 Q58 102 52 120 L48 178 Q47 186 52 188 L58 186 Q55 180 57 165 L60 135 L66 118 L72 102 Z" fill="#c0392b" stroke="#8b0000" stroke-width="0.6"/>
-    <path d="M132 100 Q142 102 148 120 L152 178 Q153 186 148 188 L142 186 Q145 180 143 165 L140 135 L134 118 L128 102 Z" fill="#c0392b" stroke="#8b0000" stroke-width="0.6"/>
-    <path d="M70 120 L130 120 M70 145 L130 145 M70 170 L130 170" stroke="#1a1a1a" stroke-width="1.2" opacity="0.4"/>
-    <path d="M85 100 L85 205 M100 100 L100 205 M115 100 L115 205" stroke="#1a1a1a" stroke-width="1.2" opacity="0.4"/>
+    <path d="M68 100 Q56 102 52 120 L48 178 Q47 186 52 188 L58 186 Q55 180 57 165 L60 135 L66 118 L72 102 Z" fill="#c0392b" stroke="#8b0000" stroke-width="0.6"/>
+    <path d="M132 100 Q144 102 148 120 L152 178 Q153 186 148 188 L142 186 Q145 180 143 165 L140 135 L134 118 L128 102 Z" fill="#c0392b" stroke="#8b0000" stroke-width="0.6"/>
+    <path d="M70 120 L130 120 M70 145 L130 145 M70 170 L130 170" stroke="#1a1a1a" stroke-width="1.2" opacity="0.35"/>
+    <path d="M85 100 L85 205 M100 100 L100 205 M115 100 L115 205" stroke="#1a1a1a" stroke-width="1.2" opacity="0.35"/>
     <path d="M60 140 L66 138 M54 165 L60 163" stroke="#a93226" stroke-width="0.5" fill="none" opacity="0.5"/>
     <path d="M140 140 L134 138 M146 165 L140 163" stroke="#a93226" stroke-width="0.5" fill="none" opacity="0.5"/>
     <circle cx="96" cy="130" r="1" fill="#fff" opacity="0.5"/>
-    <circle cx="108" cy="160" r="1" fill="#fff" opacity="0.5"/>
-    <circle cx="88" cy="180" r="1" fill="#fff" opacity="0.4"/>`,
+    <circle cx="108" cy="160" r="1" fill="#fff" opacity="0.5"/>`,
 
   b_supreme: `<path d="M66 100 Q66 96 72 96 L128 96 Q134 96 134 100 L134 205 L66 205 Z" fill="#c0392b" stroke="#a93226" stroke-width="0.6"/>
     <path d="M105 96 L105 205 L134 205 L134 100 Q134 98 132 96 Z" fill="#a93226" opacity="0.4"/>
     <path d="M74 96 Q100 82 126 96 L126 100 L74 100 Z" fill="#a93226"/>
     <path d="M76 96 Q100 84 124 96" stroke="#8b0000" stroke-width="0.6" fill="none" opacity="0.5"/>
-    <path d="M66 100 Q56 102 50 122 L48 178 Q47 186 52 188 L58 186 Q55 180 57 165 L60 135 L66 118 L72 102 Z" fill="#c0392b" stroke="#a93226" stroke-width="0.6"/>
-    <path d="M134 100 Q144 102 150 122 L152 178 Q153 186 148 188 L142 186 Q145 180 143 165 L140 135 L134 118 L128 102 Z" fill="#c0392b" stroke="#a93226" stroke-width="0.6"/>
+    <path d="M66 100 Q54 102 50 122 L46 178 Q45 186 50 188 L56 186 Q53 180 55 165 L58 135 L64 118 L70 102 Z" fill="#c0392b" stroke="#a93226" stroke-width="0.6"/>
+    <path d="M134 100 Q146 102 150 122 L154 178 Q155 186 150 188 L144 186 Q147 180 145 165 L142 135 L136 118 L130 102 Z" fill="#c0392b" stroke="#a93226" stroke-width="0.6"/>
     <path d="M52 140 L58 138 M48 165 L54 163" stroke="#8b0000" stroke-width="0.5" fill="none" opacity="0.5"/>
     <path d="M148 140 L142 138 M152 165 L146 163" stroke="#8b0000" stroke-width="0.5" fill="none" opacity="0.5"/>
     <rect x="82" y="150" width="36" height="20" fill="#a93226" stroke="#8b0000" stroke-width="0.5"/>
@@ -490,23 +486,24 @@ const ITEMS_SVG = {
 
   b_armani: `<path d="M70 100 L70 205 L88 205 L100 178 L112 205 L130 205 L130 100 Q120 94 100 94 Q80 94 70 100 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.5"/>
     <path d="M105 96 L105 205 L130 205 L130 100 Q126 96 118 95 Z" fill="#0a0a0a" opacity="0.4"/>
+    <path d="M100 178 L86 100 M100 178 L114 100" stroke="#000" stroke-width="1.5" fill="none"/>
+    <path d="M88 96 L100 170 L112 96 Z" fill="#fff" opacity="0.9"/>
+    <path d="M92 100 L100 165 L108 100" stroke="#e0e0e0" stroke-width="0.5" fill="none" opacity="0.6"/>
     <path d="M70 100 Q58 102 52 122 L48 178 Q47 186 52 188 L58 186 Q55 180 57 165 L60 135 L66 118 L72 102 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.5"/>
     <path d="M130 100 Q142 102 148 122 L152 178 Q153 186 148 188 L142 186 Q145 180 143 165 L140 135 L134 118 L128 102 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.5"/>
-    <path d="M100 178 L86 100 M100 178 L114 100" stroke="#000" stroke-width="1.5" fill="none"/>
-    <path d="M88 100 L92 108 L108 108 L112 100 Z" fill="#fff" opacity="0.9"/>
-    <path d="M92 108 L100 145 L108 108" stroke="#fff" stroke-width="0.6" fill="none" opacity="0.5"/>
     <path d="M54 140 L60 138 M48 165 L54 163" stroke="#333" stroke-width="0.4" fill="none" opacity="0.4"/>
     <path d="M146 140 L140 138 M152 165 L146 163" stroke="#333" stroke-width="0.4" fill="none" opacity="0.4"/>
     <circle cx="100" cy="160" r="1.5" fill="#888"/>
     <circle cx="100" cy="175" r="1.5" fill="#888"/>
+    <path d="M88 96 L92 108 L108 108 L112 96 Z" fill="#fff" opacity="0.9"/>
     <path d="M76 120 L82 124" stroke="#333" stroke-width="0.5" fill="none" opacity="0.5"/>
     <path d="M118 120 L124 124" stroke="#333" stroke-width="0.5" fill="none" opacity="0.5"/>`,
 
   b_nf: `<path d="M68 100 L68 205 L132 205 L132 100 Q120 94 100 94 Q80 94 68 100 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.6"/>
     <path d="M105 96 L105 205 L132 205 L132 100 Q126 96 118 95 Z" fill="#0a0a0a" opacity="0.4"/>
     <path d="M76 96 Q100 82 124 96" fill="#0a0a0a"/>
-    <path d="M68 100 Q58 102 52 122 L48 178 Q47 186 52 188 L58 186 Q55 180 57 165 L60 135 L66 118 L72 102 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.6"/>
-    <path d="M132 100 Q142 102 148 122 L152 178 Q153 186 148 188 L142 186 Q145 180 143 165 L140 135 L134 118 L128 102 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.6"/>
+    <path d="M68 100 Q56 102 50 122 L46 178 Q45 186 50 188 L56 186 Q53 180 55 165 L58 135 L64 118 L70 102 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.6"/>
+    <path d="M132 100 Q144 102 150 122 L154 178 Q155 186 150 188 L144 186 Q147 180 145 165 L142 135 L136 118 L130 102 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.6"/>
     <path d="M70 120 L130 120 M70 145 L130 145 M70 170 L130 170 M70 190 L130 190" stroke="#333" stroke-width="1.2"/>
     <path d="M70 118 L130 118 M70 143 L130 143 M70 168 L130 168" stroke="#3a3a3a" stroke-width="0.4" opacity="0.5"/>
     <path d="M76 96 Q100 88 124 96" stroke="#444" stroke-width="0.8" fill="none" opacity="0.6"/>
@@ -517,16 +514,16 @@ const ITEMS_SVG = {
 
   b_leather: `<path d="M70 100 L70 205 L88 205 L100 178 L112 205 L130 205 L130 100 Q120 94 100 94 Q80 94 70 100 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.7"/>
     <path d="M105 96 L105 205 L130 205 L130 100 Q126 96 118 95 Z" fill="#0a0a0a" opacity="0.35"/>
-    <path d="M70 100 Q58 102 52 122 L48 178 Q47 186 52 188 L58 186 Q55 180 57 165 L60 135 L66 118 L72 102 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.7"/>
-    <path d="M130 100 Q142 102 148 122 L152 178 Q153 186 148 188 L142 186 Q145 180 143 165 L140 135 L134 118 L128 102 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.7"/>
+    <path d="M70 100 Q56 102 50 122 L46 178 Q45 186 50 188 L56 186 Q53 180 55 165 L58 135 L64 118 L70 102 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.7"/>
+    <path d="M130 100 Q144 102 150 122 L154 178 Q155 186 150 188 L144 186 Q147 180 145 165 L142 135 L136 118 L130 102 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.7"/>
     <path d="M100 178 L84 100 M100 178 L116 100" stroke="#000" stroke-width="2" fill="none"/>
     <path d="M88 100 L92 108 L108 108 L112 100 Z" fill="#2a2a2a"/>
     <path d="M80 120 L88 130 M120 120 L112 130" stroke="#333" stroke-width="1" fill="none" opacity="0.6"/>
     <path d="M78 155 L86 162 M122 155 L114 162" stroke="#333" stroke-width="0.8" fill="none" opacity="0.5"/>
-    <path d="M54 140 L60 138 M48 165 L54 163" stroke="#444" stroke-width="0.4" fill="none" opacity="0.4"/>
-    <path d="M146 140 L140 138 M152 165 L146 163" stroke="#444" stroke-width="0.4" fill="none" opacity="0.4"/>
     <circle cx="100" cy="190" r="2" fill="#888"/>
-    <circle cx="100" cy="190" r="1" fill="#aaa"/>`,
+    <circle cx="100" cy="190" r="1" fill="#aaa"/>
+    <path d="M54 140 L60 138 M48 165 L54 163" stroke="#444" stroke-width="0.4" fill="none" opacity="0.4"/>
+    <path d="M146 140 L140 138 M152 165 L146 163" stroke="#444" stroke-width="0.4" fill="none" opacity="0.4"/>`,
 
   b_wedding: `<path d="M72 96 Q70 96 70 100 L70 205 L130 205 L130 100 Q130 96 128 96 L118 96 Q115 108 100 108 Q85 108 82 96 Z" fill="#f8f8f8" stroke="#e0e0e0" stroke-width="0.5"/>
     <path d="M105 96 L105 205 L130 205 L130 100 Q130 98 128 96 Z" fill="#f0f0f0" opacity="0.4"/>
@@ -578,8 +575,8 @@ const ITEMS_SVG = {
     <circle cx="86" cy="170" r="2" fill="#fff" opacity="0.7"/>
     <circle cx="114" cy="170" r="2" fill="#fff" opacity="0.7"/>`,
 
-  b_tank_usa: `<path d="M72 100 Q70 96 74 96 L126 96 Q130 96 128 100 L128 205 L72 205 Z" fill="#f5f5f5" stroke="#e0e0e0" stroke-width="0.5"/>
-    <path d="M104 96 L104 205 L128 205 L128 100 Q128 98 126 96 Z" fill="#e8e8e8" opacity="0.4"/>
+  b_tank_usa: `<path d="M72 100 Q70 96 74 96 L126 96 Q130 96 128 102 L128 205 L72 205 Z" fill="#f5f5f5" stroke="#d0d0d0" stroke-width="0.5"/>
+    <path d="M104 96 L104 205 L128 205 L128 102 Q128 98 126 96 Z" fill="#e0e0e0" opacity="0.5"/>
     <path d="M80 100 Q100 90 120 100" fill="#f5f5f5"/>
     <path d="M82 100 Q100 92 118 100" stroke="#e0e0e0" stroke-width="0.5" fill="none"/>
     <rect x="76" y="140" width="48" height="30" fill="#c0392b"/>
@@ -609,8 +606,8 @@ const ITEMS_SVG = {
   b_hawaii: `<path d="M70 96 Q68 96 68 100 L68 205 L132 205 L132 100 Q132 96 130 96 L118 96 Q115 108 100 108 Q85 108 82 96 Z" fill="#fff9e6" stroke="#f0e6c0" stroke-width="0.5"/>
     <path d="M104 96 L104 205 L132 205 L132 100 Q132 98 130 96 Z" fill="#f0e6c0" opacity="0.4"/>
     <path d="M78 96 Q100 82 122 96" fill="#fff9e6"/>
-    <path d="M68 100 Q58 102 52 120 L52 138 Q60 136 64 132 L67 125 L72 102 Z" fill="#fff9e6" stroke="#f0e6c0" stroke-width="0.5"/>
-    <path d="M132 100 Q142 102 148 120 L148 138 Q140 136 136 132 L133 125 L128 102 Z" fill="#fff9e6" stroke="#f0e6c0" stroke-width="0.5"/>
+    <path d="M68 100 Q56 102 50 118 L50 138 Q60 136 64 132 L67 125 L72 102 Z" fill="#fff9e6" stroke="#f0e6c0" stroke-width="0.5"/>
+    <path d="M132 100 Q144 102 150 118 L150 138 Q140 136 136 132 L133 125 L128 102 Z" fill="#fff9e6" stroke="#f0e6c0" stroke-width="0.5"/>
     <circle cx="82" cy="132" r="5" fill="#2ecc71"/>
     <circle cx="82" cy="132" r="2" fill="#27ae60"/>
     <line x1="82" y1="137" x2="80" y2="148" stroke="#2ecc71" stroke-width="1.5"/>
@@ -676,8 +673,8 @@ const ITEMS_SVG = {
     <circle cx="100" cy="179" r="3" fill="#f39c12"/>
     <circle cx="100" cy="179" r="1.5" fill="#fff"/>`,
 
-  b_jersey: `<path d="M72 100 Q70 96 74 96 L126 96 Q130 96 128 100 L128 205 L72 205 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.6"/>
-    <path d="M104 96 L104 205 L128 205 L128 100 Q128 98 126 96 Z" fill="#0a0a0a" opacity="0.4"/>
+  b_jersey: `<path d="M72 100 Q70 96 74 96 L126 96 Q130 96 128 102 L128 205 L72 205 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.6"/>
+    <path d="M104 96 L104 205 L128 205 L128 102 Q128 98 126 96 Z" fill="#0a0a0a" opacity="0.4"/>
     <path d="M80 96 Q100 82 120 96" fill="#1a1a1a"/>
     <path d="M72 100 Q62 102 56 118 L56 132 Q64 130 68 126 L70 120 L74 108 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.5"/>
     <path d="M128 100 Q138 102 144 118 L144 132 Q136 130 132 126 L130 120 L126 108 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.5"/>
@@ -1024,14 +1021,13 @@ const ITEMS_SVG = {
     <circle cx="113" cy="250" r="3.5" fill="#8b0000"/>
     <circle cx="87" cy="310" r="3.5" fill="#8b0000"/>
     <circle cx="113" cy="310" r="3.5" fill="#8b0000"/>`,
-    
+
   // ═══════════════════════════════════════════════════════════
   //  ПРАВАЯ РУКА (rh_*)
-  //  ВАЖНО: rotate ПОЛОЖИТЕЛЬНЫЙ (по часовой) — предмет растёт ВПРАВО-ВВЕРХ (наружу от тела).
-  //  scale(1.4) увеличенный размер.
+  //  rotate(20) -> наружу вправо-вниз, scale(1.5)
   // ═══════════════════════════════════════════════════════════
 
-  rh_cig: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_cig: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <rect x="0" y="-2" width="32" height="4" rx="1.5" fill="#f5f5f5" stroke="#c0c0c0" stroke-width="0.4"/>
     <rect x="4" y="-2" width="12" height="4" fill="#d4a97a"/>
     <rect x="0" y="-2" width="32" height="1" fill="#fff" opacity="0.5"/>
@@ -1040,7 +1036,7 @@ const ITEMS_SVG = {
     <circle cx="35" cy="-3" r="2" fill="#bbb" opacity="0.4"/>
   </g>`,
 
-  rh_beer: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_beer: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <rect x="-8" y="-42" width="16" height="38" rx="3" fill="#8b6914" stroke="#5a3a0a" stroke-width="0.5"/>
     <rect x="-8" y="-42" width="4" height="38" fill="#a88828" opacity="0.4"/>
     <rect x="-5" y="-52" width="10" height="14" rx="1" fill="#8b6914" stroke="#5a3a0a" stroke-width="0.4"/>
@@ -1051,7 +1047,7 @@ const ITEMS_SVG = {
     <ellipse cx="-3" cy="-38" rx="2" ry="6" fill="#a88828" opacity="0.5"/>
   </g>`,
 
-  rh_baltica: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_baltica: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <rect x="-7" y="-44" width="14" height="40" rx="2" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.5"/>
     <rect x="-7" y="-44" width="3" height="40" fill="#333" opacity="0.5"/>
     <rect x="-4" y="-54" width="8" height="14" rx="1" fill="#1a1a1a"/>
@@ -1062,7 +1058,7 @@ const ITEMS_SVG = {
     <circle cx="-4" cy="-40" r="1" fill="#555" opacity="0.5"/>
   </g>`,
 
-  rh_shaverma: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_shaverma: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <path d="M-10 0 Q-14 -12 -10 -35 Q0 -45 10 -35 Q14 -12 10 0 Z" fill="#f5e6c8" stroke="#d4c8a8" stroke-width="0.6"/>
     <path d="M-10 0 Q-14 -12 -10 -35 Q-5 -40 -2 -32 L-3 0 Z" fill="#f8eed8" opacity="0.5"/>
     <path d="M-6 -18 Q0 -14 6 -18 M-8 -28 Q0 -24 8 -28 M-5 -8 Q0 -5 5 -8" stroke="#c0392b" stroke-width="1.5" fill="none"/>
@@ -1072,7 +1068,7 @@ const ITEMS_SVG = {
     <ellipse cx="0" cy="-38" rx="8" ry="3" fill="#f5e6c8" opacity="0.7"/>
   </g>`,
 
-  rh_rose: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_rose: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <line x1="0" y1="0" x2="0" y2="-55" stroke="#2ecc71" stroke-width="2.5"/>
     <line x1="-1" y1="-5" x2="-1" y2="-50" stroke="#4ade80" stroke-width="0.8" opacity="0.5"/>
     <ellipse cx="0" cy="-60" rx="10" ry="12" fill="#c0392b" stroke="#8b0000" stroke-width="0.5"/>
@@ -1084,7 +1080,7 @@ const ITEMS_SVG = {
     <ellipse cx="-6" cy="-46" rx="4" ry="2" fill="#27ae60" transform="rotate(-20 -6 -46)"/>
   </g>`,
 
-  rh_rod: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_rod: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <line x1="0" y1="0" x2="0" y2="-95" stroke="#8b6914" stroke-width="3"/>
     <line x1="0" y1="-95" x2="0" y2="-5" stroke="#a07828" stroke-width="1" opacity="0.6"/>
     <line x1="1" y1="-95" x2="1" y2="-5" stroke="#c09040" stroke-width="0.4" opacity="0.5"/>
@@ -1097,7 +1093,7 @@ const ITEMS_SVG = {
     <path d="M-3 -90 L-3 -10" stroke="#fff" stroke-width="0.3" opacity="0.4"/>
   </g>`,
 
-  rh_bat: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_bat: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <rect x="-4" y="-85" width="8" height="85" rx="3" fill="#8b6914" stroke="#5a3a0a" stroke-width="0.5"/>
     <rect x="-4" y="-85" width="3" height="85" fill="#a07828" opacity="0.5"/>
     <rect x="-7" y="-105" width="14" height="25" rx="5" fill="#a07020" stroke="#6b4a14" stroke-width="0.6"/>
@@ -1107,7 +1103,7 @@ const ITEMS_SVG = {
     <path d="M-3 -100 L3 -100" stroke="#fff" stroke-width="0.5" opacity="0.3"/>
   </g>`,
 
-  rh_nerf: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_nerf: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <rect x="-4" y="-12" width="20" height="8" rx="1.5" fill="#f39c12" stroke="#b87500" stroke-width="0.5"/>
     <rect x="16" y="-14" width="14" height="12" rx="2" fill="#f39c12" stroke="#b87500" stroke-width="0.5"/>
     <rect x="-6" y="-10" width="6" height="18" rx="2" fill="#e67e22"/>
@@ -1118,7 +1114,7 @@ const ITEMS_SVG = {
     <rect x="-4" y="-12" width="20" height="2" fill="#fdd835" opacity="0.5"/>
   </g>`,
 
-  rh_flag_rus: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_flag_rus: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <line x1="0" y1="0" x2="0" y2="-85" stroke="#888" stroke-width="2.5"/>
     <line x1="0" y1="-85" x2="0" y2="-5" stroke="#aaa" stroke-width="0.8" opacity="0.5"/>
     <rect x="0" y="-85" width="45" height="11" fill="#fff"/>
@@ -1129,7 +1125,7 @@ const ITEMS_SVG = {
     <circle cx="0" cy="-85" r="2.5" fill="#666"/>
   </g>`,
 
-  rh_case: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_case: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <rect x="-16" y="-42" width="32" height="32" rx="3" fill="#8b6914" stroke="#5a3a0a" stroke-width="0.6"/>
     <rect x="-16" y="-32" width="32" height="4" fill="#b8860b"/>
     <rect x="-16" y="-42" width="6" height="32" fill="#a88c2c" opacity="0.4"/>
@@ -1139,7 +1135,7 @@ const ITEMS_SVG = {
     <path d="M-14 -38 L14 -38" stroke="#5a3a0a" stroke-width="0.4" opacity="0.4"/>
   </g>`,
 
-  rh_knife: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_knife: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <rect x="-5" y="-15" width="10" height="15" rx="2" fill="#1a1a1a"/>
     <rect x="-3" y="-13" width="2" height="12" fill="#333" opacity="0.6"/>
     <path d="M-5 -15 L5 -15 L4 -48 L0 -55 L-4 -48 Z" fill="#d4d4d4" stroke="#888" stroke-width="0.5"/>
@@ -1150,7 +1146,7 @@ const ITEMS_SVG = {
     <circle cx="0" cy="-8" r="1.5" fill="#c0392b"/>
   </g>`,
 
-  rh_book: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_book: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <rect x="-14" y="-42" width="28" height="42" rx="2" fill="#c0392b" stroke="#8b0000" stroke-width="0.5"/>
     <rect x="-14" y="-42" width="5" height="42" fill="#8b1a1a"/>
     <rect x="-12" y="-40" width="2" height="38" fill="#e74c3c" opacity="0.4"/>
@@ -1160,7 +1156,7 @@ const ITEMS_SVG = {
     <rect x="8" y="-42" width="4" height="10" fill="#a93226" opacity="0.6"/>
   </g>`,
 
-  rh_donut: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_donut: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <circle cx="0" cy="-22" r="16" fill="#e67e22" stroke="#b85400" stroke-width="0.6"/>
     <circle cx="0" cy="-22" r="10" fill="#f39c12" opacity="0.5"/>
     <circle cx="0" cy="-22" r="7" fill="#8b4513"/>
@@ -1171,7 +1167,7 @@ const ITEMS_SVG = {
     <ellipse cx="-8" cy="-30" rx="2" ry="1" fill="#fff" opacity="0.4"/>
   </g>`,
 
-  rh_icecream: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_icecream: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <path d="M-5 -40 L5 -40 L3 -8 L-3 -8 Z" fill="#f5deb3" stroke="#d4b888" stroke-width="0.5"/>
     <path d="M-5 -40 L-3 -8" stroke="#e8c898" stroke-width="0.4" opacity="0.6"/>
     <circle cx="0" cy="-48" r="9" fill="#f06292" stroke="#c2185b" stroke-width="0.4"/>
@@ -1182,7 +1178,7 @@ const ITEMS_SVG = {
     <circle cx="-3" cy="-54" r="1" fill="#fff" opacity="0.6"/>
   </g>`,
 
-  rh_glove: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_glove: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <ellipse cx="0" cy="-15" rx="16" ry="18" fill="#c0392b" stroke="#8b1a1a" stroke-width="0.6"/>
     <ellipse cx="0" cy="-15" rx="12" ry="14" fill="#e74c3c" opacity="0.3"/>
     <ellipse cx="0" cy="-30" rx="8" ry="6" fill="#a93226" stroke="#8b1a1a" stroke-width="0.4"/>
@@ -1193,7 +1189,7 @@ const ITEMS_SVG = {
     <path d="M-8 -10 L-6 -8" stroke="#fff" stroke-width="0.4" opacity="0.4"/>
   </g>`,
 
-  rh_bag: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_bag: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <path d="M-12 -35 L12 -35 L15 5 L-15 5 Z" fill="#f5f5f5" stroke="#ccc" stroke-width="0.5"/>
     <path d="M-12 -35 L-15 5 L-10 5 L-8 -35 Z" fill="#e0e0e0" opacity="0.5"/>
     <path d="M-8 -35 Q-8 -44 0 -44 Q8 -44 8 -35" stroke="#888" stroke-width="1.8" fill="none"/>
@@ -1204,7 +1200,7 @@ const ITEMS_SVG = {
     <path d="M-12 -25 L-8 -22" stroke="#ccc" stroke-width="0.3" opacity="0.5"/>
   </g>`,
 
-  rh_brass: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_brass: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <ellipse cx="0" cy="-18" rx="12" ry="10" fill="#888" stroke="#444" stroke-width="0.5"/>
     <ellipse cx="0" cy="-18" rx="9" ry="7" fill="#999" opacity="0.3"/>
     <circle cx="-7" cy="-24" r="3.5" fill="#666" stroke="#333" stroke-width="0.4"/>
@@ -1215,7 +1211,7 @@ const ITEMS_SVG = {
     <circle cx="-7" cy="-25" r="1" fill="#aaa" opacity="0.5"/>
   </g>`,
 
-  rh_watermelon: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_watermelon: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <ellipse cx="0" cy="-18" rx="20" ry="17" fill="#2ecc71" stroke="#1a8b4a" stroke-width="0.6"/>
     <ellipse cx="0" cy="-20" rx="18" ry="14" fill="#27ae60" opacity="0.5"/>
     <path d="M-16 -18 Q0 -28 16 -18" stroke="#1a8b4a" stroke-width="1.5" fill="none" opacity="0.6"/>
@@ -1228,7 +1224,7 @@ const ITEMS_SVG = {
     <ellipse cx="-10" cy="-22" rx="3" ry="1" fill="#fff" opacity="0.3"/>
   </g>`,
 
-  rh_fish: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_fish: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <ellipse cx="0" cy="-20" rx="20" ry="10" fill="#4aa3df" stroke="#2874a6" stroke-width="0.6"/>
     <ellipse cx="0" cy="-22" rx="16" ry="6" fill="#6dc0e8" opacity="0.4"/>
     <path d="M18 -20 L28 -28 L28 -12 Z" fill="#2e86c1"/>
@@ -1239,7 +1235,7 @@ const ITEMS_SVG = {
     <path d="M-16 -20 L-10 -14 M-16 -20 L-10 -26" stroke="#2874a6" stroke-width="0.6" fill="none" opacity="0.5"/>
   </g>`,
 
-  rh_burger: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_burger: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <path d="M-18 -34 Q0 -42 18 -34 Q20 -32 20 -30 L-20 -30 Q-20 -32 -18 -34 Z" fill="#f39c12" stroke="#d68910" stroke-width="0.5"/>
     <path d="M-18 -34 Q0 -40 18 -34" stroke="#fdd835" stroke-width="0.5" fill="none" opacity="0.6"/>
     <rect x="-20" y="-30" width="40" height="4" fill="#2ecc71"/>
@@ -1252,7 +1248,7 @@ const ITEMS_SVG = {
     <circle cx="-14" cy="-33" r="1" fill="#fff" opacity="0.6"/>
   </g>`,
 
-  rh_case_knife: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_case_knife: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <rect x="-6" y="-15" width="12" height="15" rx="2" fill="#1a1a1a" stroke="#000" stroke-width="0.4"/>
     <path d="M-6 -15 L6 -15 L5 -52 L0 -60 L-5 -52 Z" fill="#d4d4d4" stroke="#888" stroke-width="0.5"/>
     <path d="M-5 -52 L5 -52 L5 -48 L-5 -48 Z" fill="#9a9a9a"/>
@@ -1261,7 +1257,7 @@ const ITEMS_SVG = {
     <circle cx="0" cy="-8" r="2" fill="#1a1a1a"/>
   </g>`,
 
-  rh_case_uzi_gold: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_case_uzi_gold: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <rect x="-6" y="-2" width="26" height="10" rx="1.5" fill="#ffd700" stroke="#b8860b" stroke-width="0.6"/>
     <rect x="-6" y="-2" width="26" height="3" fill="#ffe66d" opacity="0.5"/>
     <rect x="-6" y="8" width="8" height="16" fill="#d4ac0d" stroke="#b8860b" stroke-width="0.4"/>
@@ -1272,7 +1268,7 @@ const ITEMS_SVG = {
     <rect x="-2" y="14" width="4" height="4" fill="#8b6914"/>
   </g>`,
 
-  rh_case_dragon_sword: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_case_dragon_sword: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <rect x="-6" y="-2" width="12" height="18" rx="2" fill="#2c3e50" stroke="#1a252f" stroke-width="0.5"/>
     <rect x="-8" y="-4" width="16" height="4" rx="1" fill="#f39c12"/>
     <path d="M-5 -4 L5 -4 L4 -85 L0 -95 L-4 -85 Z" fill="#d4d4d4" stroke="#888" stroke-width="0.6"/>
@@ -1283,7 +1279,7 @@ const ITEMS_SVG = {
     <path d="M-10 16 L10 16" stroke="#f39c12" stroke-width="2.5"/>
   </g>`,
 
-  rh_case_top1_weapon: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_case_top1_weapon: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <rect x="-7" y="-6" width="14" height="24" rx="2" fill="#1a0f2e" stroke="#ffd700" stroke-width="0.8"/>
     <path d="M-6 -6 L6 -6 L5 -88 L0 -100 L-5 -88 Z" fill="#c0c0c0" stroke="#ffd700" stroke-width="1"/>
     <path d="M0 -100 L4 -88 L0 -82 L-4 -88 Z" fill="#ffd700"/>
@@ -1294,7 +1290,7 @@ const ITEMS_SVG = {
     <path d="M-3 -85 L3 -85" stroke="#fff" stroke-width="0.4" opacity="0.4"/>
   </g>`,
 
-  rh_case_top2_weapon: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_case_top2_weapon: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <rect x="-9" y="-2" width="18" height="24" rx="3" fill="#8b0000" stroke="#ffd700" stroke-width="0.8"/>
     <path d="M-5 -4 L-5 -38 Q0 -60 5 -38 L5 -4 Z" fill="#ffd700" stroke="#b8860b" stroke-width="0.6"/>
     <path d="M-4 -8 L-4 -36 Q-2 -42 0 -42 Q2 -42 4 -36 L4 -8 Z" fill="#ffe66d" opacity="0.5"/>
@@ -1305,7 +1301,7 @@ const ITEMS_SVG = {
     <circle cx="0" cy="-72" r="2.5" fill="#e74c3c"/>
   </g>`,
 
-  rh_gang_bat: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_gang_bat: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <rect x="-4" y="-78" width="8" height="78" rx="3" fill="#3d2a10" stroke="#1a0f05" stroke-width="0.5"/>
     <rect x="-4" y="-78" width="3" height="78" fill="#5a3a1e" opacity="0.5"/>
     <rect x="-7" y="-98" width="14" height="22" rx="5" fill="#5a3a1e" stroke="#3d2a10" stroke-width="0.6"/>
@@ -1315,7 +1311,7 @@ const ITEMS_SVG = {
     <path d="M-3 -95 L3 -95" stroke="#f39c12" stroke-width="1.5"/>
   </g>`,
 
-  rh_gang_mace: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_gang_mace: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <rect x="-4" y="-14" width="8" height="30" fill="#5a3a1e" stroke="#3d2a10" stroke-width="0.5"/>
     <rect x="-4" y="-14" width="3" height="30" fill="#7a5028" opacity="0.5"/>
     <circle cx="0" cy="-32" r="16" fill="#7f8c8d" stroke="#f39c12" stroke-width="1.5"/>
@@ -1325,7 +1321,7 @@ const ITEMS_SVG = {
     <path d="M-7 -40 L-4 -37 M7 -40 L4 -37" stroke="#a8b8b8" stroke-width="0.8" opacity="0.6"/>
   </g>`,
 
-  rh_gang_halberd: `<g transform="translate(145, 197) rotate(20) scale(1.4)">
+  rh_gang_halberd: `<g transform="translate(145, 197) rotate(20) scale(1.5)">
     <rect x="-3" y="-85" width="6" height="110" fill="#5a3a1e" stroke="#3d2a10" stroke-width="0.5"/>
     <rect x="-3" y="-85" width="2" height="110" fill="#7a5028" opacity="0.5"/>
     <path d="M-9 -85 L0 -105 L9 -85 L5 -72 L-5 -72 Z" fill="#c0c0c0" stroke="#8b0000" stroke-width="1"/>
@@ -1337,11 +1333,10 @@ const ITEMS_SVG = {
 
   // ═══════════════════════════════════════════════════════════
   //  ЛЕВАЯ РУКА (lh_*)
-  //  ВАЖНО: rotate ОТРИЦАТЕЛЬНЫЙ (против часовой) — предмет растёт ВЛЕВО-ВВЕРХ (наружу от тела).
-  //  scale(1.4) увеличенный размер.
+  //  rotate(-20) -> наружу влево-вниз, scale(1.5)
   // ═══════════════════════════════════════════════════════════
 
-  lh_phone: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_phone: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <rect x="-8" y="-40" width="16" height="30" rx="2" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.5"/>
     <rect x="-6" y="-37" width="12" height="24" fill="#3498db"/>
     <rect x="-6" y="-37" width="12" height="6" fill="#2980b9" opacity="0.5"/>
@@ -1350,7 +1345,7 @@ const ITEMS_SVG = {
     <rect x="-8" y="-40" width="16" height="30" rx="2" fill="none" stroke="#333" stroke-width="0.3"/>
   </g>`,
 
-  lh_wallet: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_wallet: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <rect x="-14" y="-22" width="28" height="20" rx="2" fill="#8b4513" stroke="#5a2e0a" stroke-width="0.5"/>
     <rect x="-14" y="-22" width="28" height="4" fill="#a06030" opacity="0.6"/>
     <path d="M-14 -16 L14 -16" stroke="#5a2e0a" stroke-width="1"/>
@@ -1360,7 +1355,7 @@ const ITEMS_SVG = {
     <path d="M-12 -10 L12 -10" stroke="#6b3a10" stroke-width="0.4" opacity="0.4"/>
   </g>`,
 
-  lh_cola: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_cola: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <rect x="-7" y="-34" width="14" height="32" rx="2" fill="#c0392b" stroke="#8b0000" stroke-width="0.5"/>
     <rect x="-7" y="-34" width="4" height="32" fill="#e74c3c" opacity="0.5"/>
     <rect x="-7" y="-34" width="14" height="5" fill="#888"/>
@@ -1369,7 +1364,7 @@ const ITEMS_SVG = {
     <path d="M-5 -8 L5 -8" stroke="#8b0000" stroke-width="0.5" opacity="0.5"/>
   </g>`,
 
-  lh_ext: `<g transform="translate(55, 197) rotate(-15) scale(1.4)">
+  lh_ext: `<g transform="translate(55, 197) rotate(-15) scale(1.5)">
     <rect x="-10" y="-45" width="20" height="48" rx="4" fill="#c0392b" stroke="#8b0000" stroke-width="0.5"/>
     <rect x="-10" y="-45" width="5" height="48" fill="#e74c3c" opacity="0.5"/>
     <rect x="-10" y="-42" width="20" height="4" fill="#fff"/>
@@ -1379,7 +1374,7 @@ const ITEMS_SVG = {
     <text x="0" y="-20" text-anchor="middle" font-size="8" fill="#fff" font-weight="900">ОГН</text>
   </g>`,
 
-  lh_guitar: `<g transform="translate(55, 197) rotate(-15) scale(1.4)">
+  lh_guitar: `<g transform="translate(55, 197) rotate(-15) scale(1.5)">
     <ellipse cx="0" cy="-8" rx="20" ry="18" fill="#8b4513" stroke="#5a2e0a" stroke-width="0.6"/>
     <ellipse cx="0" cy="-8" rx="15" ry="13" fill="#a06030" opacity="0.4"/>
     <ellipse cx="-2" cy="-28" rx="17" ry="14" fill="#8b4513" stroke="#5a2e0a" stroke-width="0.6"/>
@@ -1398,7 +1393,7 @@ const ITEMS_SVG = {
     <circle cx="6" cy="8" r="1.2" fill="#b8860b"/>
   </g>`,
 
-  lh_shield: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_shield: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <path d="M-20 -30 L20 -30 L20 -10 Q0 15 -20 -10 Z" fill="#7f8c8d" stroke="#5a6a6a" stroke-width="1"/>
     <path d="M-20 -30 L0 -30 L0 15 Q-10 0 -20 -10 Z" fill="#95a5a6" opacity="0.4"/>
     <path d="M-20 -30 L20 -30" stroke="#e74c3c" stroke-width="2.5"/>
@@ -1408,7 +1403,7 @@ const ITEMS_SVG = {
     <path d="M16 -30 L16 -22 L12 -22" stroke="#5a6a6a" stroke-width="0.6" fill="none"/>
   </g>`,
 
-  lh_sword: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_sword: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <line x1="0" y1="-8" x2="0" y2="-90" stroke="#bdc3c7" stroke-width="4.5"/>
     <line x1="-1.5" y1="-8" x2="-1.5" y2="-88" stroke="#fff" stroke-width="1" opacity="0.5"/>
     <path d="M0 -90 L-4 -80 L0 -75 L4 -80 Z" fill="#bdc3c7" stroke="#888" stroke-width="0.4"/>
@@ -1418,7 +1413,7 @@ const ITEMS_SVG = {
     <circle cx="0" cy="6" r="1" fill="#fff" opacity="0.6"/>
   </g>`,
 
-  lh_flag_ussr: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_flag_ussr: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <line x1="0" y1="0" x2="0" y2="-85" stroke="#888" stroke-width="2.5"/>
     <line x1="0" y1="-85" x2="0" y2="-5" stroke="#aaa" stroke-width="0.8" opacity="0.5"/>
     <rect x="-42" y="-85" width="42" height="26" fill="#c0392b" stroke="#8b0000" stroke-width="0.5"/>
@@ -1427,7 +1422,7 @@ const ITEMS_SVG = {
     <circle cx="0" cy="-85" r="2.5" fill="#666"/>
   </g>`,
 
-  lh_briefcase: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_briefcase: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <rect x="-22" y="-32" width="44" height="32" rx="3" fill="#2c3e50" stroke="#1a252f" stroke-width="0.6"/>
     <rect x="-22" y="-32" width="44" height="4" fill="#3d5060" opacity="0.6"/>
     <rect x="-22" y="-22" width="44" height="3" fill="#34495e"/>
@@ -1437,7 +1432,7 @@ const ITEMS_SVG = {
     <rect x="-18" y="-30" width="4" height="26" fill="#3d5060" opacity="0.5"/>
   </g>`,
 
-  lh_cat: `<g transform="translate(55, 197) rotate(-15) scale(1.4)">
+  lh_cat: `<g transform="translate(55, 197) rotate(-15) scale(1.5)">
     <ellipse cx="0" cy="-12" rx="16" ry="18" fill="#f39c12" stroke="#d68910" stroke-width="0.5"/>
     <ellipse cx="0" cy="-12" rx="11" ry="14" fill="#f5b041" opacity="0.4"/>
     <path d="M-13 -25 L-15 -38 L-6 -30 Z" fill="#f39c12" stroke="#d68910" stroke-width="0.4"/>
@@ -1453,7 +1448,7 @@ const ITEMS_SVG = {
     <ellipse cx="4" cy="-11" rx="1.5" ry="1" fill="#d68910" opacity="0.6"/>
   </g>`,
 
-  lh_coffee: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_coffee: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <path d="M-10 -30 L10 -30 L8 -4 L-8 -4 Z" fill="#fff" stroke="#ccc" stroke-width="0.5"/>
     <path d="M-10 -30 L10 -30" stroke="#8b4513" stroke-width="2"/>
     <ellipse cx="0" cy="-28" rx="9" ry="2" fill="#3d1a05"/>
@@ -1463,7 +1458,7 @@ const ITEMS_SVG = {
     <path d="M-9 -28 L-8 -6" stroke="#e0e0e0" stroke-width="0.6" opacity="0.5"/>
   </g>`,
 
-  lh_hammer: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_hammer: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <rect x="-4" y="-50" width="8" height="50" fill="#8b6914" stroke="#5a3a0a" stroke-width="0.5"/>
     <rect x="-4" y="-50" width="3" height="50" fill="#a07828" opacity="0.5"/>
     <rect x="-16" y="-56" width="32" height="14" rx="2" fill="#7f8c8d" stroke="#5a6a6a" stroke-width="0.5"/>
@@ -1472,7 +1467,7 @@ const ITEMS_SVG = {
     <path d="M-14 -44 L14 -44" stroke="#5a6a6a" stroke-width="0.5" opacity="0.6"/>
   </g>`,
 
-  lh_book2: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_book2: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <rect x="-18" y="-40" width="36" height="42" rx="2" fill="#2c3e50" stroke="#1a252f" stroke-width="0.6"/>
     <rect x="-18" y="-40" width="7" height="42" fill="#1a252f"/>
     <rect x="-16" y="-38" width="2" height="38" fill="#3d5060" opacity="0.4"/>
@@ -1482,7 +1477,7 @@ const ITEMS_SVG = {
     <rect x="10" y="-40" width="6" height="12" fill="#e74c3c"/>
   </g>`,
 
-  lh_ball: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_ball: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <circle cx="0" cy="-20" r="16" fill="#fff" stroke="#ddd" stroke-width="0.5"/>
     <path d="M0 -36 Q12 -26 0 -4 Q-12 -26 0 -36 Z" fill="#1a1a1a"/>
     <path d="M-16 -20 Q-10 -16 0 -20 Q10 -16 16 -20" stroke="#1a1a1a" stroke-width="1.5" fill="none"/>
@@ -1491,7 +1486,7 @@ const ITEMS_SVG = {
     <ellipse cx="-6" cy="-28" rx="3" ry="2" fill="#fff" opacity="0.5"/>
   </g>`,
 
-  lh_umbrella: `<g transform="translate(55, 197) rotate(-15) scale(1.4)">
+  lh_umbrella: `<g transform="translate(55, 197) rotate(-15) scale(1.5)">
     <line x1="0" y1="0" x2="0" y2="-80" stroke="#333" stroke-width="2"/>
     <path d="M-30 -55 Q-30 -85 0 -85 Q30 -85 30 -55 L30 -52 L-30 -52 Z" fill="#1a1a1a" stroke="#333" stroke-width="0.5"/>
     <path d="M-30 -55 Q-20 -50 -15 -55 Q-10 -50 0 -55 Q10 -50 15 -55 Q20 -50 30 -55" stroke="#333" stroke-width="0.8" fill="none"/>
@@ -1501,7 +1496,7 @@ const ITEMS_SVG = {
     <path d="M0 0 Q-6 5 -6 -2" stroke="#333" stroke-width="2" fill="none" stroke-linecap="round"/>
   </g>`,
 
-  lh_laptop: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_laptop: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <rect x="-22" y="-34" width="44" height="30" rx="2" fill="#2c3e50" stroke="#1a252f" stroke-width="0.6"/>
     <rect x="-19" y="-31" width="38" height="24" fill="#3498db"/>
     <rect x="-19" y="-31" width="38" height="8" fill="#2980b9" opacity="0.5"/>
@@ -1511,7 +1506,7 @@ const ITEMS_SVG = {
     <circle cx="-18" cy="-30" r="0.8" fill="#fff" opacity="0.5"/>
   </g>`,
 
-  lh_champagne: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_champagne: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <rect x="-8" y="-40" width="16" height="38" rx="2" fill="#1a4a1a" stroke="#0a2a0a" stroke-width="0.5"/>
     <rect x="-8" y="-40" width="5" height="38" fill="#2e6e2e" opacity="0.5"/>
     <rect x="-5" y="-58" width="10" height="20" fill="#1a4a1a"/>
@@ -1523,7 +1518,7 @@ const ITEMS_SVG = {
     <circle cx="6" cy="-30" r="0.8" fill="#fff" opacity="0.5"/>
   </g>`,
 
-  lh_sushi: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_sushi: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <rect x="-22" y="-16" width="44" height="14" rx="2" fill="#1a1a1a" stroke="#000" stroke-width="0.4"/>
     <rect x="-22" y="-16" width="44" height="2" fill="#2a2a2a"/>
     <circle cx="-12" cy="-10" r="8" fill="#f5f5f5" stroke="#ddd" stroke-width="0.4"/>
@@ -1536,7 +1531,7 @@ const ITEMS_SVG = {
     <path d="M-20 -15 L20 -15" stroke="#333" stroke-width="0.4" opacity="0.4"/>
   </g>`,
 
-  lh_pizza: `<g transform="translate(55, 197) rotate(-15) scale(1.4)">
+  lh_pizza: `<g transform="translate(55, 197) rotate(-15) scale(1.5)">
     <path d="M-20 -5 L20 -5 L22 0 L-22 0 Z" fill="#f39c12" stroke="#d68910" stroke-width="0.5"/>
     <path d="M-20 -5 L0 -45 L20 -5 Z" fill="#f39c12" stroke="#d68910" stroke-width="0.5"/>
     <path d="M-18 -3 L0 -40 L18 -3" stroke="#d68910" stroke-width="0.5" fill="none" opacity="0.4"/>
@@ -1550,7 +1545,7 @@ const ITEMS_SVG = {
     <path d="M-20 -5 L20 -5" stroke="#a0620a" stroke-width="1" opacity="0.5"/>
   </g>`,
 
-  lh_teddy: `<g transform="translate(55, 197) rotate(-15) scale(1.4)">
+  lh_teddy: `<g transform="translate(55, 197) rotate(-15) scale(1.5)">
     <ellipse cx="0" cy="-16" rx="18" ry="20" fill="#8b6914" stroke="#5a3a0a" stroke-width="0.5"/>
     <ellipse cx="0" cy="-16" rx="12" ry="14" fill="#a07020" opacity="0.4"/>
     <circle cx="0" cy="-32" r="13" fill="#8b6914" stroke="#5a3a0a" stroke-width="0.5"/>
@@ -1567,7 +1562,7 @@ const ITEMS_SVG = {
     <ellipse cx="-6" cy="-25" rx="3" ry="2" fill="#a07020" opacity="0.4"/>
   </g>`,
 
-  lh_case_lucky: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_case_lucky: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <circle cx="0" cy="-22" r="14" fill="#f1c40f" stroke="#b8860b" stroke-width="1"/>
     <circle cx="0" cy="-22" r="10" fill="#d4ac0d"/>
     <circle cx="0" cy="-22" r="8" fill="#f1c40f" opacity="0.6"/>
@@ -1575,14 +1570,14 @@ const ITEMS_SVG = {
     <path d="M-8 -26 Q-4 -30 0 -28" stroke="#fff" stroke-width="0.6" fill="none" opacity="0.5"/>
   </g>`,
 
-  lh_case_pepper: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_case_pepper: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <path d="M-6 -45 Q-2 -50 4 -48 L6 -45 Q8 -20 2 -5 L-2 -5 Q-8 -20 -6 -45 Z" fill="#c0392b" stroke="#8b0000" stroke-width="0.6"/>
     <path d="M-6 -45 L-2 -5 L-2 -45 Z" fill="#e74c3c" opacity="0.5"/>
     <path d="M-3 -40 L-3 -15" stroke="#e74c3c" stroke-width="1" fill="none" opacity="0.5"/>
     <path d="M-3 -47 Q0 -52 3 -48 Q5 -50 7 -47" fill="#2ecc71"/>
   </g>`,
 
-  lh_case_brilliant: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_case_brilliant: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <rect x="-18" y="-22" width="36" height="24" rx="3" fill="#3498db" stroke="#21618c" stroke-width="0.6"/>
     <rect x="-18" y="-22" width="36" height="4" fill="#5dade2" opacity="0.5"/>
     <rect x="-18" y="-14" width="36" height="3" fill="#2874a6"/>
@@ -1592,7 +1587,7 @@ const ITEMS_SVG = {
     <circle cx="0" cy="-7" r="1.2" fill="#fff" opacity="0.9"/>
   </g>`,
 
-  lh_case_top1_artifact: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_case_top1_artifact: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <circle cx="0" cy="-25" r="20" fill="#1a0f2e" stroke="#ffd700" stroke-width="2"/>
     <circle cx="0" cy="-25" r="14" fill="#2c1810"/>
     <path d="M0 -38 L4 -30 L13 -30 L6 -24 L9 -15 L0 -20 L-9 -15 L-6 -24 L-13 -30 L-4 -30 Z" fill="#ffd700" stroke="#b8860b" stroke-width="0.6"/>
@@ -1600,7 +1595,7 @@ const ITEMS_SVG = {
     <circle cx="0" cy="-25" r="1.2" fill="#fff"/>
   </g>`,
 
-  lh_case_top2_artifact: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_case_top2_artifact: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <ellipse cx="0" cy="-25" rx="22" ry="20" fill="#ffd700" stroke="#8b0000" stroke-width="2.5"/>
     <ellipse cx="0" cy="-25" rx="16" ry="14" fill="#1a0f2e"/>
     <path d="M0 -40 L5 -30 L16 -28 L8 -21 L10 -10 L0 -16 L-10 -10 L-8 -21 L-16 -28 L-5 -30 Z" fill="#ffd700" stroke="#b8860b" stroke-width="0.6"/>
@@ -1610,14 +1605,14 @@ const ITEMS_SVG = {
     <circle cx="0" cy="-3" r="1.8" fill="#fff"/>
   </g>`,
 
-  lh_gang_banner: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_gang_banner: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <line x1="0" y1="0" x2="0" y2="-75" stroke="#5a3a1e" stroke-width="2.5"/>
     <path d="M0 -75 L38 -70 L33 -60 L38 -50 L0 -55 Z" fill="#c0392b" stroke="#8b0000" stroke-width="0.6"/>
     <text x="19" y="-60" text-anchor="middle" font-size="9" fill="#f39c12" font-weight="900">ГАНГ</text>
     <circle cx="0" cy="-75" r="2" fill="#3d2a10"/>
   </g>`,
 
-  lh_gang_shield: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_gang_shield: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <path d="M-20 -30 L20 -30 L20 -8 Q0 16 -20 -8 Z" fill="#2c3e50" stroke="#f39c12" stroke-width="2"/>
     <path d="M-20 -30 L0 -30 L0 16 Q-10 0 -20 -8 Z" fill="#34495e" opacity="0.4"/>
     <path d="M-20 -30 L20 -30" stroke="#c0392b" stroke-width="3"/>
@@ -1626,7 +1621,7 @@ const ITEMS_SVG = {
     <circle cx="0" cy="-14" r="3" fill="#c0392b"/>
   </g>`,
 
-  lh_gang_trophy: `<g transform="translate(55, 197) rotate(-20) scale(1.4)">
+  lh_gang_trophy: `<g transform="translate(55, 197) rotate(-20) scale(1.5)">
     <path d="M-14 -38 L14 -38 L12 -20 Q0 -14 -12 -20 Z" fill="#ffd700" stroke="#b8860b" stroke-width="1"/>
     <path d="M-14 -38 L-16 -32 Q-16 -25 -10 -22 M14 -38 L16 -32 Q16 -25 10 -22" stroke="#b8860b" stroke-width="1.2" fill="none"/>
     <path d="M-12 -38 L-12 -22 Q0 -18 0 -22 Z" fill="#ffe66d" opacity="0.5"/>
@@ -1640,14 +1635,12 @@ const ITEMS_SVG = {
   //  ПРИЧЁСКИ (hair_*)
   // ═══════════════════════════════════════════════════════════
 
-  hair_short_black: `<path d="M72 48 Q72 20 100 18 Q128 20 128 48 Q126 36 100 34 Q74 36 72 48 Z"
-                       fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.4"/>
+  hair_short_black: `<path d="M72 48 Q72 20 100 18 Q128 20 128 48 Q126 36 100 34 Q74 36 72 48 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.4"/>
     <path d="M75 36 Q82 30 92 30" stroke="#333" stroke-width="0.5" fill="none" opacity="0.5"/>
     <path d="M108 30 Q118 30 125 36" stroke="#333" stroke-width="0.5" fill="none" opacity="0.5"/>
     <path d="M78 42 Q82 40 86 42 M114 42 Q118 40 122 42" stroke="#0a0a0a" stroke-width="0.4" fill="none" opacity="0.4"/>`,
 
-  hair_curly_brown: `<path d="M70 50 Q68 18 100 14 Q132 18 130 50 Q128 40 100 38 Q72 40 70 50 Z"
-                        fill="#5a3a1e" stroke="#3d2810" stroke-width="0.5"/>
+  hair_curly_brown: `<path d="M70 50 Q68 18 100 14 Q132 18 130 50 Q128 40 100 38 Q72 40 70 50 Z" fill="#5a3a1e" stroke="#3d2810" stroke-width="0.5"/>
     <circle cx="74" cy="36" r="6" fill="#6b4a2a" opacity="0.9"/>
     <circle cx="82" cy="28" r="7" fill="#6b4a2a" opacity="0.9"/>
     <circle cx="94" cy="24" r="7" fill="#6b4a2a" opacity="0.9"/>
@@ -1658,8 +1651,7 @@ const ITEMS_SVG = {
     <circle cx="120" cy="42" r="5" fill="#7a5a3a" opacity="0.6"/>
     <path d="M78 38 Q82 34 86 38" stroke="#3d2810" stroke-width="0.6" fill="none" opacity="0.5"/>`,
 
-  hair_long_red: `<path d="M70 50 Q68 16 100 14 Q132 16 130 50 Q128 40 100 38 Q72 40 70 50 Z"
-                     fill="#c0392b" stroke="#8b0000" stroke-width="0.4"/>
+  hair_long_red: `<path d="M70 50 Q68 16 100 14 Q132 16 130 50 Q128 40 100 38 Q72 40 70 50 Z" fill="#c0392b" stroke="#8b0000" stroke-width="0.4"/>
     <path d="M70 50 Q62 90 64 135 Q72 140 78 135 Q74 90 76 55 Z" fill="#c0392b" stroke="#8b0000" stroke-width="0.4"/>
     <path d="M130 50 Q138 90 136 135 Q128 140 122 135 Q126 90 124 55 Z" fill="#c0392b" stroke="#8b0000" stroke-width="0.4"/>
     <path d="M74 60 Q68 100 70 130 M126 60 Q132 100 130 130" stroke="#8b0000" stroke-width="0.6" fill="none" opacity="0.5"/>
@@ -1672,8 +1664,7 @@ const ITEMS_SVG = {
     <path d="M104 42 Q112 40 122 42" stroke="#2980b9" stroke-width="0.6" fill="none" opacity="0.6"/>
     <path d="M90 14 L100 2 L110 14" stroke="#5dade2" stroke-width="0.6" fill="none" opacity="0.4"/>`,
 
-  hair_flowing_gold: `<path d="M68 52 Q66 14 100 12 Q134 14 132 52 Q130 40 100 38 Q70 40 68 52 Z"
-                         fill="#f1c40f" stroke="#b8860b" stroke-width="0.5"/>
+  hair_flowing_gold: `<path d="M68 52 Q66 14 100 12 Q134 14 132 52 Q130 40 100 38 Q70 40 68 52 Z" fill="#f1c40f" stroke="#b8860b" stroke-width="0.5"/>
     <path d="M68 52 Q58 100 60 155 Q60 175 68 180 Q76 175 72 155 Q72 100 76 58 Z" fill="#f1c40f" stroke="#b8860b" stroke-width="0.5"/>
     <path d="M132 52 Q142 100 140 155 Q140 175 132 180 Q124 175 128 155 Q128 100 124 58 Z" fill="#f1c40f" stroke="#b8860b" stroke-width="0.5"/>
     <path d="M72 70 Q65 110 66 150 M128 70 Q135 110 134 150" stroke="#b8860b" stroke-width="0.6" fill="none" opacity="0.5"/>
@@ -1731,41 +1722,14 @@ const ITEMS_SVG = {
     <ellipse cx="120" cy="366" rx="3" ry="1" fill="#fff" opacity="0.7"/>`,
 
   // ═══════════════════════════════════════════════════════════
-  //  КЕЙСОВЫЕ И КЛАНСКИЕ (которые не были в верхней секции)
+  //  ДОПОЛНИТЕЛЬНЫЕ (ЗАЩИТА ОТ ПУСТЫХ ID)
   // ═══════════════════════════════════════════════════════════
-
-  b_case_top2_body: `<path d="M64 90 L136 90 L142 215 L58 215 Z" fill="#8b0000" stroke="#ffd700" stroke-width="2.2"/>
-    <path d="M64 90 Q50 96 44 120 L40 178 Q39 186 44 188 L50 186 Q47 180 49 165 L52 135 L58 118 L64 96 Z" fill="#8b0000" stroke="#ffd700" stroke-width="2"/>
-    <path d="M136 90 Q150 96 156 120 L160 178 Q161 186 156 188 L150 186 Q153 180 151 165 L148 135 L142 118 L136 96 Z" fill="#8b0000" stroke="#ffd700" stroke-width="2"/>
-    <path d="M64 90 L84 106 L100 90 L116 106 L136 90" stroke="#ffd700" stroke-width="2" fill="none"/>
-    <path d="M74 132 L126 132 M74 162 L126 162 M74 192 L126 192" stroke="#ffd700" stroke-width="1.5"/>
-    <ellipse cx="100" cy="146" rx="13" ry="11" fill="#ffd700" stroke="#1a0f2e" stroke-width="1.5"/>
-    <text x="100" y="152" text-anchor="middle" font-size="16" fill="#8b0000" font-weight="900">☭</text>
-    <circle cx="84" cy="110" r="2.5" fill="#fff"/>
-    <circle cx="116" cy="110" r="2.5" fill="#fff"/>
-    <circle cx="80" cy="205" r="2" fill="#f39c12"/>
-    <circle cx="120" cy="205" r="2" fill="#f39c12"/>`,
-
-  b_case_chains: `<path d="M70 96 L70 205 L130 205 L130 96 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.6"/>
-    <path d="M76 96 Q100 82 124 96" fill="#1a1a1a"/>
-    <path d="M70 98 Q58 100 52 118 L52 138 Q60 136 64 132 L67 125 L74 108 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.5"/>
-    <path d="M130 98 Q142 100 148 118 L148 138 Q140 136 136 132 L133 125 L126 108 Z" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.5"/>
-    <g stroke="#d4d4d4" stroke-width="2" fill="none">
-      <circle cx="82" cy="126" r="4"/><circle cx="82" cy="136" r="4"/><circle cx="82" cy="146" r="4"/><circle cx="82" cy="156" r="4"/>
-      <circle cx="118" cy="126" r="4"/><circle cx="118" cy="136" r="4"/><circle cx="118" cy="146" r="4"/><circle cx="118" cy="156" r="4"/>
-    </g>
-    <circle cx="100" cy="120" r="3" fill="#c0c0c0" stroke="#888" stroke-width="0.5"/>
-    <path d="M100 123 L100 170" stroke="#c0c0c0" stroke-width="1.2"/>`,
-
   lh_tyanka: null,
   lh_tyanka2: null,
   rh_miku: null,
   rh_tyanka3: null,
 };
 
-// ═══════════════════════════════════════════════════════════
-//  ГЛАВНЫЙ РЕНДЕР
-// ═══════════════════════════════════════════════════════════
 function renderCharacterSVG(outfit, opts = {}) {
   const baseH = opts.height || 300;
   const head = outfit?.head_id?.item_id;
