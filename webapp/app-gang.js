@@ -9,7 +9,6 @@ async function loadCases() {
     const d = await api("cases/list");
     const el = $("#cases-list");
     el.innerHTML = d.cases.map(c => {
-        // Определяем, лимитирован ли кейс
         const fbLimit = LIMITED_CASES_FALLBACK[c.case_id];
         const isLimited = c.is_limited === true || (c.is_limited === undefined && !!fbLimit);
         const totalLimit = c.limit || fbLimit || 0;
@@ -23,8 +22,8 @@ async function loadCases() {
             limitBadge = `
               <div style="margin-top:8px;padding:6px 8px;background:rgba(231,76,60,0.12);border:1px solid #e74c3c;border-radius:8px;">
                 <div style="font-size:12px;color:#e74c3c;font-weight:900;text-align:center;letter-spacing:0.5px;">🔥 ЛИМИТИРОВАННЫЙ</div>
-                <div style="width:100%;height:5px;background:#111;border-radius:3px;margin-top:5px;overflow:hidden;">
-                  <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#e74c3c,#ff6b6b);"></div>
+                <div style="width:100%;height:5px;background:#222;border-radius:3px;margin-top:5px;overflow:hidden;">
+                  <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#e74c3c,#ff6b6b);min-width:${pct>0?'3px':'0'};"></div>
                 </div>
                 <div style="font-size:11px;color:#fff;text-align:center;margin-top:4px;">Осталось: <b style="color:#e74c3c;">${leftCount}/${totalLimit}</b></div>
               </div>
@@ -81,8 +80,8 @@ function showCaseDetail(cid) {
         <div style="margin: 12px 0; padding: 12px; background: rgba(231,76,60,0.12); border: 1px solid #e74c3c; border-radius: 10px;">
           <div style="font-weight:900;color:#e74c3c;text-align:center;letter-spacing:0.5px;">🔥 ЛИМИТИРОВАННЫЙ 🔥</div>
           <div style="font-size:12px;color:var(--hint);text-align:center;margin-top:6px;">Глобальный лимит: ${totalLimit} шт. на всю игру</div>
-          <div style="width:100%;height:8px;background:#111;border-radius:4px;margin-top:8px;overflow:hidden;">
-            <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#e74c3c,#ff6b6b);"></div>
+          <div style="width:100%;height:8px;background:#222;border-radius:4px;margin-top:8px;overflow:hidden;">
+            <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,#e74c3c,#ff6b6b);min-width:${pct>0?'4px':'0'};"></div>
           </div>
           <div style="font-size:16px;color:#fff;text-align:center;font-weight:900;margin-top:8px;">Осталось: <span style="color:#e74c3c;">${leftCount} / ${totalLimit}</span></div>
         </div>
@@ -109,19 +108,27 @@ async function openCase(cid) {
 
   try {
     const d = await api("cases/open", {case_id: cid});
-    state.player = d.player; 
+    state.player = d.player;
     renderPlayer();
 
+    // ═══ Обновляем лимит ЛОКАЛЬНО из ответа сервера ═══
+    if (d.is_limited && d.opened !== undefined) {
+        c.opened = d.opened;
+        c.left = d.left;
+        c.is_limited = true;
+        c.limit = d.limit;
+    }
+
     const wonItem = d.won;
-    const allItems = c.items; 
-    const WIN_INDEX = 45; 
-    const ITEM_WIDTH = 100; 
+    const allItems = c.items;
+    const WIN_INDEX = 45;
+    const ITEM_WIDTH = 100;
 
     let stripHtml = "";
     for (let i = 0; i < 60; i++) {
         let it;
         if (i === WIN_INDEX) {
-            it = wonItem; 
+            it = wonItem;
         } else {
             let totalChance = allItems.reduce((sum, item) => sum + item.chance, 0);
             let r = Math.random() * totalChance;
@@ -132,10 +139,10 @@ async function openCase(cid) {
                 if (r <= acc) { it = item; break; }
             }
         }
-        
+
         const preview = {...emptyOutfit()};
         preview[SLOT_KEY[it.slot]] = {item_id: it.item_id};
-        
+
         stripHtml += `<div class="case-roll-item" style="border-bottom: 4px solid ${it.rarity_color}">
             <div class="case-roll-svg">${renderCharacterSVG(preview, {width: 60, height: 120})}</div>
         </div>`;
@@ -156,7 +163,7 @@ async function openCase(cid) {
     setTimeout(() => {
         const containerWidth = document.getElementById("case-roll-container").offsetWidth;
         const strip = document.getElementById("case-roll-strip");
-        
+
         const targetOffset = (WIN_INDEX * ITEM_WIDTH) + (ITEM_WIDTH / 2) - (containerWidth / 2);
         const randomOffset = Math.floor(Math.random() * 60) - 30;
         const finalTranslate = -(targetOffset + randomOffset);
@@ -181,11 +188,11 @@ async function openCase(cid) {
                 ${_itemStatsHtml(wonItem, 'block')}
                 <button class="btn btn-primary" onclick="closeModal();loadCases()" style="margin-top:16px">Забрать</button>
               </div>`);
-        }, 5200); 
-    }, 50); 
+        }, 5200);
+    }, 50);
 
-  } catch(e) { 
-    toast(e.message, "error"); 
+  } catch(e) {
+    toast(e.message, "error");
     loadCases();
   }
 }
