@@ -2,11 +2,13 @@
 const SKIN = "#e8b48a", SKIN_DARK = "#d4a17a", SKIN_LIGHT = "#f0c4a0";
 
 // ═══ КАСТОМНЫЕ КАРТИНКИ (ТЯНКИ) ═══
+// w: ширина рамки (viewBox units), h: высота, y: верх рамки (0 = макушка, 400 = пятки)
+// side: "left" — стоит слева от персонажа, "right" — справа
 const CUSTOM_IMAGES = {
-    "lh_tyanka": { url: "/assets/hands/lh_tyanka.png", x: -130, y: 20, w: 140, h: 380 },
-    "lh_tyanka2": { url: "/assets/hands/lh_tyanka2.png", x: -100, y: 160, w: 110, h: 240 },
-    "rh_miku": { url: "/assets/hands/rh_miku.png", x: 190, y: 20, w: 140, h: 380 },
-    "rh_tyanka3": { url: "/assets/hands/rh_tyanka3.png", x: 190, y: 20, w: 140, h: 380 }
+    "lh_tyanka":  { url: "/assets/hands/lh_tyanka.png",  side: "left",  y: 0,   w: 230, h: 400 },
+    "lh_tyanka2": { url: "/assets/hands/lh_tyanka2.png", side: "left",  y: 160, w: 160, h: 240 },
+    "rh_miku":    { url: "/assets/hands/rh_miku.png",    side: "right", y: 0,   w: 230, h: 400 },
+    "rh_tyanka3": { url: "/assets/hands/rh_tyanka3.png", side: "right", y: 0,   w: 230, h: 400 }
 };
 
 function renderBaseBody() {
@@ -150,7 +152,7 @@ const ITEMS_SVG = {
   lh_pizza: `<path d="M40 195 L70 195 L70 200 L40 200 Z" fill="#f39c12"/><path d="M40 195 L55 165 L70 195 Z" fill="#f39c12"/><circle cx="50" cy="188" r="3" fill="#c0392b"/><circle cx="60" cy="188" r="3" fill="#c0392b"/><circle cx="55" cy="178" r="2.5" fill="#c0392b"/><circle cx="48" cy="192" r="1.5" fill="#2ecc71"/>`,
   lh_teddy: `<ellipse cx="55" cy="195" rx="16" ry="18" fill="#8b6914"/><circle cx="55" cy="178" r="12" fill="#8b6914"/><circle cx="46" cy="170" r="5" fill="#8b6914"/><circle cx="64" cy="170" r="5" fill="#8b6914"/><circle cx="46" cy="170" r="2" fill="#5a3a1e"/><circle cx="64" cy="170" r="2" fill="#5a3a1e"/><circle cx="50" cy="176" r="2" fill="#1a1a1a"/><circle cx="60" cy="176" r="2" fill="#1a1a1a"/><ellipse cx="55" cy="184" rx="4" ry="3" fill="#5a3a1e"/><ellipse cx="55" cy="184" rx="2" ry="1" fill="#1a1a1a"/>`,
 
-  // ═══ КЕЙСОВЫЕ (старые + новые) ═══
+  // ═══ КЕЙСОВЫЕ ═══
   h_case_bandit: `<path d="M72 42 Q100 15 128 42 L128 48 L72 48 Z" fill="#1a1a1a"/><path d="M128 42 L158 48 L155 54 L128 48 Z" fill="#0a0a0a"/><ellipse cx="100" cy="48" rx="30" ry="8" fill="#000" opacity="0.5"/>`,
   b_case_tracksuit: `<path d="M68 100 L68 205 L132 205 L132 100 Q120 95 100 95 Q80 95 68 100 Z" fill="#1a1a1a"/><rect x="52" y="100" width="20" height="95" rx="8" fill="#1a1a1a"/><rect x="128" y="100" width="20" height="95" rx="8" fill="#1a1a1a"/><path d="M75 115 L125 115 M75 125 L125 125" stroke="#fff" stroke-width="2"/><path d="M75 140 L75 205 M85 140 L85 205 M95 140 L95 205 M105 140 L105 205 M115 140 L115 205 M125 140 L125 205" stroke="#fff" stroke-width="1" opacity="0.4"/>`,
   l_case_adidas: `<rect x="75" y="205" width="24" height="160" rx="4" fill="#1a1a1a"/><rect x="101" y="205" width="24" height="160" rx="4" fill="#1a1a1a"/><path d="M80 215 L80 355 M84 215 L84 355 M88 215 L88 355" stroke="#fff" stroke-width="1.5"/><path d="M106 215 L106 355 M110 215 L110 355 M114 215 L114 355" stroke="#fff" stroke-width="1.5"/><path d="M75 355 L99 355 M101 355 L125 355" stroke="#fff" stroke-width="2"/><circle cx="87" cy="240" r="2" fill="#f39c12"/><circle cx="87" cy="280" r="2" fill="#f39c12"/><circle cx="113" cy="240" r="2" fill="#f39c12"/><circle cx="113" cy="280" r="2" fill="#f39c12"/>`,
@@ -164,19 +166,19 @@ const ITEMS_SVG = {
   rh_case_dragon_sword: `<g transform="translate(140,197)"><rect x="-6" y="-3" width="12" height="20" rx="2" fill="#2c3e50"/><rect x="-6" y="-3" width="12" height="3" fill="#f39c12"/><path d="M-5 -3 L5 -3 L4 -65 L-4 -65 Z" fill="#d4d4d4"/><path d="M-4 -65 L4 -65 L3 -60 L-3 -60 Z" fill="#9a9a9a"/><path d="M-2 -55 L2 -55 M-2 -45 L2 -45 M-2 -35 L2 -35 M-2 -25 L2 -25 M-2 -15 L2 -15" stroke="#f39c12" stroke-width="1.2"/><circle cx="0" cy="-65" r="2" fill="#e74c3c"/><path d="M-8 17 L8 17" stroke="#f39c12" stroke-width="2"/></g>`,
   lh_case_brilliant: `<g transform="translate(45,190)"><rect x="0" y="0" width="30" height="22" rx="3" fill="#3498db"/><rect x="0" y="6" width="30" height="2" fill="#2874a6"/><circle cx="15" cy="-2" r="4" fill="none" stroke="#3498db" stroke-width="2"/><path d="M8 10 L12 16 L18 16 L22 10 Z" fill="#e74c3c"/><path d="M10 12 L14 14 L20 14 L22 12" stroke="#fff" stroke-width="0.5" fill="none"/><circle cx="15" cy="13" r="1" fill="#fff" opacity="0.9"/></g>`,
 
-  // ═══ НОВЫЕ КЕЙСОВЫЕ (legacy) ═══
+  // ═══ LEGACY КЕЙСОВЫЕ ═══
   b_case_chains: `<path d="M70 95 L70 205 L130 205 L130 95 Z" fill="#1a1a1a"/><rect x="52" y="100" width="20" height="95" rx="8" fill="#1a1a1a"/><rect x="128" y="100" width="20" height="95" rx="8" fill="#1a1a1a"/><g stroke="#d4d4d4" stroke-width="2" fill="none"><circle cx="82" cy="125" r="4"/><circle cx="82" cy="135" r="4"/><circle cx="82" cy="145" r="4"/><circle cx="82" cy="155" r="4"/><circle cx="118" cy="125" r="4"/><circle cx="118" cy="135" r="4"/><circle cx="118" cy="145" r="4"/><circle cx="118" cy="155" r="4"/></g>`,
   h_case_crypto: `<circle cx="100" cy="55" r="32" fill="#f39c12"/><circle cx="100" cy="55" r="26" fill="#d68910"/><text x="100" y="65" text-anchor="middle" font-size="30" fill="#fff" font-weight="900">₿</text><circle cx="90" cy="50" r="2" fill="#1a1a1a"/><circle cx="110" cy="50" r="2" fill="#1a1a1a"/>`,
   h_case_dragon: `<path d="M68 42 Q100 15 132 42 L132 52 Q100 62 68 52 Z" fill="#2c3e50"/><path d="M78 32 Q82 18 88 28 L88 35 Z" fill="#1a252f"/><path d="M112 32 Q118 18 122 28 L122 35 Z" fill="#1a252f"/><ellipse cx="88" cy="50" rx="8" ry="5" fill="#e74c3c"/><ellipse cx="112" cy="50" rx="8" ry="5" fill="#e74c3c"/><circle cx="88" cy="50" r="2" fill="#000"/><circle cx="112" cy="50" r="2" fill="#000"/><path d="M95 60 Q100 62 105 60" stroke="#e74c3c" stroke-width="2" fill="none"/><path d="M98 52 L96 62 L100 60 Z" fill="#f39c12"/>`,
 
-  // ═══ ТОП-1 КЕЙС (Максимус) ═══
+  // ═══ ТОП-1 КЕЙС ═══
   h_case_top1_head: `<path d="M60 30 Q100 0 140 30 L140 55 Q100 70 60 55 Z" fill="#1a0f2e" stroke="#ffd700" stroke-width="2"/><ellipse cx="100" cy="48" rx="35" ry="20" fill="#2c1810"/><circle cx="82" cy="45" r="5" fill="#ffd700"/><circle cx="118" cy="45" r="5" fill="#ffd700"/><circle cx="82" cy="45" r="2" fill="#1a1a1a"/><circle cx="118" cy="45" r="2" fill="#1a1a1a"/><path d="M100 20 L95 35 L105 35 Z" fill="#ffd700"/><circle cx="100" cy="18" r="3" fill="#e74c3c"/>`,
   b_case_top1_body: `<path d="M70 95 L130 95 L130 205 L70 205 Z" fill="#1a0f2e" stroke="#ffd700" stroke-width="1.5"/><path d="M85 125 L100 110 L115 125 L115 170 L100 185 L85 170 Z" fill="#2c1810" stroke="#ffd700" stroke-width="1"/><ellipse cx="100" cy="145" rx="8" ry="10" fill="#ffd700"/><circle cx="100" cy="145" r="4" fill="#e74c3c"/><path d="M75 100 Q100 90 125 100" stroke="#f39c12" stroke-width="2" fill="none"/>`,
   l_case_top1_legs: `<rect x="72" y="200" width="28" height="170" rx="4" fill="#1a0f2e" stroke="#ffd700" stroke-width="1.5"/><rect x="100" y="200" width="28" height="170" rx="4" fill="#1a0f2e" stroke="#ffd700" stroke-width="1.5"/><path d="M82 215 L82 360 M90 215 L90 360 M110 215 L110 360 M118 215 L118 360" stroke="#ffd700" stroke-width="1.5"/><circle cx="86" cy="240" r="3" fill="#e74c3c"/><circle cx="114" cy="240" r="3" fill="#e74c3c"/><circle cx="86" cy="310" r="3" fill="#e74c3c"/><circle cx="114" cy="310" r="3" fill="#e74c3c"/>`,
   rh_case_top1_weapon: `<g transform="translate(140,197)"><rect x="-7" y="-5" width="14" height="22" rx="2" fill="#1a0f2e" stroke="#ffd700" stroke-width="1"/><path d="M-6 -5 L6 -5 L5 -70 L0 -80 L-5 -70 Z" fill="#c0c0c0" stroke="#ffd700" stroke-width="1"/><path d="M0 -80 L3 -70 L0 -65 L-3 -70 Z" fill="#ffd700"/><path d="M-2 -55 L2 -55 M-2 -40 L2 -40 M-2 -25 L2 -25" stroke="#ffd700" stroke-width="1.2"/><circle cx="0" cy="-30" r="2" fill="#e74c3c"/><path d="M-10 17 L10 17" stroke="#ffd700" stroke-width="2.5"/></g>`,
   lh_case_top1_artifact: `<g transform="translate(45,185)"><circle cx="15" cy="15" r="18" fill="#1a0f2e" stroke="#ffd700" stroke-width="2"/><circle cx="15" cy="15" r="12" fill="#2c1810"/><path d="M15 5 L18 12 L25 12 L19 16 L22 23 L15 19 L8 23 L11 16 L5 12 L12 12 Z" fill="#ffd700"/><circle cx="15" cy="15" r="3" fill="#e74c3c"/><circle cx="15" cy="15" r="1" fill="#fff"/></g>`,
 
-  // ═══ ТОП-2 КЕЙС (Император) ═══
+  // ═══ ТОП-2 КЕЙС ═══
   h_case_top2_head: `<path d="M55 25 L55 55 Q100 75 145 55 L145 25 Z" fill="#8b0000" stroke="#ffd700" stroke-width="2.5"/><path d="M55 25 L50 5 L70 20 L85 0 L100 18 L115 0 L130 20 L150 5 L145 25" fill="none" stroke="#ffd700" stroke-width="2.5" stroke-linejoin="round"/><circle cx="100" cy="10" r="4" fill="#e74c3c"/><circle cx="70" cy="15" r="3" fill="#3498db"/><circle cx="130" cy="15" r="3" fill="#3498db"/><circle cx="50" cy="10" r="2" fill="#fff"/><circle cx="150" cy="10" r="2" fill="#fff"/><path d="M75 40 Q100 45 125 40" stroke="#ffd700" stroke-width="2" fill="none"/>`,
   b_case_top2_body: `<path d="M65 90 L135 90 L140 215 L60 215 Z" fill="#8b0000" stroke="#ffd700" stroke-width="2"/><path d="M65 90 L85 105 L100 90 L115 105 L135 90" stroke="#ffd700" stroke-width="2" fill="none"/><path d="M75 130 L125 130 M75 160 L125 160 M75 190 L125 190" stroke="#ffd700" stroke-width="1.5"/><ellipse cx="100" cy="145" rx="12" ry="10" fill="#ffd700" stroke="#1a0f2e" stroke-width="1.5"/><text x="100" y="151" text-anchor="middle" font-size="14" fill="#8b0000" font-weight="900">☭</text><circle cx="85" cy="110" r="2" fill="#fff"/><circle cx="115" cy="110" r="2" fill="#fff"/>`,
   l_case_top2_legs: `<rect x="68" y="195" width="32" height="175" rx="4" fill="#8b0000" stroke="#ffd700" stroke-width="2"/><rect x="100" y="195" width="32" height="175" rx="4" fill="#8b0000" stroke="#ffd700" stroke-width="2"/><path d="M80 210 L80 365 M84 210 L84 365 M88 210 L88 365" stroke="#ffd700" stroke-width="1.5"/><path d="M112 210 L112 365 M116 210 L116 365 M120 210 L120 365" stroke="#ffd700" stroke-width="1.5"/><ellipse cx="84" cy="250" rx="6" ry="8" fill="#ffd700"/><ellipse cx="116" cy="250" rx="6" ry="8" fill="#ffd700"/><circle cx="84" cy="250" r="3" fill="#e74c3c"/><circle cx="116" cy="250" r="3" fill="#e74c3c"/>`,
@@ -202,34 +204,49 @@ const ITEMS_SVG = {
 };
 
 function renderCharacterSVG(outfit, opts = {}) {
-  let w = opts.width || 140;
-  let h = opts.height || 280;
-  
+  const baseH = opts.height || 300;
   const head = outfit?.head_id?.item_id;
   const body = outfit?.body_id?.item_id;
   const legs = outfit?.legs_id?.item_id;
   const rh = outfit?.right_hand_id?.item_id;
   const lh = outfit?.left_hand_id?.item_id;
 
-  const leftImg = lh ? CUSTOM_IMAGES[lh] : null;
-  const rightImg = rh ? CUSTOM_IMAGES[rh] : null;
+  const leftCfg = lh ? CUSTOM_IMAGES[lh] : null;
+  const rightCfg = rh ? CUSTOM_IMAGES[rh] : null;
 
-  let viewBox = "0 0 200 400";
-  
-  if (leftImg || rightImg) {
-      viewBox = "-160 0 520 400";
-      w = w * 2.6;
-      h = h * 1.0; 
+  const leftW = leftCfg ? leftCfg.w : 0;
+  const rightW = rightCfg ? rightCfg.w : 0;
+
+  let vx = 0, vw = 200;
+  if (leftW) { vx = -leftW; vw += leftW; }
+  if (rightW) { vw += rightW; }
+  const viewBox = `${vx} 0 ${vw} 400`;
+
+  let outW, outH;
+  if (leftCfg || rightCfg) {
+    outH = baseH;
+    outW = baseH * (vw / 400);
+  } else {
+    outW = opts.width || 140;
+    outH = opts.height || 280;
   }
 
-  return `<svg viewBox="${viewBox}" width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
-    ${leftImg ? `<image href="${leftImg.url}" x="${leftImg.x}" y="${leftImg.y}" width="${leftImg.w}" height="${leftImg.h}" />` : ''}
+  const renderGirl = (cfg) => {
+    if (!cfg) return "";
+    const x = cfg.side === "left" ? -cfg.w : 200;
+    return `<foreignObject x="${x}" y="${cfg.y}" width="${cfg.w}" height="${cfg.h}">
+      <img xmlns="http://www.w3.org/1999/xhtml" src="${cfg.url}" style="width:100%;height:100%;object-fit:contain;object-position:center bottom;display:block;" alt="" />
+    </foreignObject>`;
+  };
+
+  return `<svg viewBox="${viewBox}" width="${outW}" height="${outH}" xmlns="http://www.w3.org/2000/svg">
+    ${renderGirl(leftCfg)}
     ${renderBaseBody()}
     ${legs && ITEMS_SVG[legs] ? ITEMS_SVG[legs] : ''}
     ${body && ITEMS_SVG[body] ? ITEMS_SVG[body] : ''}
     ${rh && ITEMS_SVG[rh] ? ITEMS_SVG[rh] : ''}
     ${lh && ITEMS_SVG[lh] ? ITEMS_SVG[lh] : ''}
     ${head && ITEMS_SVG[head] ? ITEMS_SVG[head] : ''}
-    ${rightImg ? `<image href="${rightImg.url}" x="${rightImg.x}" y="${rightImg.y}" width="${rightImg.w}" height="${rightImg.h}" />` : ''}
+    ${renderGirl(rightCfg)}
   </svg>`;
 }

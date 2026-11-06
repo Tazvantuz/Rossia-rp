@@ -114,6 +114,7 @@ async def main():
     await _set_menu_button(bot)
     asyncio.create_task(_capture_processor())
     logging.info("⚔️ Background capture processor запущен")
+    # ═══ БОТ-СИМУЛЯТОР И СИД БОТОВ УДАЛЕНЫ ═══
     try:
         await dp.start_polling(bot)
     finally:

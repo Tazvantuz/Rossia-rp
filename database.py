@@ -136,9 +136,17 @@ CREATE TABLE IF NOT EXISTS player_daily_activity (
     requests INTEGER DEFAULT 1,
     UNIQUE(user_id, day)
 );
+CREATE TABLE IF NOT EXISTS system_stats (
+    key TEXT PRIMARY KEY,
+    value INTEGER DEFAULT 0
+);
 CREATE INDEX IF NOT EXISTS idx_activity_day ON player_daily_activity(day);
 CREATE INDEX IF NOT EXISTS idx_activity_user ON player_daily_activity(user_id);
 """
+
+# Известные ID и ники ботов — используем оба для надёжности
+KNOWN_BOT_IDS = (9900000001, 9900000002, 9900000003, 9900000004, 9900000005)
+KNOWN_BOT_NICKS = ('Ксюха', 'Денчик', 'Толик', 'Света', 'Санёк')
 
 class Database:
     def __init__(self, path=DB_PATH):
@@ -190,16 +198,39 @@ class Database:
                 await self.conn.execute(f"ALTER TABLE pvp_battles ADD COLUMN {_col}")
                 await self.conn.commit()
             except: pass
-        # ═══ ФИКС: принудительно ставим is_bot=1 для известных ботов ═══
-        # Если боты были созданы до появления колонки is_bot — миграция их не тронула,
-        # и они остались с is_bot=0. Симулятор их не видит, api_location тоже.
+
+        # ═══ ЖЁСТКОЕ ОТКЛЮЧЕНИЕ БОТОВ ═══
+        # 1. По ID
         try:
+            ids_placeholder = ",".join("?" * len(KNOWN_BOT_IDS))
             await self.conn.execute(
-                "UPDATE players SET is_bot=1 WHERE user_id IN "
-                "(9900000001, 9900000002, 9900000003, 9900000004, 9900000005)")
+                f"UPDATE players SET is_bot=1, last_seen=0 WHERE user_id IN ({ids_placeholder})",
+                KNOWN_BOT_IDS
+            )
+            await self.conn.commit()
+            print(f"🤖 Отключено {len(KNOWN_BOT_IDS)} ботов по ID")
+        except Exception as e:
+            print(f"⚠️ bot disable by ID: {e}")
+
+        # 2. По нику (на случай если ID другие)
+        try:
+            nicks_placeholder = ",".join("?" * len(KNOWN_BOT_NICKS))
+            await self.conn.execute(
+                f"UPDATE players SET is_bot=1, last_seen=0 WHERE nickname IN ({nicks_placeholder})",
+                KNOWN_BOT_NICKS
+            )
+            await self.conn.commit()
+            print(f"🤖 Отключено ботов по нику ({len(KNOWN_BOT_NICKS)} имён)")
+        except Exception as e:
+            print(f"⚠️ bot disable by nick: {e}")
+
+        # 3. Вообще ВСЕХ is_bot=1 в оффлайн
+        try:
+            await self.conn.execute("UPDATE players SET last_seen=0 WHERE is_bot=1")
             await self.conn.commit()
         except Exception as e:
-            print(f"⚠️ bot is_bot migration: {e}")
+            print(f"⚠️ bot last_seen reset: {e}")
+
     async def fetchone(self, q, p=()):
         async with self.conn.execute(q, p) as cur:
             r = await cur.fetchone()
@@ -214,7 +245,6 @@ class Database:
         if self.conn: await self.conn.close()
 
 db = Database()
-
 
 async def migrate_referrals():
     try:

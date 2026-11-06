@@ -18,20 +18,6 @@ def set_token(t):
     global BOT_TOKEN
     BOT_TOKEN = t
 
-# ═══ Ротация ботов: 3 онлайн / 2 оффлайн, сдвиг каждые 15 минут ═══
-BOT_IDS = (9900000001, 9900000002, 9900000003, 9900000004, 9900000005)
-BOT_IDS_SET = set(BOT_IDS)
-BOT_ROTATION_SEC = 900
-BOTS_ONLINE_COUNT = 3
-
-def bot_online_ids(now=None):
-    """Возвращает set из 3 ID ботов, которые онлайн в данный момент.
-    Ротация: каждые 15 мин состав меняется (2 выходят, 2 заходят, 1 остаётся)."""
-    if now is None: now = int(time.time())
-    slot = (now // BOT_ROTATION_SEC) % 5
-    start = (slot * 2) % 5
-    return {BOT_IDS[(start + i) % 5] for i in range(BOTS_ONLINE_COUNT)}
-
 def validate_init_data(init_data):
     if not init_data or not BOT_TOKEN: return None
     try:
