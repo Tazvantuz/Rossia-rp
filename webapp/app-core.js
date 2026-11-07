@@ -27,10 +27,10 @@ const SUB_TAB_TITLES = {
 
 function getStaffBadge(role) {
   if (role === 'admin') {
-    return `<span style="display:inline-flex;align-items:center;gap:2px;margin-left:4px;vertical-align:middle;"><img src="assets/personal.png" style="width:14px;height:14px;object-fit:contain;"><span style="background:#c0392b;color:#fff;font-size:10px;font-weight:900;padding:1px 4px;border-radius:4px;line-height:1;">ADM</span></span>`;
+    return `<span style="display:inline-flex;align-items:center;gap:3px;margin-left:4px;vertical-align:middle;"><img src="assets/personal.png" style="width:28px;height:28px;object-fit:contain;"><span style="background:#c0392b;color:#fff;font-size:12px;font-weight:900;padding:2px 6px;border-radius:4px;line-height:1;">ADM</span></span>`;
   }
   if (role === 'moderator') {
-    return `<span style="display:inline-flex;align-items:center;gap:2px;margin-left:4px;vertical-align:middle;"><img src="assets/personal.png" style="width:14px;height:14px;object-fit:contain;"><span style="background:#2980b9;color:#fff;font-size:10px;font-weight:900;padding:1px 4px;border-radius:4px;line-height:1;">MOD</span></span>`;
+    return `<span style="display:inline-flex;align-items:center;gap:3px;margin-left:4px;vertical-align:middle;"><img src="assets/personal.png" style="width:28px;height:28px;object-fit:contain;"><span style="background:#2980b9;color:#fff;font-size:12px;font-weight:900;padding:2px 6px;border-radius:4px;line-height:1;">MOD</span></span>`;
   }
   return '';
 }
