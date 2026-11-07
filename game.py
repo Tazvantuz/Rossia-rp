@@ -278,6 +278,13 @@ ITEMS.update({
     "hair_long_red":    {"name":"Длинные рыжие","emoji":"💇","slot":"hair","price":5000,"rarity":"rare","desc":"Огненные волосы"},
     "hair_mohawk_blue": {"name":"Ирокез синий","emoji":"💇","slot":"hair","price":15000,"rarity":"epic","desc":"Панк-рок жив"},
     "hair_flowing_gold":{"name":"Золотые локоны","emoji":"💇","slot":"hair","price":50000,"rarity":"legendary","desc":"Как у полубога"},
+    
+    # НОВЫЕ ПРИЧЁСКИ (v29)
+    "hair_long_brown":  {"name":"Длинные каштановые","emoji":"💇","slot":"hair","price":2500,"rarity":"uncommon","desc":"Густые и шелковистые"},
+    "hair_gopnik":      {"name":"Гоп-стрижка","emoji":"💇","slot":"hair","price":800,"rarity":"common","desc":"Полу бокс, полу боб"},
+    "hair_slick_back":  {"name":"Зачес назад","emoji":"💇","slot":"hair","price":4000,"rarity":"rare","desc":"Стиль мафии"},
+    "hair_blonde_headband": {"name":"Блонд с ободком","emoji":"💇","slot":"hair","price":12000,"rarity":"epic","desc":"Свежий взгляд"},
+    "hair_punk_pink":   {"name":"Розовый панк","emoji":"💇","slot":"hair","price":25000,"rarity":"legendary","desc":"Бунтарский дух"},
 })
 
 # ═══════ КРОССОВКИ ═══════

@@ -1,7 +1,7 @@
 // app-svg.js
+// v4.5 — Исправлен масштаб отрисовки персонажа без тянок (сохранение пропорций viewBox).
 // v4.4 — Добавлены пропущенные предметы (маска Гая Фокса, шлем мотоциклиста, рога).
 // v4.3 — Исправлено обрезание широких предметов (расширен viewBox).
-// v4.1 — Ручки в руках увеличены (x1.8 / x2.2).
 
 const SKIN = "#e8b48a";
 const SKIN_D = "#c99b6f";
@@ -477,7 +477,7 @@ const ITEMS_SVG = {
     <path d="M94 56 Q100 58 106 56" stroke="#e74c3c" stroke-width="2" fill="none"/>
     <path d="M98 48 L96 58 L100 56 Z" fill="#f39c12"/>`,
 
-  // ═══ НОВЫЕ ПРЕДМЕТЫ (ДОБАВЛЕНЫ) ═══
+  // ═══ НОВЫЕ ПРЕДМЕТЫ ═══
   h_guy: `<path d="M68 36 Q100 4 132 36 Q132 60 100 82 Q68 60 68 36 Z" fill="#f0f0f0" stroke="#ccc" stroke-width="0.8"/>
     <path d="M70 40 Q100 10 130 40" stroke="#ddd" stroke-width="0.6" fill="none" opacity="0.5"/>
     <path d="M76 46 Q86 42 94 46" stroke="#2a1e10" stroke-width="1.5" fill="none" stroke-linecap="round"/>
@@ -2021,7 +2021,7 @@ const ITEMS_SVG = {
 };
 
 // ═══════════════════════════════════════════════════════════
-//  ГЛАВНЫЙ РЕНДЕР (ОБНОВЛЕН VIEWBOX)
+//  ГЛАВНЫЙ РЕНДЕР
 // ═══════════════════════════════════════════════════════════
 function renderCharacterSVG(outfit, opts = {}) {
   const baseH = opts.height || 300;
@@ -2039,21 +2039,16 @@ function renderCharacterSVG(outfit, opts = {}) {
   const leftW = leftCfg ? leftCfg.w : 0;
   const rightW = rightCfg ? rightCfg.w : 0;
 
-  // УВЕЛИЧЕННЫЙ VIEWBOX, чтобы длинные предметы не обрезались
-  let vx = -Math.max(leftW || 0, 70);
-  let vw = Math.abs(vx) + 200 + Math.max(rightW || 0, 70);
-  let vy = -30, vh = 440;
-
+  const vx = -leftW;
+  const vw = leftW + 200 + rightW;
+  const vy = -20;
+  const vh = 440;
   const viewBox = `${vx} ${vy} ${vw} ${vh}`;
 
-  let outW, outH;
-  if (leftCfg || rightCfg) {
-    outH = baseH;
-    outW = baseH * (vw / vh);
-  } else {
-    outW = opts.width || 140;
-    outH = opts.height || 280;
-  }
+  // ИСПРАВЛЕНИЕ: Размеры холста всегда пропорциональны viewBox,
+  // чтобы персонаж без тянок не сжимался.
+  const outH = baseH;
+  const outW = outH * (vw / vh);
 
   const renderGirl = (cfg) => {
     if (!cfg) return "";
