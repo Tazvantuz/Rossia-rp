@@ -1,4 +1,5 @@
 // app-svg.js
+// v4.3 — Полное покрытие плеч и рук. Поднял линию торса и рукавов до y=90.
 // v4.2 — Идеальная посадка одежды: широкий торс, рукава полностью покрывают руки без зазоров.
 // v4.1 — Ручки в руках увеличены (x1.8 / x2.2).
 
@@ -121,40 +122,40 @@ function renderBaseBody() {
   `;
 }
 
-// ═══ ХЕЛПЕРЫ РУКАВОВ (ОБНОВЛЕНЫ ДЛЯ ИДЕАЛЬНОГО ОБЛЕГАНИЯ) ═══
+// ═══ ХЕЛПЕРЫ РУКАВОВ (ОБНОВЛЕНЫ ДО y=90) ═══
 const SL_SHORT_L = (fill, shade) => `
-  <path d="M70 96 Q58 108 48 128 L62 136 Q68 120 76 110 Z" fill="${fill}"/>
-  <path d="M70 96 Q58 108 48 128 L52 130 Q60 112 72 100 Z" fill="${shade}" opacity="0.4"/>
-  <path d="M48 128 L62 136" stroke="${shade}" stroke-width="1.2" fill="none" opacity="0.75"/>
-  <path d="M54 131 L60 134" stroke="${shade}" stroke-width="0.4" fill="none" opacity="0.4"/>`;
+  <path d="M66 90 Q54 100 48 128 L62 134 Q68 118 74 110 Z" fill="${fill}"/>
+  <path d="M66 90 Q54 100 48 128 L52 130 Q58 112 70 100 Z" fill="${shade}" opacity="0.4"/>
+  <path d="M48 128 L62 134" stroke="${shade}" stroke-width="1.2" fill="none" opacity="0.75"/>
+  <path d="M54 129 L60 132" stroke="${shade}" stroke-width="0.4" fill="none" opacity="0.4"/>`;
 
 const SL_SHORT_R = (fill, shade) => `
-  <path d="M130 96 Q142 108 152 128 L138 136 Q132 120 124 110 Z" fill="${fill}"/>
-  <path d="M130 96 Q142 108 152 128 L148 130 Q140 112 128 100 Z" fill="${shade}" opacity="0.4"/>
-  <path d="M152 128 L138 136" stroke="${shade}" stroke-width="1.2" fill="none" opacity="0.75"/>
-  <path d="M146 131 L140 134" stroke="${shade}" stroke-width="0.4" fill="none" opacity="0.4"/>`;
+  <path d="M134 90 Q146 100 152 128 L138 134 Q132 118 126 110 Z" fill="${fill}"/>
+  <path d="M134 90 Q146 100 152 128 L148 130 Q142 112 130 100 Z" fill="${shade}" opacity="0.4"/>
+  <path d="M152 128 L138 134" stroke="${shade}" stroke-width="1.2" fill="none" opacity="0.75"/>
+  <path d="M146 129 L140 132" stroke="${shade}" stroke-width="0.4" fill="none" opacity="0.4"/>`;
 
 const SL_LONG_L = (fill, shade) => `
-  <path d="M70 96 Q58 108 50 145 L46 185 Q46 192 52 192 L64 192 L64 145 Q66 120 76 110 Z" fill="${fill}"/>
-  <path d="M70 96 Q58 108 50 145 L46 185 Q46 192 52 192 L52 185 L50 145 Q58 115 72 103 Z" fill="${shade}" opacity="0.35"/>
-  <path d="M46 185 Q46 192 52 192 L64 192" stroke="${shade}" stroke-width="1.2" fill="none" opacity="0.75"/>
-  <path d="M50 160 Q55 175 58 185" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.3"/>`;
+  <path d="M66 90 Q52 100 48 150 L44 185 Q44 192 50 192 L62 192 L64 150 Q66 115 76 110 Z" fill="${fill}"/>
+  <path d="M66 90 Q52 100 48 150 L44 185 Q44 192 50 192 L50 185 L48 150 Q54 115 70 100 Z" fill="${shade}" opacity="0.35"/>
+  <path d="M44 185 Q44 192 50 192 L62 192" stroke="${shade}" stroke-width="1.2" fill="none" opacity="0.75"/>
+  <path d="M48 160 Q53 175 56 185" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.3"/>`;
 
 const SL_LONG_R = (fill, shade) => `
-  <path d="M130 96 Q142 108 150 145 L154 185 Q154 192 148 192 L136 192 L136 145 Q134 120 124 110 Z" fill="${fill}"/>
-  <path d="M130 96 Q142 108 150 145 L154 185 Q154 192 148 192 L148 185 L150 145 Q142 115 128 103 Z" fill="${shade}" opacity="0.35"/>
-  <path d="M154 185 Q154 192 148 192 L136 192" stroke="${shade}" stroke-width="1.2" fill="none" opacity="0.75"/>
-  <path d="M150 160 Q145 175 142 185" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.3"/>`;
+  <path d="M134 90 Q148 100 152 150 L156 185 Q156 192 150 192 L138 192 L136 150 Q134 115 124 110 Z" fill="${fill}"/>
+  <path d="M134 90 Q148 100 152 150 L156 185 Q156 192 150 192 L150 185 L152 150 Q146 115 130 100 Z" fill="${shade}" opacity="0.35"/>
+  <path d="M156 185 Q156 192 150 192 L138 192" stroke="${shade}" stroke-width="1.2" fill="none" opacity="0.75"/>
+  <path d="M152 160 Q147 175 144 185" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.3"/>`;
 
 const SL_FULL_L = (fill, shade, accent) => `
-  <path d="M70 96 Q54 110 46 150 L40 185 L58 192 L76 192 L76 110 Z" fill="${fill}"/>
-  <path d="M70 96 Q54 110 46 150 L40 185 L48 188 L52 150 Q60 115 72 102 Z" fill="${shade}" opacity="0.28"/>
+  <path d="M66 90 Q50 100 44 150 L40 185 L58 192 L76 192 L76 110 Z" fill="${fill}"/>
+  <path d="M66 90 Q50 100 44 150 L40 185 L48 188 L52 150 Q60 115 70 102 Z" fill="${shade}" opacity="0.28"/>
   <path d="M40 185 Q50 192 76 192" stroke="${accent || shade}" stroke-width="1.5" fill="none" opacity="0.6"/>
   <path d="M48 160 Q58 175 68 185" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.3"/>`;
 
 const SL_FULL_R = (fill, shade, accent) => `
-  <path d="M130 96 Q146 110 154 150 L160 185 L142 192 L124 192 L124 110 Z" fill="${fill}"/>
-  <path d="M130 96 Q146 110 154 150 L160 185 L152 188 L148 150 Q140 115 128 102 Z" fill="${shade}" opacity="0.28"/>
+  <path d="M134 90 Q150 100 156 150 L160 185 L142 192 L124 192 L124 110 Z" fill="${fill}"/>
+  <path d="M134 90 Q150 100 156 150 L160 185 L152 188 L148 150 Q140 115 130 102 Z" fill="${shade}" opacity="0.28"/>
   <path d="M160 185 Q150 192 124 192" stroke="${accent || shade}" stroke-width="1.5" fill="none" opacity="0.6"/>
   <path d="M152 160 Q142 175 132 185" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.3"/>`;
 
@@ -477,16 +478,16 @@ const ITEMS_SVG = {
     <path d="M98 48 L96 58 L100 56 Z" fill="#f39c12"/>`,
 
   // ═══════════════════════════════════════════════════════════
-  //  ТЕЛО (Торс теперь от x=66 до 134, чтобы перекрывать плечи)
+  //  ТЕЛО (Торс теперь с y=90 и x=66..134)
   // ═══════════════════════════════════════════════════════════
 
   b_alco: `
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#f5f5f5" stroke="#d8d8d8" stroke-width="0.5"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#e8e8e8" opacity="0.5"/>
-    <path d="M68 96 L66 104 Q66 112 69 116 L73 114 L73 100 Z" fill="#f0f0f0" stroke="#d8d8d8" stroke-width="0.4"/>
-    <path d="M132 96 L134 104 Q134 112 131 116 L127 114 L127 100 Z" fill="#f0f0f0" stroke="#d8d8d8" stroke-width="0.4"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#f5f5f5" stroke="#d8d8d8" stroke-width="0.5"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#e8e8e8" opacity="0.5"/>
+    <path d="M68 90 L66 104 Q66 112 69 116 L73 114 L73 100 Z" fill="#f0f0f0" stroke="#d8d8d8" stroke-width="0.4"/>
+    <path d="M132 90 L134 104 Q134 112 131 116 L127 114 L127 100 Z" fill="#f0f0f0" stroke="#d8d8d8" stroke-width="0.4"/>
     <path d="M73 100 Q73 96 77 96 M127 100 Q127 96 123 96" stroke="#d8d8d8" stroke-width="0.5" fill="none"/>
-    <path d="M66 96 Q82 100 90 102 Q100 104 110 102 Q118 100 134 96" stroke="#d8d8d8" stroke-width="0.6" fill="none"/>
+    <path d="M66 90 Q82 100 90 102 Q100 104 110 102 Q118 100 134 90" stroke="#d8d8d8" stroke-width="0.6" fill="none"/>
     <path d="M78 108 L78 205 M82 108 L82 205 M86 108 L86 205 M90 108 L90 205 M94 108 L94 205 M98 108 L98 205
              M102 108 L102 205 M106 108 L106 205 M110 108 L110 205 M114 108 L114 205 M118 108 L118 205 M122 108 L122 205"
           stroke="#e0e0e0" stroke-width="0.4" opacity="0.6"/>
@@ -498,11 +499,11 @@ const ITEMS_SVG = {
   b_aura: `
     ${SL_SHORT_L("#1a1a1a", "#0a0a0a")}
     ${SL_SHORT_R("#1a1a1a", "#0a0a0a")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#1a1a1a"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#0f0f0f" opacity="0.6"/>
-    <path d="M72 96 Q86 90 100 90 Q114 90 128 96" stroke="#333" stroke-width="0.8" fill="none"/>
-    <path d="M82 96 Q100 84 118 96 L116 100 Q100 89 84 100 Z" fill="#0a0a0a"/>
-    <path d="M82 96 Q100 86 118 96" stroke="#444" stroke-width="0.5" fill="none" opacity="0.6"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#1a1a1a"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#0f0f0f" opacity="0.6"/>
+    <path d="M72 90 Q86 86 100 86 Q114 86 128 90" stroke="#333" stroke-width="0.8" fill="none"/>
+    <path d="M82 90 Q100 80 118 90 L116 94 Q100 84 84 94 Z" fill="#0a0a0a"/>
+    <path d="M82 90 Q100 82 118 90" stroke="#444" stroke-width="0.5" fill="none" opacity="0.6"/>
     <text x="100" y="140" text-anchor="middle" font-size="11" fill="#f39c12" font-weight="900" letter-spacing="1">AURA</text>
     <text x="100" y="156" text-anchor="middle" font-size="6" fill="#f39c12" font-weight="700" letter-spacing="0.8" opacity="0.8">FARMING</text>
     <path d="M80 175 Q100 182 120 175" stroke="#f39c12" stroke-width="1" fill="none" opacity="0.4"/>
@@ -510,16 +511,16 @@ const ITEMS_SVG = {
     <path d="M126 140 Q124 155 126 170" stroke="#0a0a0a" stroke-width="0.6" fill="none" opacity="0.5"/>
     <path d="M66 203 L134 203" stroke="#0a0a0a" stroke-width="1.2"/>
     <path d="M66 201 L134 201" stroke="#333" stroke-width="0.4" opacity="0.4"/>
-    <circle cx="74" cy="98" r="1" fill="#444" opacity="0.6"/>
-    <circle cx="126" cy="98" r="1" fill="#444" opacity="0.6"/>`,
+    <circle cx="74" cy="94" r="1" fill="#444" opacity="0.6"/>
+    <circle cx="126" cy="94" r="1" fill="#444" opacity="0.6"/>`,
 
   b_iambog: `
     ${SL_SHORT_L("#f5f5f5", "#e0e0e0")}
     ${SL_SHORT_R("#f5f5f5", "#e0e0e0")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#f5f5f5"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#e8e8e8" opacity="0.5"/>
-    <path d="M82 96 Q100 86 118 96 L116 100 Q100 90 84 100 Z" fill="#e8e8e8"/>
-    <path d="M82 96 Q100 87 118 96" stroke="#d0d0d0" stroke-width="0.5" fill="none"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#f5f5f5"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#e8e8e8" opacity="0.5"/>
+    <path d="M82 90 Q100 82 118 90 L116 94 Q100 84 84 94 Z" fill="#e8e8e8"/>
+    <path d="M82 90 Q100 83 118 90" stroke="#d0d0d0" stroke-width="0.5" fill="none"/>
     <text x="100" y="145" text-anchor="middle" font-size="15" fill="#c0392b" font-weight="900">Я БОГ</text>
     <path d="M78 162 Q100 170 122 162" stroke="#c0392b" stroke-width="1.2" fill="none" opacity="0.7"/>
     <path d="M74 130 Q76 145 74 160" stroke="#dcdcdc" stroke-width="0.5" fill="none" opacity="0.6"/>
@@ -529,19 +530,19 @@ const ITEMS_SVG = {
   b_cage: `
     ${SL_LONG_L("#c0392b", "#8b0000")}
     ${SL_LONG_R("#c0392b", "#8b0000")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#c0392b"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#a93226" opacity="0.5"/>
-    <path d="M82 96 Q100 88 118 96 L116 102 Q100 92 84 102 Z" fill="#a93226"/>
-    <path d="M100 96 L100 205" stroke="#8b0000" stroke-width="0.8"/>
-    <path d="M88 96 L92 205" stroke="#a93226" stroke-width="0.4" opacity="0.5"/>
-    <path d="M112 96 L108 205" stroke="#a93226" stroke-width="0.4" opacity="0.5"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#c0392b"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#a93226" opacity="0.5"/>
+    <path d="M82 90 Q100 82 118 90 L116 96 Q100 86 84 96 Z" fill="#a93226"/>
+    <path d="M100 90 L100 205" stroke="#8b0000" stroke-width="0.8"/>
+    <path d="M88 90 L92 205" stroke="#a93226" stroke-width="0.4" opacity="0.5"/>
+    <path d="M112 90 L108 205" stroke="#a93226" stroke-width="0.4" opacity="0.5"/>
     <path d="M66 120 L134 120 M66 145 L134 145 M66 170 L134 170 M66 195 L134 195" stroke="#8b0000" stroke-width="1" opacity="0.5"/>
     <path d="M66 121 L134 121 M66 146 L134 146 M66 171 L134 171" stroke="#e74c3c" stroke-width="0.3" opacity="0.3"/>
     <circle cx="100" cy="130" r="1.8" fill="#fff" stroke="#8b0000" stroke-width="0.3"/>
     <circle cx="100" cy="155" r="1.8" fill="#fff" stroke="#8b0000" stroke-width="0.3"/>
     <circle cx="100" cy="180" r="1.8" fill="#fff" stroke="#8b0000" stroke-width="0.3"/>
-    <path d="M84 96 L82 108 L84 112 L86 108 Z" fill="#e74c3c" stroke="#8b0000" stroke-width="0.4"/>
-    <path d="M116 96 L118 108 L116 112 L114 108 Z" fill="#e74c3c" stroke="#8b0000" stroke-width="0.4"/>
+    <path d="M84 90 L82 108 L84 112 L86 108 Z" fill="#e74c3c" stroke="#8b0000" stroke-width="0.4"/>
+    <path d="M116 90 L118 108 L116 112 L114 108 Z" fill="#e74c3c" stroke="#8b0000" stroke-width="0.4"/>
     <rect x="80" y="120" width="12" height="10" rx="1" fill="none" stroke="#8b0000" stroke-width="0.6"/>
     <path d="M66 203 L134 203" stroke="#8b0000" stroke-width="1.2"/>
     <path d="M74 130 Q76 145 74 160" stroke="#a93226" stroke-width="0.5" fill="none" opacity="0.5"/>`,
@@ -549,19 +550,19 @@ const ITEMS_SVG = {
   b_supreme: `
     ${SL_LONG_L("#c0392b", "#8b0000")}
     ${SL_LONG_R("#c0392b", "#8b0000")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#c0392b"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#a93226" opacity="0.5"/>
-    <path d="M66 96 Q60 84 76 78 Q92 74 100 78 Q108 74 124 78 Q140 84 134 96 Z" fill="#a93226"/>
-    <path d="M76 90 Q80 80 90 78 Q100 76 110 78 Q120 80 124 90" stroke="#8b0000" stroke-width="0.8" fill="none" opacity="0.6"/>
-    <path d="M76 90 Q80 80 90 78 Q100 76 110 78 Q120 80 124 90" stroke="#e74c3c" stroke-width="0.4" fill="none" opacity="0.4"/>
-    <path d="M82 96 Q100 90 118 96" stroke="#8b0000" stroke-width="0.8" fill="none"/>
-    <path d="M94 100 L94 118 M106 100 L106 118" stroke="#fff" stroke-width="1.5"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#c0392b"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#a93226" opacity="0.5"/>
+    <path d="M66 90 Q60 84 76 76 Q92 72 100 76 Q108 72 124 76 Q140 84 134 90 Z" fill="#a93226"/>
+    <path d="M76 86 Q80 78 90 76 Q100 74 110 76 Q120 78 124 86" stroke="#8b0000" stroke-width="0.8" fill="none" opacity="0.6"/>
+    <path d="M76 86 Q80 78 90 76 Q100 74 110 76 Q120 78 124 86" stroke="#e74c3c" stroke-width="0.4" fill="none" opacity="0.4"/>
+    <path d="M82 90 Q100 86 118 90" stroke="#8b0000" stroke-width="0.8" fill="none"/>
+    <path d="M94 94 L94 118 M106 94 L106 118" stroke="#fff" stroke-width="1.5"/>
     <circle cx="94" cy="118" r="1.5" fill="#fff"/>
     <circle cx="106" cy="118" r="1.5" fill="#fff"/>
     <rect x="82" y="148" width="36" height="22" rx="4" fill="#a93226" stroke="#8b0000" stroke-width="0.6"/>
     <path d="M82 156 L118 156" stroke="#8b0000" stroke-width="0.5" opacity="0.5"/>
     <rect x="88" y="155" width="24" height="12" fill="#a93226" opacity="0.8"/>
-    <path d="M100 96 L100 205" stroke="#8b0000" stroke-width="0.4" opacity="0.3"/>
+    <path d="M100 90 L100 205" stroke="#8b0000" stroke-width="0.4" opacity="0.3"/>
     <path d="M74 130 Q76 145 74 160" stroke="#a93226" stroke-width="0.5" fill="none" opacity="0.5"/>
     <rect x="66" y="196" width="68" height="9" fill="#8b0000" opacity="0.7"/>
     <path d="M66 198 L134 198 M66 202 L134 202" stroke="#5a0000" stroke-width="0.4" opacity="0.5"/>
@@ -571,38 +572,38 @@ const ITEMS_SVG = {
   b_armani: `
     ${SL_LONG_L("#1a1a1a", "#0a0a0a")}
     ${SL_LONG_R("#1a1a1a", "#0a0a0a")}
-    <path d="M66 96 L90 96 L88 205 L66 205 Z" fill="#1a1a1a"/>
-    <path d="M134 96 L110 96 L112 205 L134 205 Z" fill="#1a1a1a"/>
-    <path d="M90 96 L100 160 L88 205 L66 205 L66 96 Z" fill="#1a1a1a" opacity="0.95"/>
-    <path d="M110 96 L100 160 L112 205 L134 205 L134 96 Z" fill="#0a0a0a" opacity="0.9"/>
-    <path d="M90 96 L100 160 L110 96 L105 96 L100 140 L95 96 Z" fill="#2a2a2a" opacity="0.9"/>
-    <path d="M90 96 L82 130 L74 96" fill="#1a1a1a"/>
-    <path d="M110 96 L118 130 L126 96" fill="#0a0a0a"/>
-    <path d="M82 96 L100 145 L118 96" stroke="#000" stroke-width="1.5" fill="none"/>
-    <path d="M84 96 L100 140 L116 96" stroke="#333" stroke-width="0.5" fill="none" opacity="0.6"/>
-    <path d="M84 96 L82 130 L82 205" stroke="#2a2a2a" stroke-width="0.6" fill="none" opacity="0.6"/>
-    <path d="M116 96 L118 130 L118 205" stroke="#2a2a2a" stroke-width="0.6" fill="none" opacity="0.6"/>
+    <path d="M66 90 L90 90 L88 205 L66 205 Z" fill="#1a1a1a"/>
+    <path d="M134 90 L110 90 L112 205 L134 205 Z" fill="#1a1a1a"/>
+    <path d="M90 90 L100 160 L88 205 L66 205 L66 90 Z" fill="#1a1a1a" opacity="0.95"/>
+    <path d="M110 90 L100 160 L112 205 L134 205 L134 90 Z" fill="#0a0a0a" opacity="0.9"/>
+    <path d="M90 90 L100 160 L110 90 L105 90 L100 140 L95 90 Z" fill="#2a2a2a" opacity="0.9"/>
+    <path d="M90 90 L82 130 L74 90" fill="#1a1a1a"/>
+    <path d="M110 90 L118 130 L126 90" fill="#0a0a0a"/>
+    <path d="M82 90 L100 145 L118 90" stroke="#000" stroke-width="1.5" fill="none"/>
+    <path d="M84 90 L100 140 L116 90" stroke="#333" stroke-width="0.5" fill="none" opacity="0.6"/>
+    <path d="M84 90 L82 130 L82 205" stroke="#2a2a2a" stroke-width="0.6" fill="none" opacity="0.6"/>
+    <path d="M116 90 L118 130 L118 205" stroke="#2a2a2a" stroke-width="0.6" fill="none" opacity="0.6"/>
     <path d="M100 160 L100 205" stroke="#000" stroke-width="0.8" opacity="0.5"/>
     <circle cx="100" cy="172" r="1.5" fill="#666"/>
     <circle cx="100" cy="188" r="1.5" fill="#666"/>
     <rect x="74" y="130" width="6" height="50" fill="#0a0a0a" opacity="0.4"/>
     <rect x="120" y="130" width="6" height="50" fill="#0a0a0a" opacity="0.4"/>
-    <path d="M82 96 L82 105 L84 105 L84 96 Z" fill="#2a2a2a" opacity="0.5"/>
-    <path d="M118 96 L118 105 L116 105 L116 96 Z" fill="#2a2a2a" opacity="0.5"/>
-    <path d="M78 96 L80 130" stroke="#333" stroke-width="0.4" fill="none" opacity="0.4"/>`,
+    <path d="M82 90 L82 105 L84 105 L84 90 Z" fill="#2a2a2a" opacity="0.5"/>
+    <path d="M118 90 L118 105 L116 105 L116 90 Z" fill="#2a2a2a" opacity="0.5"/>
+    <path d="M78 90 L80 130" stroke="#333" stroke-width="0.4" fill="none" opacity="0.4"/>`,
 
   b_nf: `
     ${SL_LONG_L("#1a1a1a", "#0a0a0a")}
     ${SL_LONG_R("#1a1a1a", "#0a0a0a")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#1a1a1a"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#0a0a0a" opacity="0.5"/>
-    <path d="M72 96 Q100 84 128 96 L126 102 Q100 90 74 102 Z" fill="#0a0a0a"/>
-    <path d="M72 96 Q100 86 128 96" stroke="#444" stroke-width="0.6" fill="none" opacity="0.5"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#1a1a1a"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#0a0a0a" opacity="0.5"/>
+    <path d="M72 90 Q100 80 128 90 L126 96 Q100 86 74 96 Z" fill="#0a0a0a"/>
+    <path d="M72 90 Q100 82 128 90" stroke="#444" stroke-width="0.6" fill="none" opacity="0.5"/>
     <path d="M66 108 L134 108 M66 130 L134 130 M66 152 L134 152 M66 174 L134 174 M66 196 L134 196" stroke="#0a0a0a" stroke-width="1.2" opacity="0.7"/>
     <path d="M66 110 L134 110 M66 132 L134 132 M66 154 L134 154 M66 176 L134 176" stroke="#333" stroke-width="0.3" opacity="0.5"/>
-    <path d="M66 96 L66 205" stroke="#333" stroke-width="0.5" opacity="0.4"/>
-    <path d="M134 96 L134 205" stroke="#0a0a0a" stroke-width="0.5" opacity="0.4"/>
-    <path d="M100 96 L100 205" stroke="#0a0a0a" stroke-width="0.5" opacity="0.4"/>
+    <path d="M66 90 L66 205" stroke="#333" stroke-width="0.5" opacity="0.4"/>
+    <path d="M134 90 L134 205" stroke="#0a0a0a" stroke-width="0.5" opacity="0.4"/>
+    <path d="M100 90 L100 205" stroke="#0a0a0a" stroke-width="0.5" opacity="0.4"/>
     <rect x="66" y="192" width="68" height="13" fill="#0a0a0a"/>
     <path d="M66 194 L134 194 M66 200 L134 200" stroke="#333" stroke-width="0.4" opacity="0.5"/>
     <path d="M74 130 Q76 145 74 160" stroke="#0a0a0a" stroke-width="0.5" fill="none" opacity="0.4"/>`,
@@ -610,107 +611,107 @@ const ITEMS_SVG = {
   b_leather: `
     ${SL_LONG_L("#1a1a1a", "#000")}
     ${SL_LONG_R("#1a1a1a", "#000")}
-    <path d="M66 96 L88 96 L88 205 L66 205 Z" fill="#1a1a1a"/>
-    <path d="M134 96 L112 96 L112 205 L134 205 Z" fill="#1a1a1a"/>
-    <path d="M88 96 L100 160 L88 205 L66 205 L66 96 Z" fill="#1a1a1a"/>
-    <path d="M112 96 L100 160 L112 205 L134 205 L134 96 Z" fill="#0d0d0d"/>
-    <path d="M88 96 L100 160 L112 96 L107 96 L100 148 L93 96 Z" fill="#2a2a2a" opacity="0.9"/>
-    <path d="M88 96 L80 130 L74 96" fill="#1a1a1a"/>
-    <path d="M112 96 L120 130 L126 96" fill="#0d0d0d"/>
-    <path d="M80 96 L100 150 L120 96" stroke="#000" stroke-width="1.8" fill="none"/>
-    <path d="M82 96 L100 146 L118 96" stroke="#333" stroke-width="0.5" fill="none" opacity="0.4"/>
-    <path d="M86 96 L84 110 L88 108 Z" fill="#2a2a2a"/>
-    <path d="M114 96 L116 110 L112 108 Z" fill="#2a2a2a"/>
+    <path d="M66 90 L88 90 L88 205 L66 205 Z" fill="#1a1a1a"/>
+    <path d="M134 90 L112 90 L112 205 L134 205 Z" fill="#1a1a1a"/>
+    <path d="M88 90 L100 160 L88 205 L66 205 L66 90 Z" fill="#1a1a1a"/>
+    <path d="M112 90 L100 160 L112 205 L134 205 L134 90 Z" fill="#0d0d0d"/>
+    <path d="M88 90 L100 160 L112 90 L107 90 L100 148 L93 90 Z" fill="#2a2a2a" opacity="0.9"/>
+    <path d="M88 90 L80 130 L74 90" fill="#1a1a1a"/>
+    <path d="M112 90 L120 130 L126 90" fill="#0d0d0d"/>
+    <path d="M80 90 L100 150 L120 90" stroke="#000" stroke-width="1.8" fill="none"/>
+    <path d="M82 90 L100 146 L118 90" stroke="#333" stroke-width="0.5" fill="none" opacity="0.4"/>
+    <path d="M86 90 L84 110 L88 108 Z" fill="#2a2a2a"/>
+    <path d="M114 90 L116 110 L112 108 Z" fill="#2a2a2a"/>
     <path d="M100 160 L100 205" stroke="#000" stroke-width="1" opacity="0.6"/>
     <path d="M80 130 L80 140 M120 130 L120 140" stroke="#333" stroke-width="1" opacity="0.6"/>
     <path d="M78 155 L78 162 M122 155 L122 162" stroke="#333" stroke-width="0.8" opacity="0.5"/>
     <circle cx="100" cy="175" r="2.5" fill="#444"/>
     <circle cx="100" cy="175" r="1.2" fill="#666"/>
     <circle cx="100" cy="192" r="1.8" fill="#444"/>
-    <path d="M76 96 L76 105" stroke="#2a2a2a" stroke-width="0.6"/>
-    <path d="M124 96 L124 105" stroke="#2a2a2a" stroke-width="0.6"/>
+    <path d="M76 90 L76 105" stroke="#2a2a2a" stroke-width="0.6"/>
+    <path d="M124 90 L124 105" stroke="#2a2a2a" stroke-width="0.6"/>
     <path d="M74 130 Q76 145 74 160" stroke="#000" stroke-width="0.5" fill="none" opacity="0.4"/>`,
 
   b_wedding: `
-    <path d="M72 100 L72 205 L60 260 L140 260 L128 205 L128 100 Q100 94 72 100 Z" fill="#f8f8f8" stroke="#e0e0e0" stroke-width="0.5"/>
-    <path d="M104 96 L104 205 L128 205 L140 260 L118 260 L104 205 Z" fill="#f0f0f0" opacity="0.5"/>
-    <path d="M78 100 L76 96 Q100 88 124 96 L122 100 Q100 92 78 100 Z" fill="#fff"/>
-    <path d="M78 100 Q100 94 122 100" stroke="#e0e0e0" stroke-width="0.6" fill="none"/>
+    <path d="M72 90 L72 205 L60 260 L140 260 L128 205 L128 90 Q100 84 72 90 Z" fill="#f8f8f8" stroke="#e0e0e0" stroke-width="0.5"/>
+    <path d="M104 90 L104 205 L128 205 L140 260 L118 260 L104 205 Z" fill="#f0f0f0" opacity="0.5"/>
+    <path d="M78 90 L76 86 Q100 78 124 86 L122 90 Q100 82 78 90 Z" fill="#fff"/>
+    <path d="M78 90 Q100 84 122 90" stroke="#e0e0e0" stroke-width="0.6" fill="none"/>
     <path d="M80 205 L76 230 L74 250 M120 205 L124 230 L126 250" stroke="#e8e8e8" stroke-width="1.5" fill="none"/>
     <path d="M88 210 L84 250 M112 210 L116 250 M100 210 L100 250" stroke="#e8e8e8" stroke-width="1.2" fill="none" opacity="0.7"/>
     <path d="M62 255 L138 255" stroke="#e0e0e0" stroke-width="0.8"/>
     <path d="M64 258 Q100 262 136 258" stroke="#e8e8e8" stroke-width="0.5" fill="none" opacity="0.6"/>
     <ellipse cx="100" cy="118" rx="6" ry="4" fill="#fce4ec" opacity="0.8"/>
     <circle cx="100" cy="118" r="2" fill="#fff"/>
-    <path d="M78 96 Q100 88 122 96" stroke="#fce4ec" stroke-width="0.4" fill="none" opacity="0.5"/>
+    <path d="M78 86 Q100 78 122 86" stroke="#fce4ec" stroke-width="0.4" fill="none" opacity="0.5"/>
     <circle cx="90" cy="150" r="2" fill="#fff" opacity="0.7"/>
     <circle cx="110" cy="170" r="2" fill="#fff" opacity="0.7"/>
     <circle cx="100" cy="185" r="2" fill="#fff" opacity="0.7"/>
     <path d="M72 200 L128 200" stroke="#e8e8e8" stroke-width="1"/>`,
 
   b_vest: `
-    <path d="M68 96 L132 96 L132 205 L68 205 Z" fill="#2c3e50" stroke="#1a252f" stroke-width="0.6"/>
-    <path d="M104 96 L104 205 L132 205 L132 96 Z" fill="#1a252f" opacity="0.5"/>
-    <path d="M66 96 L66 130 L73 130 L73 96 Z" fill="#34495e"/>
-    <path d="M134 96 L134 130 L127 130 L127 96 Z" fill="#1a252f"/>
-    <path d="M73 96 L73 130" stroke="#3d5060" stroke-width="0.6"/>
-    <path d="M127 96 L127 130" stroke="#3d5060" stroke-width="0.6"/>
+    <path d="M68 90 L132 90 L132 205 L68 205 Z" fill="#2c3e50" stroke="#1a252f" stroke-width="0.6"/>
+    <path d="M104 90 L104 205 L132 205 L132 90 Z" fill="#1a252f" opacity="0.5"/>
+    <path d="M66 90 L66 130 L73 130 L73 90 Z" fill="#34495e"/>
+    <path d="M134 90 L134 130 L127 130 L127 90 Z" fill="#1a252f"/>
+    <path d="M73 90 L73 130" stroke="#3d5060" stroke-width="0.6"/>
+    <path d="M127 90 L127 130" stroke="#3d5060" stroke-width="0.6"/>
     <rect x="78" y="118" width="44" height="30" rx="3" fill="#1a252f" stroke="#0f1519" stroke-width="0.6"/>
     <path d="M80 130 L120 130" stroke="#2c3e50" stroke-width="0.6" opacity="0.6"/>
     <path d="M80 138 L120 138" stroke="#2c3e50" stroke-width="0.4" opacity="0.4"/>
     <path d="M80 155 L120 155 M80 172 L120 172" stroke="#1a252f" stroke-width="1.5"/>
     <rect x="90" y="104" width="20" height="7" rx="2" fill="#34495e" stroke="#1a252f" stroke-width="0.4"/>
-    <path d="M82 96 Q90 108 100 108 Q110 108 118 96" stroke="#34495e" stroke-width="1" fill="none"/>
+    <path d="M82 90 Q90 108 100 108 Q110 108 118 90" stroke="#34495e" stroke-width="1" fill="none"/>
     <circle cx="94" cy="132" r="1.5" fill="#556"/>
     <circle cx="106" cy="132" r="1.5" fill="#556"/>
     <path d="M92 155 L108 155" stroke="#34495e" stroke-width="0.5" opacity="0.5"/>
     <path d="M92 172 L108 172" stroke="#34495e" stroke-width="0.5" opacity="0.5"/>
     <rect x="86" y="180" width="28" height="15" rx="2" fill="#0f1519" opacity="0.6"/>
-    <path d="M73 96 L73 108" stroke="#3d5060" stroke-width="0.6"/>
-    <path d="M127 96 L127 108" stroke="#3d5060" stroke-width="0.6"/>
+    <path d="M73 90 L73 108" stroke="#3d5060" stroke-width="0.6"/>
+    <path d="M127 90 L127 108" stroke="#3d5060" stroke-width="0.6"/>
     <path d="M66 203 L134 203" stroke="#1a252f" stroke-width="1.2"/>`,
 
   b_tuxedo: `
     ${SL_LONG_L("#000", "#000")}
     ${SL_LONG_R("#000", "#000")}
-    <path d="M66 96 L88 96 L88 205 L66 205 Z" fill="#000"/>
-    <path d="M134 96 L112 96 L112 205 L134 205 Z" fill="#000"/>
-    <path d="M88 96 L100 160 L88 205 L66 205 L66 96 Z" fill="#000"/>
-    <path d="M112 96 L100 160 L112 205 L134 205 L134 96 Z" fill="#0a0a0a"/>
-    <path d="M88 96 L100 160 L112 96 L106 96 L100 148 L94 96 Z" fill="#fff"/>
-    <path d="M88 96 L100 160 L112 96 L106 96 L100 148 L94 96 Z" fill="#f0f0f0" opacity="0.4"/>
-    <path d="M88 96 L80 130 L74 96" fill="#000"/>
-    <path d="M112 96 L120 130 L126 96" fill="#0a0a0a"/>
-    <path d="M80 96 L100 150 L120 96" stroke="#1a1a1a" stroke-width="1.8" fill="none"/>
-    <path d="M88 96 L100 160 L112 96" stroke="#1a1a1a" stroke-width="1.5" fill="none" opacity="0.4"/>
-    <path d="M96 96 L100 108 L104 96 L102 96 L100 100 L98 96 Z" fill="#000"/>
-    <path d="M96 96 L100 108 L104 96" stroke="#333" stroke-width="0.5" fill="none" opacity="0.5"/>
+    <path d="M66 90 L88 90 L88 205 L66 205 Z" fill="#000"/>
+    <path d="M134 90 L112 90 L112 205 L134 205 Z" fill="#000"/>
+    <path d="M88 90 L100 160 L88 205 L66 205 L66 90 Z" fill="#000"/>
+    <path d="M112 90 L100 160 L112 205 L134 205 L134 90 Z" fill="#0a0a0a"/>
+    <path d="M88 90 L100 160 L112 90 L106 90 L100 148 L94 90 Z" fill="#fff"/>
+    <path d="M88 90 L100 160 L112 90 L106 90 L100 148 L94 90 Z" fill="#f0f0f0" opacity="0.4"/>
+    <path d="M88 90 L80 130 L74 90" fill="#000"/>
+    <path d="M112 90 L120 130 L126 90" fill="#0a0a0a"/>
+    <path d="M80 90 L100 150 L120 90" stroke="#1a1a1a" stroke-width="1.8" fill="none"/>
+    <path d="M88 90 L100 160 L112 90" stroke="#1a1a1a" stroke-width="1.5" fill="none" opacity="0.4"/>
+    <path d="M96 90 L100 108 L104 90 L102 90 L100 100 L98 90 Z" fill="#000"/>
+    <path d="M96 90 L100 108 L104 90" stroke="#333" stroke-width="0.5" fill="none" opacity="0.5"/>
     <path d="M100 160 L100 205" stroke="#0a0a0a" stroke-width="1" opacity="0.8"/>
     <circle cx="100" cy="172" r="2" fill="#fff"/>
     <circle cx="100" cy="190" r="2" fill="#fff"/>
-    <path d="M84 96 L84 110 L86 110 L86 96 Z" fill="#1a1a1a" opacity="0.6"/>
-    <path d="M116 96 L116 110 L114 110 L114 96 Z" fill="#1a1a1a" opacity="0.6"/>
+    <path d="M84 90 L84 110 L86 110 L86 90 Z" fill="#1a1a1a" opacity="0.6"/>
+    <path d="M116 90 L116 110 L114 110 L114 90 Z" fill="#1a1a1a" opacity="0.6"/>
     <path d="M80 130 L80 145 M120 130 L120 145" stroke="#1a1a1a" stroke-width="0.8" opacity="0.5"/>
-    <path d="M76 96 L76 108" stroke="#333" stroke-width="0.5"/>
-    <path d="M124 96 L124 108" stroke="#333" stroke-width="0.5"/>
-    <path d="M78 96 L80 130" stroke="#1a1a1a" stroke-width="0.4" fill="none" opacity="0.4"/>`,
+    <path d="M76 90 L76 108" stroke="#333" stroke-width="0.5"/>
+    <path d="M124 90 L124 108" stroke="#333" stroke-width="0.5"/>
+    <path d="M78 90 L80 130" stroke="#1a1a1a" stroke-width="0.4" fill="none" opacity="0.4"/>`,
 
   b_santa: `
     ${SL_LONG_L("#c0392b", "#8b0000")}
     ${SL_LONG_R("#c0392b", "#8b0000")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#c0392b"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#a93226" opacity="0.5"/>
-    <path d="M66 96 Q100 82 134 96" stroke="#fff" stroke-width="5" fill="none"/>
-    <path d="M66 96 Q100 84 134 96" stroke="#f0f0f0" stroke-width="2" fill="none" opacity="0.7"/>
-    <path d="M66 96 Q100 82 134 96" stroke="#e0e0e0" stroke-width="0.8" fill="none" opacity="0.5"/>
-    <path d="M66 100 Q80 104 88 102 Q100 100 112 102 Q120 104 134 100" stroke="#8b0000" stroke-width="0.6" fill="none" opacity="0.4"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#c0392b"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#a93226" opacity="0.5"/>
+    <path d="M66 90 Q100 76 134 90" stroke="#fff" stroke-width="5" fill="none"/>
+    <path d="M66 90 Q100 78 134 90" stroke="#f0f0f0" stroke-width="2" fill="none" opacity="0.7"/>
+    <path d="M66 90 Q100 76 134 90" stroke="#e0e0e0" stroke-width="0.8" fill="none" opacity="0.5"/>
+    <path d="M66 94 Q80 98 88 96 Q100 94 112 96 Q120 98 134 94" stroke="#8b0000" stroke-width="0.6" fill="none" opacity="0.4"/>
     <rect x="66" y="196" width="68" height="9" fill="#fff"/>
     <path d="M66 198 L134 198" stroke="#e0e0e0" stroke-width="0.6" opacity="0.5"/>
     <path d="M66 202 L134 202" stroke="#f0f0f0" stroke-width="0.4" opacity="0.4"/>
     <path d="M74 130 Q76 145 74 160" stroke="#a93226" stroke-width="0.6" fill="none" opacity="0.5"/>
     <path d="M126 140 Q124 155 126 170" stroke="#a93226" stroke-width="0.6" fill="none" opacity="0.5"/>
-    <path d="M78 118 Q88 114 98 118" stroke="#fff" stroke-width="1.2" fill="none" opacity="0.6"/>
-    <path d="M102 118 Q112 114 122 118" stroke="#fff" stroke-width="1.2" fill="none" opacity="0.6"/>
+    <path d="M78 112 Q88 108 98 112" stroke="#fff" stroke-width="1.2" fill="none" opacity="0.6"/>
+    <path d="M102 112 Q112 108 122 112" stroke="#fff" stroke-width="1.2" fill="none" opacity="0.6"/>
     <circle cx="86" cy="135" r="2.5" fill="#fff" opacity="0.7"/>
     <circle cx="114" cy="135" r="2.5" fill="#fff" opacity="0.7"/>
     <circle cx="86" cy="165" r="2.5" fill="#fff" opacity="0.7"/>
@@ -718,11 +719,11 @@ const ITEMS_SVG = {
     <circle cx="100" cy="150" r="2" fill="#fff" opacity="0.6"/>`,
 
   b_tank_usa: `
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#f5f5f5"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#e8e8e8" opacity="0.5"/>
-    <path d="M68 96 L66 104 Q66 112 69 116 L73 114 L73 100 Z" fill="#f0f0f0" stroke="#d8d8d8" stroke-width="0.4"/>
-    <path d="M132 96 L134 104 Q134 112 131 116 L127 114 L127 100 Z" fill="#f0f0f0" stroke="#d8d8d8" stroke-width="0.4"/>
-    <path d="M66 96 Q82 100 90 102 Q100 104 110 102 Q118 100 134 96" stroke="#d8d8d8" stroke-width="0.6" fill="none"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#f5f5f5"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#e8e8e8" opacity="0.5"/>
+    <path d="M68 90 L66 104 Q66 112 69 116 L73 114 L73 100 Z" fill="#f0f0f0" stroke="#d8d8d8" stroke-width="0.4"/>
+    <path d="M132 90 L134 104 Q134 112 131 116 L127 114 L127 100 Z" fill="#f0f0f0" stroke="#d8d8d8" stroke-width="0.4"/>
+    <path d="M66 90 Q82 100 90 102 Q100 104 110 102 Q118 100 134 90" stroke="#d8d8d8" stroke-width="0.6" fill="none"/>
     <rect x="72" y="140" width="56" height="30" fill="#c0392b"/>
     <rect x="72" y="140" width="28" height="15" fill="#1c3a7a"/>
     <line x1="72" y1="145" x2="100" y2="145" stroke="#fff" stroke-width="1.5"/>
@@ -741,13 +742,13 @@ const ITEMS_SVG = {
   b_hoodie: `
     ${SL_LONG_L("#1a1a1a", "#0a0a0a")}
     ${SL_LONG_R("#1a1a1a", "#0a0a0a")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#1a1a1a"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#0a0a0a" opacity="0.6"/>
-    <path d="M66 96 Q60 84 76 76 Q92 72 100 76 Q108 72 124 76 Q140 84 134 96 Z" fill="#0a0a0a"/>
-    <path d="M76 90 Q80 78 90 76 Q100 74 110 76 Q120 78 124 90" stroke="#333" stroke-width="0.8" fill="none" opacity="0.6"/>
-    <path d="M76 90 Q80 78 90 76 Q100 74 110 76 Q120 78 124 90" stroke="#444" stroke-width="0.4" fill="none" opacity="0.4"/>
-    <path d="M82 96 Q100 88 118 96" stroke="#0a0a0a" stroke-width="0.8" fill="none"/>
-    <path d="M94 100 L94 118 M106 100 L106 118" stroke="#fff" stroke-width="1.2"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#1a1a1a"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#0a0a0a" opacity="0.6"/>
+    <path d="M66 90 Q60 80 76 74 Q92 70 100 74 Q108 70 124 74 Q140 80 134 90 Z" fill="#0a0a0a"/>
+    <path d="M76 86 Q80 76 90 74 Q100 72 110 74 Q120 76 124 86" stroke="#333" stroke-width="0.8" fill="none" opacity="0.6"/>
+    <path d="M76 86 Q80 76 90 74 Q100 72 110 74 Q120 76 124 86" stroke="#444" stroke-width="0.4" fill="none" opacity="0.4"/>
+    <path d="M82 90 Q100 84 118 90" stroke="#0a0a0a" stroke-width="0.8" fill="none"/>
+    <path d="M94 94 L94 118 M106 94 L106 118" stroke="#fff" stroke-width="1.2"/>
     <rect x="94" y="115" width="3" height="6" rx="1" fill="#fff"/>
     <rect x="103" y="115" width="3" height="6" rx="1" fill="#fff"/>
     <path d="M84 145 L84 185 Q84 192 90 192 L110 192 Q116 192 116 185 L116 145" fill="#0a0a0a" stroke="#333" stroke-width="0.6"/>
@@ -756,17 +757,17 @@ const ITEMS_SVG = {
     <path d="M126 140 Q124 155 126 170" stroke="#0a0a0a" stroke-width="0.5" fill="none" opacity="0.4"/>
     <rect x="66" y="196" width="68" height="9" fill="#0a0a0a" opacity="0.8"/>
     <path d="M66 198 L134 198 M66 202 L134 202" stroke="#333" stroke-width="0.3" opacity="0.4"/>
-    <circle cx="90" cy="112" r="1.2" fill="#555" opacity="0.6"/>
-    <circle cx="110" cy="112" r="1.2" fill="#555" opacity="0.6"/>`,
+    <circle cx="90" cy="108" r="1.2" fill="#555" opacity="0.6"/>
+    <circle cx="110" cy="108" r="1.2" fill="#555" opacity="0.6"/>`,
 
   b_hawaii: `
     ${SL_SHORT_L("#fff9e6", "#f0e6c0")}
     ${SL_SHORT_R("#fff9e6", "#f0e6c0")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#fff9e6"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#f0e6c0" opacity="0.5"/>
-    <path d="M72 96 Q86 90 100 90 Q114 90 128 96" stroke="#f0e6c0" stroke-width="0.8" fill="none"/>
-    <path d="M82 96 Q100 84 118 96 L116 100 Q100 89 84 100 Z" fill="#f0e6c0"/>
-    <path d="M100 96 L100 205" stroke="#f0e6c0" stroke-width="0.6" opacity="0.6"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#fff9e6"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#f0e6c0" opacity="0.5"/>
+    <path d="M72 90 Q86 86 100 86 Q114 86 128 90" stroke="#f0e6c0" stroke-width="0.8" fill="none"/>
+    <path d="M82 90 Q100 80 118 90 L116 94 Q100 84 84 94 Z" fill="#f0e6c0"/>
+    <path d="M100 90 L100 205" stroke="#f0e6c0" stroke-width="0.6" opacity="0.6"/>
     <circle cx="82" cy="132" r="5" fill="#2ecc71"/>
     <circle cx="82" cy="132" r="2" fill="#27ae60"/>
     <line x1="82" y1="137" x2="80" y2="148" stroke="#2ecc71" stroke-width="1.5"/>
@@ -789,44 +790,44 @@ const ITEMS_SVG = {
   b_armor: `
     ${SL_LONG_L("#7f8c8d", "#5a6a6a")}
     ${SL_LONG_R("#7f8c8d", "#5a6a6a")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#7f8c8d" stroke="#5a6a6a" stroke-width="1"/>
-    <path d="M105 96 L105 205 L134 205 L134 96 Z" fill="#5a6a6a" opacity="0.5"/>
-    <path d="M66 96 L72 108 L72 205 L66 205 Z" fill="#5a6a6a"/>
-    <path d="M134 96 L128 108 L128 205 L134 205 Z" fill="#5a6a6a"/>
-    <path d="M66 96 L72 108" stroke="#a8b8b8" stroke-width="0.6" fill="none" opacity="0.5"/>
-    <path d="M134 96 L128 108" stroke="#a8b8b8" stroke-width="0.6" fill="none" opacity="0.5"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#7f8c8d" stroke="#5a6a6a" stroke-width="1"/>
+    <path d="M105 90 L105 205 L134 205 L134 90 Z" fill="#5a6a6a" opacity="0.5"/>
+    <path d="M66 90 L72 108 L72 205 L66 205 Z" fill="#5a6a6a"/>
+    <path d="M134 90 L128 108 L128 205 L134 205 Z" fill="#5a6a6a"/>
+    <path d="M66 90 L72 108" stroke="#a8b8b8" stroke-width="0.6" fill="none" opacity="0.5"/>
+    <path d="M134 90 L128 108" stroke="#a8b8b8" stroke-width="0.6" fill="none" opacity="0.5"/>
     <rect x="84" y="124" width="32" height="60" fill="#5a6a6a" stroke="#4a5a5a" stroke-width="0.6"/>
     <circle cx="100" cy="150" r="9" fill="#e74c3c" stroke="#8b0000" stroke-width="1"/>
     <path d="M96 148 L104 148 M100 144 L100 152" stroke="#8b0000" stroke-width="1"/>
     <circle cx="100" cy="150" r="3" fill="#c0392b"/>
     <circle cx="100" cy="150" r="1.5" fill="#8b0000"/>
     <rect x="92" y="104" width="16" height="12" fill="#5a6a6a" stroke="#4a5a5a" stroke-width="0.5"/>
-    <path d="M82 96 L100 108 L118 96" stroke="#4a5a5a" stroke-width="1" fill="none"/>
+    <path d="M82 90 L100 108 L118 90" stroke="#4a5a5a" stroke-width="1" fill="none"/>
     <path d="M84 116 L116 116" stroke="#a8b8b8" stroke-width="0.5" opacity="0.5"/>
     <path d="M84 190 L116 190 M84 198 L116 198" stroke="#4a5a5a" stroke-width="0.6" opacity="0.6"/>
-    <path d="M72 96 L72 110" stroke="#a8b8b8" stroke-width="0.5" opacity="0.5"/>
-    <path d="M128 96 L128 110" stroke="#a8b8b8" stroke-width="0.5" opacity="0.5"/>
+    <path d="M72 90 L72 110" stroke="#a8b8b8" stroke-width="0.5" opacity="0.5"/>
+    <path d="M128 90 L128 110" stroke="#a8b8b8" stroke-width="0.5" opacity="0.5"/>
     <circle cx="88" cy="138" r="1.5" fill="#a8b8b8" opacity="0.6"/>
     <circle cx="112" cy="138" r="1.5" fill="#a8b8b8" opacity="0.6"/>`,
 
   b_bomber: `
     ${SL_LONG_L("#1a1a1a", "#0a0a0a")}
     ${SL_LONG_R("#1a1a1a", "#0a0a0a")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#1a1a1a"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#0a0a0a" opacity="0.5"/>
-    <path d="M72 96 Q100 84 128 96 L126 102 Q100 90 74 102 Z" fill="#0a0a0a"/>
-    <path d="M72 96 Q100 86 128 96" stroke="#333" stroke-width="0.6" fill="none" opacity="0.5"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#1a1a1a"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#0a0a0a" opacity="0.5"/>
+    <path d="M72 90 Q100 80 128 90 L126 96 Q100 86 74 96 Z" fill="#0a0a0a"/>
+    <path d="M72 90 Q100 82 128 90" stroke="#333" stroke-width="0.6" fill="none" opacity="0.5"/>
     <path d="M66 118 L134 118" stroke="#444" stroke-width="2"/>
     <path d="M66 120 L134 120" stroke="#333" stroke-width="0.5" opacity="0.5"/>
-    <path d="M82 96 L82 205 M100 96 L100 205 M118 96 L118 205" stroke="#333" stroke-width="0.6" opacity="0.5"/>
-    <path d="M66 96 Q63 94 63 100 L65 118 L69 118 L69 100 Z" fill="#d35400" opacity="0.7"/>
-    <path d="M134 96 Q137 94 137 100 L135 118 L131 118 L131 100 Z" fill="#d35400" opacity="0.7"/>
-    <path d="M82 96 L78 108 L70 100 L70 96 Z" fill="#d35400" opacity="0.5"/>
-    <path d="M118 96 L122 108 L130 100 L130 96 Z" fill="#d35400" opacity="0.5"/>
+    <path d="M82 90 L82 205 M100 90 L100 205 M118 90 L118 205" stroke="#333" stroke-width="0.6" opacity="0.5"/>
+    <path d="M66 90 Q63 88 63 94 L65 118 L69 118 L69 94 Z" fill="#d35400" opacity="0.7"/>
+    <path d="M134 90 Q137 88 137 94 L135 118 L131 118 L131 94 Z" fill="#d35400" opacity="0.7"/>
+    <path d="M82 90 L78 108 L70 100 L70 90 Z" fill="#d35400" opacity="0.5"/>
+    <path d="M118 90 L122 108 L130 100 L130 90 Z" fill="#d35400" opacity="0.5"/>
     <rect x="88" y="148" width="24" height="14" fill="#0a0a0a" stroke="#333" stroke-width="0.5"/>
     <path d="M88 155 L112 155" stroke="#333" stroke-width="0.4" opacity="0.5"/>
     <circle cx="100" cy="155" r="2" fill="#444"/>
-    <path d="M100 96 L100 118" stroke="#0a0a0a" stroke-width="0.6" opacity="0.4"/>
+    <path d="M100 90 L100 118" stroke="#0a0a0a" stroke-width="0.6" opacity="0.4"/>
     <rect x="66" y="196" width="68" height="9" fill="#0a0a0a"/>
     <path d="M66 198 L134 198 M66 202 L134 202" stroke="#333" stroke-width="0.3" opacity="0.4"/>
     <path d="M74 130 Q76 145 74 160" stroke="#0a0a0a" stroke-width="0.5" fill="none" opacity="0.4"/>
@@ -835,10 +836,10 @@ const ITEMS_SVG = {
   b_poncho: `
     ${SL_FULL_L("#8b4513", "#5a2e0a", "#a0522d")}
     ${SL_FULL_R("#8b4513", "#5a2e0a", "#a0522d")}
-    <path d="M56 100 Q56 94 66 94 L134 94 Q144 94 144 100 L150 225 L50 225 Z" fill="#8b4513"/>
-    <path d="M104 94 L104 225 L150 225 L144 100 Q144 97 140 94 Z" fill="#5a2e0a" opacity="0.35"/>
-    <path d="M66 94 Q100 82 134 94" fill="#8b4513"/>
-    <path d="M68 94 Q100 84 132 94" stroke="#5a2e0a" stroke-width="0.6" fill="none" opacity="0.5"/>
+    <path d="M56 90 Q56 84 66 84 L134 84 Q144 84 144 90 L150 225 L50 225 Z" fill="#8b4513"/>
+    <path d="M104 84 L104 225 L150 225 L144 90 Q144 87 140 84 Z" fill="#5a2e0a" opacity="0.35"/>
+    <path d="M66 84 Q100 72 134 84" fill="#8b4513"/>
+    <path d="M68 84 Q100 74 132 84" stroke="#5a2e0a" stroke-width="0.6" fill="none" opacity="0.5"/>
     <path d="M56 128 L144 128 M56 158 L144 158 M56 188 L144 188" stroke="#a0522d" stroke-width="2"/>
     <path d="M60 128 L60 225 M80 128 L80 225 M100 128 L100 225 M120 128 L120 225 M140 128 L140 225" stroke="#a0522d" stroke-width="2"/>
     <path d="M62 128 L62 225" stroke="#6b3a1a" stroke-width="0.4" opacity="0.5"/>
@@ -850,30 +851,30 @@ const ITEMS_SVG = {
   b_kimono: `
     ${SL_FULL_L("#e91e63", "#c2185b", "#f06292")}
     ${SL_FULL_R("#e91e63", "#c2185b", "#f06292")}
-    <path d="M66 96 L66 205 L100 205 L100 96 Z" fill="#e91e63"/>
-    <path d="M100 96 L100 205 L134 205 L134 96 Z" fill="#e91e63"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#c2185b" opacity="0.4"/>
-    <path d="M66 96 L100 145 L134 96" stroke="#c2185b" stroke-width="4" fill="none" stroke-linejoin="round"/>
-    <path d="M77 96 L100 138 L123 96" stroke="#f06292" stroke-width="1.5" fill="none"/>
-    <path d="M82 96 L100 128 L118 96" stroke="#f8bbd0" stroke-width="0.6" fill="none" opacity="0.5"/>
+    <path d="M66 90 L66 205 L100 205 L100 90 Z" fill="#e91e63"/>
+    <path d="M100 90 L100 205 L134 205 L134 90 Z" fill="#e91e63"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#c2185b" opacity="0.4"/>
+    <path d="M66 90 L100 145 L134 90" stroke="#c2185b" stroke-width="4" fill="none" stroke-linejoin="round"/>
+    <path d="M77 90 L100 138 L123 90" stroke="#f06292" stroke-width="1.5" fill="none"/>
+    <path d="M82 90 L100 128 L118 90" stroke="#f8bbd0" stroke-width="0.6" fill="none" opacity="0.5"/>
     <rect x="66" y="170" width="68" height="18" fill="#c2185b"/>
     <path d="M66 172 L134 172 M66 186 L134 186" stroke="#8b0000" stroke-width="1" opacity="0.6"/>
     <path d="M66 179 L134 179" stroke="#f06292" stroke-width="0.5" opacity="0.5"/>
     <circle cx="100" cy="179" r="3" fill="#f39c12"/>
     <circle cx="100" cy="179" r="1.5" fill="#fff"/>
-    <path d="M66 96 L66 205" stroke="#c2185b" stroke-width="0.4" opacity="0.3"/>
-    <path d="M134 96 L134 205" stroke="#c2185b" stroke-width="0.4" opacity="0.3"/>
+    <path d="M66 90 L66 205" stroke="#c2185b" stroke-width="0.4" opacity="0.3"/>
+    <path d="M134 90 L134 205" stroke="#c2185b" stroke-width="0.4" opacity="0.3"/>
     <path d="M74 130 Q76 145 74 160" stroke="#c2185b" stroke-width="0.5" fill="none" opacity="0.4"/>
     <path d="M126 140 Q124 155 126 170" stroke="#c2185b" stroke-width="0.5" fill="none" opacity="0.4"/>
-    <path d="M76 96 Q88 92 100 92 Q112 92 124 96" stroke="#c2185b" stroke-width="0.6" fill="none" opacity="0.5"/>`,
+    <path d="M76 90 Q88 86 100 86 Q112 86 124 90" stroke="#c2185b" stroke-width="0.6" fill="none" opacity="0.5"/>`,
 
   b_jersey: `
     ${SL_SHORT_L("#1a1a1a", "#0a0a0a")}
     ${SL_SHORT_R("#1a1a1a", "#0a0a0a")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#1a1a1a"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#0a0a0a" opacity="0.6"/>
-    <path d="M80 96 Q100 82 120 96" fill="#1a1a1a"/>
-    <path d="M82 96 Q100 86 118 96" stroke="#333" stroke-width="0.5" fill="none"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#1a1a1a"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#0a0a0a" opacity="0.6"/>
+    <path d="M80 90 Q100 78 120 90" fill="#1a1a1a"/>
+    <path d="M82 90 Q100 82 118 90" stroke="#333" stroke-width="0.5" fill="none"/>
     <text x="100" y="165" text-anchor="middle" font-size="26" fill="#f1c40f" font-weight="900">10</text>
     <path d="M76 100 L76 125 M124 100 L124 125" stroke="#f1c40f" stroke-width="1.2" opacity="0.4"/>
     <path d="M74 130 Q76 145 74 160" stroke="#0a0a0a" stroke-width="0.5" fill="none" opacity="0.4"/>
@@ -882,9 +883,9 @@ const ITEMS_SVG = {
     <circle cx="100" cy="120" r="2" fill="#f1c40f" opacity="0.6"/>`,
 
   b_dress_red: `
-    <path d="M72 96 Q70 96 70 105 L84 130 L62 240 L138 240 L116 130 L130 105 Q130 96 128 96 L118 96 Q114 108 100 108 Q86 108 82 96 Z" fill="#c0392b"/>
-    <path d="M105 96 L105 108 Q113 108 116 130 L138 240 L110 240 L100 178 Z" fill="#a93226" opacity="0.5"/>
-    <path d="M76 96 Q86 100 100 100 Q114 100 124 96" stroke="#8b0000" stroke-width="0.6" fill="none"/>
+    <path d="M72 90 Q70 90 70 100 L84 130 L62 240 L138 240 L116 130 L130 100 Q130 90 128 90 L118 90 Q114 104 100 104 Q86 104 82 90 Z" fill="#c0392b"/>
+    <path d="M105 90 L105 104 Q113 104 116 130 L138 240 L110 240 L100 178 Z" fill="#a93226" opacity="0.5"/>
+    <path d="M76 90 Q86 96 100 96 Q114 96 124 90" stroke="#8b0000" stroke-width="0.6" fill="none"/>
     <path d="M84 130 L100 108 L116 130" stroke="#8b0000" stroke-width="0.6" fill="none" opacity="0.6"/>
     <path d="M74 200 L126 200" stroke="#a93226" stroke-width="2"/>
     <path d="M74 202 L126 202" stroke="#e74c3c" stroke-width="0.4" opacity="0.5"/>
@@ -898,17 +899,17 @@ const ITEMS_SVG = {
   b_shirt_tie: `
     ${SL_LONG_L("#fff", "#e8e8e8")}
     ${SL_LONG_R("#fff", "#e8e8e8")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#fff"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#e8e8e8" opacity="0.5"/>
-    <path d="M72 96 Q86 90 100 90 Q114 90 128 96" stroke="#e0e0e0" stroke-width="0.8" fill="none"/>
-    <path d="M82 96 Q100 84 118 96 L116 100 Q100 89 84 100 Z" fill="#fff"/>
-    <path d="M82 96 Q100 86 118 96" stroke="#e0e0e0" stroke-width="0.5" fill="none"/>
-    <path d="M96 96 L100 108 L104 96" fill="#e0e0e0" opacity="0.4"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#fff"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#e8e8e8" opacity="0.5"/>
+    <path d="M72 90 Q86 86 100 86 Q114 86 128 90" stroke="#e0e0e0" stroke-width="0.8" fill="none"/>
+    <path d="M82 90 Q100 78 118 90 L116 94 Q100 84 84 94 Z" fill="#fff"/>
+    <path d="M82 90 Q100 80 118 90" stroke="#e0e0e0" stroke-width="0.5" fill="none"/>
+    <path d="M96 90 L100 108 L104 90" fill="#e0e0e0" opacity="0.4"/>
     <path d="M100 108 L95 118 L100 126 L105 118 Z" fill="#c0392b" stroke="#8b0000" stroke-width="0.4"/>
     <path d="M96 126 L104 126 L108 200 L92 200 Z" fill="#c0392b" stroke="#8b0000" stroke-width="0.4"/>
     <path d="M98 126 L100 200 L102 126" stroke="#e74c3c" stroke-width="0.5" fill="none" opacity="0.5"/>
-    <path d="M78 96 L82 130 M122 96 L118 130" stroke="#d0d0d0" stroke-width="0.8" fill="none"/>
-    <path d="M100 96 L100 108" stroke="#d0d0d0" stroke-width="0.4" opacity="0.5"/>
+    <path d="M78 90 L82 130 M122 90 L118 130" stroke="#d0d0d0" stroke-width="0.8" fill="none"/>
+    <path d="M100 90 L100 108" stroke="#d0d0d0" stroke-width="0.4" opacity="0.5"/>
     <circle cx="100" cy="135" r="1" fill="#fff" stroke="#8b0000" stroke-width="0.3"/>
     <circle cx="100" cy="155" r="1" fill="#fff" stroke="#8b0000" stroke-width="0.3"/>
     <circle cx="100" cy="175" r="1" fill="#fff" stroke="#8b0000" stroke-width="0.3"/>
@@ -919,10 +920,10 @@ const ITEMS_SVG = {
   b_gang_shirt: `
     ${SL_SHORT_L("#c0392b", "#8b0000")}
     ${SL_SHORT_R("#c0392b", "#8b0000")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#c0392b"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#a93226" opacity="0.5"/>
-    <path d="M72 96 Q86 90 100 90 Q114 90 128 96" stroke="#8b0000" stroke-width="0.8" fill="none"/>
-    <path d="M82 96 Q100 84 118 96 L116 100 Q100 89 84 100 Z" fill="#a93226"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#c0392b"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#a93226" opacity="0.5"/>
+    <path d="M72 90 Q86 86 100 86 Q114 86 128 90" stroke="#8b0000" stroke-width="0.8" fill="none"/>
+    <path d="M82 90 Q100 78 118 90 L116 94 Q100 84 84 94 Z" fill="#a93226"/>
     <text x="100" y="155" text-anchor="middle" font-size="15" fill="#f39c12" font-weight="900">ГАНГ</text>
     <path d="M66 130 L134 130 M66 170 L134 170" stroke="#8b0000" stroke-width="1.2" opacity="0.5"/>
     <circle cx="100" cy="185" r="3" fill="#f39c12"/>
@@ -933,16 +934,16 @@ const ITEMS_SVG = {
   b_gang_jacket: `
     ${SL_LONG_L("#1a1a1a", "#0a0a0a")}
     ${SL_LONG_R("#1a1a1a", "#0a0a0a")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#1a1a1a"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#0a0a0a" opacity="0.5"/>
-    <path d="M72 96 Q100 82 128 96 L126 102 Q100 88 74 102 Z" fill="#0a0a0a"/>
-    <path d="M72 96 Q100 84 128 96" stroke="#333" stroke-width="0.6" fill="none" opacity="0.5"/>
-    <path d="M66 96 L100 132 L134 96" stroke="#f39c12" stroke-width="2" fill="none"/>
-    <path d="M75 96 L100 128 L125 96" stroke="#b87500" stroke-width="0.5" fill="none" opacity="0.5"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#1a1a1a"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#0a0a0a" opacity="0.5"/>
+    <path d="M72 90 Q100 78 128 90 L126 96 Q100 84 74 96 Z" fill="#0a0a0a"/>
+    <path d="M72 90 Q100 80 128 90" stroke="#333" stroke-width="0.6" fill="none" opacity="0.5"/>
+    <path d="M66 90 L100 132 L134 90" stroke="#f39c12" stroke-width="2" fill="none"/>
+    <path d="M75 90 L100 128 L125 90" stroke="#b87500" stroke-width="0.5" fill="none" opacity="0.5"/>
     <text x="100" y="170" text-anchor="middle" font-size="13" fill="#f39c12" font-weight="900">CLAN</text>
     <circle cx="100" cy="150" r="5" fill="#c0392b" stroke="#8b0000" stroke-width="0.6"/>
     <circle cx="100" cy="150" r="2" fill="#f39c12"/>
-    <path d="M82 96 L82 205 M118 96 L118 205" stroke="#333" stroke-width="0.6" opacity="0.5"/>
+    <path d="M82 90 L82 205 M118 90 L118 205" stroke="#333" stroke-width="0.6" opacity="0.5"/>
     <path d="M74 130 Q76 145 74 160" stroke="#0a0a0a" stroke-width="0.5" fill="none" opacity="0.4"/>
     <path d="M126 140 Q124 155 126 170" stroke="#0a0a0a" stroke-width="0.5" fill="none" opacity="0.4"/>
     <rect x="66" y="196" width="68" height="9" fill="#0a0a0a" opacity="0.8"/>
@@ -953,16 +954,16 @@ const ITEMS_SVG = {
   b_gang_armor: `
     ${SL_LONG_L("#2c3e50", "#1a252f")}
     ${SL_LONG_R("#2c3e50", "#1a252f")}
-    <path d="M64 90 L136 90 L142 215 L58 215 Z" fill="#2c3e50" stroke="#f39c12" stroke-width="2.2"/>
-    <path d="M105 90 L105 215 L142 215 L136 90 Z" fill="#1a252f" opacity="0.6"/>
-    <path d="M64 90 L70 102 L70 215 L64 215 Z" fill="#1a252f"/>
-    <path d="M136 90 L130 102 L130 215 L136 215 Z" fill="#1a252f"/>
+    <path d="M64 84 L136 84 L142 215 L58 215 Z" fill="#2c3e50" stroke="#f39c12" stroke-width="2.2"/>
+    <path d="M105 84 L105 215 L142 215 L136 84 Z" fill="#1a252f" opacity="0.6"/>
+    <path d="M64 84 L70 102 L70 215 L64 215 Z" fill="#1a252f"/>
+    <path d="M136 84 L130 102 L130 215 L136 215 Z" fill="#1a252f"/>
     <path d="M74 112 L126 112 M74 142 L126 142 M74 172 L126 172" stroke="#f39c12" stroke-width="1.5"/>
     <ellipse cx="100" cy="155" rx="13" ry="15" fill="#c0392b" stroke="#8b0000" stroke-width="1"/>
     <text x="100" y="162" text-anchor="middle" font-size="14" fill="#f39c12" font-weight="900">☭</text>
-    <path d="M64 90 L100 105 L136 90" stroke="#f39c12" stroke-width="1.5" fill="none" opacity="0.6"/>
-    <path d="M64 90 L70 102" stroke="#f39c12" stroke-width="0.8" fill="none" opacity="0.5"/>
-    <path d="M136 90 L130 102" stroke="#f39c12" stroke-width="0.8" fill="none" opacity="0.5"/>
+    <path d="M64 84 L100 105 L136 84" stroke="#f39c12" stroke-width="1.5" fill="none" opacity="0.6"/>
+    <path d="M64 84 L70 102" stroke="#f39c12" stroke-width="0.8" fill="none" opacity="0.5"/>
+    <path d="M136 84 L130 102" stroke="#f39c12" stroke-width="0.8" fill="none" opacity="0.5"/>
     <circle cx="82" cy="120" r="2" fill="#f39c12" opacity="0.6"/>
     <circle cx="118" cy="120" r="2" fill="#f39c12" opacity="0.6"/>
     <path d="M74 208 L126 208" stroke="#f39c12" stroke-width="1" opacity="0.5"/>`,
@@ -970,9 +971,9 @@ const ITEMS_SVG = {
   b_case_tracksuit: `
     ${SL_LONG_L("#1a1a1a", "#0a0a0a")}
     ${SL_LONG_R("#1a1a1a", "#0a0a0a")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#1a1a1a"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#0a0a0a" opacity="0.5"/>
-    <path d="M72 96 Q100 82 128 96 L126 102 Q100 88 74 102 Z" fill="#0a0a0a"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#1a1a1a"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#0a0a0a" opacity="0.5"/>
+    <path d="M72 90 Q100 78 128 90 L126 96 Q100 84 74 96 Z" fill="#0a0a0a"/>
     <path d="M66 116 L134 116" stroke="#fff" stroke-width="2"/>
     <path d="M66 118 L134 118" stroke="#fff" stroke-width="0.8" opacity="0.6"/>
     <path d="M66 126 L134 126" stroke="#fff" stroke-width="0.8" opacity="0.6"/>
@@ -987,33 +988,33 @@ const ITEMS_SVG = {
   b_case_armani_real: `
     ${SL_LONG_L("#0a0a0a", "#000")}
     ${SL_LONG_R("#0a0a0a", "#000")}
-    <path d="M66 96 L88 96 L88 205 L66 205 Z" fill="#0a0a0a"/>
-    <path d="M134 96 L112 96 L112 205 L134 205 Z" fill="#0a0a0a"/>
-    <path d="M88 96 L100 160 L88 205 L66 205 L66 96 Z" fill="#0a0a0a"/>
-    <path d="M112 96 L100 160 L112 205 L134 205 L134 96 Z" fill="#000"/>
-    <path d="M88 96 L100 160 L112 96 L106 96 L100 148 L94 96 Z" fill="#1a1a1a"/>
-    <path d="M88 96 L80 130 L74 96" fill="#0a0a0a"/>
-    <path d="M112 96 L120 130 L126 96" fill="#000"/>
-    <path d="M80 96 L100 150 L120 96" stroke="#000" stroke-width="2" fill="none"/>
-    <path d="M88 96 L100 160 L112 96" stroke="#f39c12" stroke-width="1.2" fill="none" opacity="0.5"/>
-    <path d="M88 96 L100 160 L112 96" stroke="#000" stroke-width="1.5" fill="none" opacity="0.3"/>
+    <path d="M66 90 L88 90 L88 205 L66 205 Z" fill="#0a0a0a"/>
+    <path d="M134 90 L112 90 L112 205 L134 205 Z" fill="#0a0a0a"/>
+    <path d="M88 90 L100 160 L88 205 L66 205 L66 90 Z" fill="#0a0a0a"/>
+    <path d="M112 90 L100 160 L112 205 L134 205 L134 90 Z" fill="#000"/>
+    <path d="M88 90 L100 160 L112 90 L106 90 L100 148 L94 90 Z" fill="#1a1a1a"/>
+    <path d="M88 90 L80 130 L74 90" fill="#0a0a0a"/>
+    <path d="M112 90 L120 130 L126 90" fill="#000"/>
+    <path d="M80 90 L100 150 L120 90" stroke="#000" stroke-width="2" fill="none"/>
+    <path d="M88 90 L100 160 L112 90" stroke="#f39c12" stroke-width="1.2" fill="none" opacity="0.5"/>
+    <path d="M88 90 L100 160 L112 90" stroke="#000" stroke-width="1.5" fill="none" opacity="0.3"/>
     <path d="M100 160 L100 205" stroke="#000" stroke-width="1" opacity="0.6"/>
     <circle cx="100" cy="172" r="2.5" fill="#f39c12"/>
     <circle cx="100" cy="188" r="2.5" fill="#f39c12"/>
-    <path d="M82 96 L82 108 L84 108 L84 96 Z" fill="#1a1a1a" opacity="0.6"/>
-    <path d="M118 96 L118 108 L116 108 L116 96 Z" fill="#1a1a1a" opacity="0.6"/>
+    <path d="M82 90 L82 108 L84 108 L84 90 Z" fill="#1a1a1a" opacity="0.6"/>
+    <path d="M118 90 L118 108 L116 108 L116 90 Z" fill="#1a1a1a" opacity="0.6"/>
     <path d="M80 130 L80 145 M120 130 L120 145" stroke="#1a1a1a" stroke-width="0.8" opacity="0.5"/>
-    <path d="M76 96 L76 108" stroke="#333" stroke-width="0.5"/>
-    <path d="M124 96 L124 108" stroke="#333" stroke-width="0.5"/>
-    <path d="M78 96 L80 130" stroke="#1a1a1a" stroke-width="0.4" fill="none" opacity="0.4"/>`,
+    <path d="M76 90 L76 108" stroke="#333" stroke-width="0.5"/>
+    <path d="M124 90 L124 108" stroke="#333" stroke-width="0.5"/>
+    <path d="M78 90 L80 130" stroke="#1a1a1a" stroke-width="0.4" fill="none" opacity="0.4"/>`,
 
   b_case_dragon_armor: `
     ${SL_LONG_L("#2c3e50", "#1a252f")}
     ${SL_LONG_R("#2c3e50", "#1a252f")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#2c3e50" stroke="#1a252f" stroke-width="1"/>
-    <path d="M105 96 L105 205 L134 205 L134 96 Z" fill="#1a252f" opacity="0.6"/>
-    <path d="M66 96 L72 108 L72 205 L66 205 Z" fill="#1a252f"/>
-    <path d="M134 96 L128 108 L128 205 L134 205 Z" fill="#1a252f"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#2c3e50" stroke="#1a252f" stroke-width="1"/>
+    <path d="M105 90 L105 205 L134 205 L134 90 Z" fill="#1a252f" opacity="0.6"/>
+    <path d="M66 90 L72 108 L72 205 L66 205 Z" fill="#1a252f"/>
+    <path d="M134 90 L128 108 L128 205 L134 205 Z" fill="#1a252f"/>
     <rect x="84" y="124" width="32" height="60" fill="#1a252f"/>
     <path d="M84 130 L100 120 L116 130" stroke="#e74c3c" stroke-width="2" fill="none"/>
     <path d="M84 180 L100 190 L116 180" stroke="#e74c3c" stroke-width="2" fill="none"/>
@@ -1021,8 +1022,8 @@ const ITEMS_SVG = {
     <ellipse cx="100" cy="155" rx="9" ry="13" fill="#e74c3c" stroke="#8b0000" stroke-width="1"/>
     <path d="M94 152 L106 152" stroke="#8b0000" stroke-width="0.8"/>
     <path d="M92 108 L100 118 L108 108" stroke="#34495e" stroke-width="0.8" fill="none"/>
-    <path d="M84 96 L84 110" stroke="#34495e" stroke-width="0.5" opacity="0.6"/>
-    <path d="M116 96 L116 110" stroke="#34495e" stroke-width="0.5" opacity="0.6"/>
+    <path d="M84 90 L84 110" stroke="#34495e" stroke-width="0.5" opacity="0.6"/>
+    <path d="M116 90 L116 110" stroke="#34495e" stroke-width="0.5" opacity="0.6"/>
     <circle cx="88" cy="138" r="1.5" fill="#f39c12" opacity="0.6"/>
     <circle cx="112" cy="138" r="1.5" fill="#f39c12" opacity="0.6"/>
     <circle cx="88" cy="172" r="1.5" fill="#f39c12" opacity="0.6"/>
@@ -1031,32 +1032,32 @@ const ITEMS_SVG = {
   b_case_top1_body: `
     ${SL_LONG_L("#1a0f2e", "#0f0819")}
     ${SL_LONG_R("#1a0f2e", "#0f0819")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#1a0f2e" stroke="#ffd700" stroke-width="1.8"/>
-    <path d="M105 96 L105 205 L134 205 L134 96 Z" fill="#0f0819" opacity="0.6"/>
-    <path d="M66 96 L72 108 L72 205 L66 205 Z" fill="#0f0819"/>
-    <path d="M134 96 L128 108 L128 205 L134 205 Z" fill="#0f0819"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#1a0f2e" stroke="#ffd700" stroke-width="1.8"/>
+    <path d="M105 90 L105 205 L134 205 L134 90 Z" fill="#0f0819" opacity="0.6"/>
+    <path d="M66 90 L72 108 L72 205 L66 205 Z" fill="#0f0819"/>
+    <path d="M134 90 L128 108 L128 205 L134 205 Z" fill="#0f0819"/>
     <path d="M85 125 L100 108 L115 125 L115 172 L100 188 L85 172 Z" fill="#2c1810" stroke="#ffd700" stroke-width="1.2"/>
     <ellipse cx="100" cy="148" rx="9" ry="11" fill="#ffd700" stroke="#b8860b" stroke-width="0.6"/>
     <circle cx="100" cy="148" r="4.5" fill="#e74c3c"/>
     <circle cx="100" cy="148" r="1.8" fill="#fff" opacity="0.8"/>
-    <path d="M76 100 Q100 90 124 100" stroke="#f39c12" stroke-width="2" fill="none"/>
+    <path d="M76 94 Q100 84 124 94" stroke="#f39c12" stroke-width="2" fill="none"/>
     <path d="M76 200 Q100 208 124 200" stroke="#f39c12" stroke-width="2" fill="none"/>
     <circle cx="82" cy="115" r="3" fill="#ffd700" stroke="#b8860b" stroke-width="0.5"/>
     <circle cx="118" cy="115" r="3" fill="#ffd700" stroke="#b8860b" stroke-width="0.5"/>
     <circle cx="82" cy="115" r="1.2" fill="#e74c3c"/>
     <circle cx="118" cy="115" r="1.2" fill="#e74c3c"/>
     <path d="M84 125 L84 180 M116 125 L116 180" stroke="#ffd700" stroke-width="0.6" opacity="0.5"/>
-    <path d="M66 96 L66 108" stroke="#ffd700" stroke-width="0.8" opacity="0.6"/>
-    <path d="M134 96 L134 108" stroke="#ffd700" stroke-width="0.8" opacity="0.6"/>`,
+    <path d="M66 90 L66 108" stroke="#ffd700" stroke-width="0.8" opacity="0.6"/>
+    <path d="M134 90 L134 108" stroke="#ffd700" stroke-width="0.8" opacity="0.6"/>`,
 
   b_case_top2_body: `
     ${SL_LONG_L("#8b0000", "#5a0000", "#ffd700")}
     ${SL_LONG_R("#8b0000", "#5a0000", "#ffd700")}
-    <path d="M64 90 L136 90 L142 215 L58 215 Z" fill="#8b0000" stroke="#ffd700" stroke-width="2.2"/>
-    <path d="M105 90 L105 215 L142 215 L136 90 Z" fill="#5a0000" opacity="0.6"/>
-    <path d="M64 90 L70 102 L70 215 L64 215 Z" fill="#5a0000"/>
-    <path d="M136 90 L130 102 L130 215 L136 215 Z" fill="#5a0000"/>
-    <path d="M64 90 L84 106 L100 90 L116 106 L136 90" stroke="#ffd700" stroke-width="2" fill="none"/>
+    <path d="M64 84 L136 84 L142 215 L58 215 Z" fill="#8b0000" stroke="#ffd700" stroke-width="2.2"/>
+    <path d="M105 84 L105 215 L142 215 L136 84 Z" fill="#5a0000" opacity="0.6"/>
+    <path d="M64 84 L70 102 L70 215 L64 215 Z" fill="#5a0000"/>
+    <path d="M136 84 L130 102 L130 215 L136 215 Z" fill="#5a0000"/>
+    <path d="M64 84 L84 106 L100 90 L116 106 L136 84" stroke="#ffd700" stroke-width="2" fill="none"/>
     <path d="M74 132 L126 132 M74 162 L126 162 M74 192 L126 192" stroke="#ffd700" stroke-width="1.5"/>
     <ellipse cx="100" cy="146" rx="13" ry="11" fill="#ffd700" stroke="#1a0f2e" stroke-width="1.5"/>
     <text x="100" y="152" text-anchor="middle" font-size="16" fill="#8b0000" font-weight="900">☭</text>
@@ -1064,17 +1065,17 @@ const ITEMS_SVG = {
     <circle cx="116" cy="110" r="2.5" fill="#fff"/>
     <circle cx="80" cy="205" r="2" fill="#f39c12"/>
     <circle cx="120" cy="205" r="2" fill="#f39c12"/>
-    <path d="M64 90 L70 102" stroke="#ffd700" stroke-width="0.8" fill="none" opacity="0.5"/>
-    <path d="M136 90 L130 102" stroke="#ffd700" stroke-width="0.8" fill="none" opacity="0.5"/>
+    <path d="M64 84 L70 102" stroke="#ffd700" stroke-width="0.8" fill="none" opacity="0.5"/>
+    <path d="M136 84 L130 102" stroke="#ffd700" stroke-width="0.8" fill="none" opacity="0.5"/>
     <path d="M64 210 L136 210" stroke="#ffd700" stroke-width="1.5" opacity="0.6"/>`,
 
   b_case_chains: `
     ${SL_SHORT_L("#1a1a1a", "#0a0a0a")}
     ${SL_SHORT_R("#1a1a1a", "#0a0a0a")}
-    <path d="M66 96 L134 96 L134 205 L66 205 Z" fill="#1a1a1a"/>
-    <path d="M104 96 L104 205 L134 205 L134 96 Z" fill="#0a0a0a" opacity="0.5"/>
-    <path d="M72 96 Q86 90 100 90 Q114 90 128 96" stroke="#333" stroke-width="0.8" fill="none"/>
-    <path d="M82 96 Q100 84 118 96 L116 100 Q100 89 84 100 Z" fill="#0a0a0a"/>
+    <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#1a1a1a"/>
+    <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#0a0a0a" opacity="0.5"/>
+    <path d="M72 90 Q86 86 100 86 Q114 86 128 90" stroke="#333" stroke-width="0.8" fill="none"/>
+    <path d="M82 90 Q100 78 118 90 L116 94 Q100 84 84 94 Z" fill="#0a0a0a"/>
     <g stroke="#d4d4d4" stroke-width="2" fill="none">
       <circle cx="82" cy="126" r="4"/><circle cx="82" cy="136" r="4"/><circle cx="82" cy="146" r="4"/><circle cx="82" cy="156" r="4"/>
       <circle cx="118" cy="126" r="4"/><circle cx="118" cy="136" r="4"/><circle cx="118" cy="146" r="4"/><circle cx="118" cy="156" r="4"/>
@@ -1219,12 +1220,12 @@ const ITEMS_SVG = {
     <rect x="101" y="205" width="24" height="160" rx="4" fill="#3d5a80" stroke="#2c4566" stroke-width="0.5"/>
     <path d="M101 205 L101 365 L125 365 L125 205 Z" fill="#2c4566" opacity="0.4"/>
     <rect x="70" y="180" width="60" height="30" fill="#3d5a80" stroke="#2c4566" stroke-width="0.5"/>
-    <rect x="76" y="96" width="8" height="90" fill="#3d5a80" stroke="#2c4566" stroke-width="0.5"/>
-    <rect x="116" y="96" width="8" height="90" fill="#3d5a80" stroke="#2c4566" stroke-width="0.5"/>
-    <rect x="78" y="94" width="8" height="8" fill="#f1c40f" stroke="#b8860b" stroke-width="0.5"/>
-    <rect x="114" y="94" width="8" height="8" fill="#f1c40f" stroke="#b8860b" stroke-width="0.5"/>
+    <rect x="76" y="90" width="8" height="96" fill="#3d5a80" stroke="#2c4566" stroke-width="0.5"/>
+    <rect x="116" y="90" width="8" height="96" fill="#3d5a80" stroke="#2c4566" stroke-width="0.5"/>
+    <rect x="78" y="88" width="8" height="8" fill="#f1c40f" stroke="#b8860b" stroke-width="0.5"/>
+    <rect x="114" y="88" width="8" height="8" fill="#f1c40f" stroke="#b8860b" stroke-width="0.5"/>
     <path d="M70 190 L130 190" stroke="#2c4566" stroke-width="1"/>
-    <path d="M78 96 L78 185 M122 96 L122 185" stroke="#2c4566" stroke-width="0.4" opacity="0.5"/>
+    <path d="M78 90 L78 185 M122 90 L122 185" stroke="#2c4566" stroke-width="0.4" opacity="0.5"/>
     <rect x="82" y="196" width="10" height="8" rx="1" fill="#2c4566" stroke="#1a252f" stroke-width="0.4"/>
     <rect x="108" y="196" width="10" height="8" rx="1" fill="#2c4566" stroke="#1a252f" stroke-width="0.4"/>`,
   l_kilt: `<path d="M70 195 L130 195 L138 295 L62 295 Z" fill="#1a5c1a" stroke="#0f3d0f" stroke-width="0.6"/>
