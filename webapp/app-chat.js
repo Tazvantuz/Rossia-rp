@@ -42,7 +42,7 @@ async function loadChat() {
         } catch(e) {}
         return `<div class="chat-msg">
           <div class="chat-msg-head">
-            <span class="chat-nick" onclick="viewPlayer(${m.user_id})">${formatNickWithTag(m.nickname, m.gang_tag, m.gang_tag_color)}</span>
+            <span class="chat-nick" onclick="viewPlayer(${m.user_id})">${formatNickWithTag(m.nickname, m.gang_tag, m.gang_tag_color, m.role)}</span>
             <span class="chat-lvl">Ур. ${m.level}</span>
             <span class="chat-time">${time}</span>
           </div>
@@ -101,7 +101,7 @@ function renderChatTabs() {
       if (isActive) activePm = p;
       const unreadDot = (p.unread && p.unread > 0) ? `<span style="background:#e74c3c;color:#fff;border-radius:8px;padding:0 5px;font-size:10px;margin-left:4px;">${p.unread}</span>` : '';
       const tagHtml = p.tag ? `<span class="gang-tag" style="color:${escapeHtml(p.tag_color || '#f39c12')};border-color:${escapeHtml(p.tag_color || '#f39c12')}">[${escapeHtml(p.tag)}]</span> ` : '';
-      html += `<button class="chat-tab ${isActive ? 'active' : ''}" data-chat="${p.uid}" onclick="switchChat(${p.uid})">👤 ${tagHtml}${escapeHtml(p.name)}${unreadDot}</button>`;
+      html += `<button class="chat-tab ${isActive ? 'active' : ''}" data-chat="${p.uid}" onclick="switchChat(${p.uid})">👤 ${tagHtml}${escapeHtml(p.name)}${getStaffBadge(p.role)}${unreadDot}</button>`;
     }
   }
   tabs.innerHTML = html;
@@ -113,7 +113,7 @@ function renderChatTabs() {
       const tagHtml = activePm.tag ? `<span class="gang-tag" style="color:${escapeHtml(activePm.tag_color || '#f39c12')};border-color:${escapeHtml(activePm.tag_color || '#f39c12')}">[${escapeHtml(activePm.tag)}]</span> ` : '';
       header.innerHTML = `
         <div style="flex:1; font-weight:bold; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-          ✉️ ${tagHtml}${escapeHtml(activePm.name)}
+          ✉️ ${tagHtml}${escapeHtml(activePm.name)}${getStaffBadge(activePm.role)}
         </div>
         <button onclick="deletePM()" style="background:transparent;border:none;color:#e74c3c;font-size:22px;padding:0 10px;cursor:pointer;line-height:1;" title="Удалить переписку">✕</button>
       `;
@@ -189,7 +189,7 @@ async function searchFriends() {
       el.innerHTML = d.results.map(u => `
         <div class="player-card">
           <div class="player-avatar">👤</div>
-          <div class="player-info"><div class="player-name">${formatNickWithTag(u.nickname, u.gang_tag, u.gang_tag_color)}</div><div class="player-meta">Ур. ${u.level}</div></div>
+          <div class="player-info"><div class="player-name">${formatNickWithTag(u.nickname, u.gang_tag, u.gang_tag_color, u.role)}</div><div class="player-meta">Ур. ${u.level}</div></div>
           <button class="btn btn-primary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="sendFriendRequest(${u.user_id})">Добавить</button>
         </div>
       `).join("");
@@ -216,7 +216,7 @@ async function loadFriends() {
       reqBox.innerHTML = `<h3 class="section-subtitle" style="color:#f39c12">Запросы (${d.requests.length})</h3>` + sortedReqs.map(r => `
         <div class="player-card">
           <div class="player-info">
-            <div class="player-name">${formatNickWithTag(r.nickname, r.gang_tag, r.gang_tag_color)}</div>
+            <div class="player-name">${formatNickWithTag(r.nickname, r.gang_tag, r.gang_tag_color, r.role)}</div>
             <div class="player-meta">${_onlineHtml(r.is_online)}${!r.is_online ? ` · <span class="last-seen">${formatLastSeen(r.last_seen)}</span>` : ''}</div>
           </div>
           <button class="btn btn-primary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="respondFriend(${r.user_id}, true)">✅</button>
@@ -240,7 +240,7 @@ async function loadFriends() {
         <div class="player-card" onclick="viewPlayer(${f.user_id})">
           <div class="player-avatar">👤</div>
           <div class="player-info">
-            <div class="player-name">${formatNickWithTag(f.nickname, f.gang_tag, f.gang_tag_color)}</div>
+            <div class="player-name">${formatNickWithTag(f.nickname, f.gang_tag, f.gang_tag_color, f.role)}</div>
             <div class="player-meta">Ур. ${f.level} · ${_onlineHtml(f.is_online)}${!f.is_online ? ` · <span class="last-seen">${formatLastSeen(f.last_seen)}</span>` : ''}</div>
           </div>
           <button class="btn btn-secondary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick='event.stopPropagation(); openPM(${f.user_id}, ${nickJs}, ${tagJs}, ${colJs})'>✉️ ЛС</button>
@@ -321,6 +321,11 @@ function showNotifications() {
           actions = `<div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
             <button class="btn btn-primary" style="margin:0;width:100%;padding:12px;font-size:14px;" onclick="respondFriendFromNotif(${notifData.user_id}, true, ${n.id})">✅ Принять заявку</button>
             <button class="btn btn-secondary" style="margin:0;width:100%;padding:12px;font-size:14px;" onclick="respondFriendFromNotif(${notifData.user_id}, false, ${n.id})">❌ Отклонить</button>
+          </div>`;
+        }
+        if (n.type === 'mute') {
+          actions = `<div style="display:flex;flex-direction:column;gap:8px;margin-top:12px;">
+            <button class="btn btn-secondary" style="margin:0;width:100%;padding:12px;font-size:14px;background:var(--bg-3);color:#fff;" onclick="hideNotification(${n.id})">Прочитано</button>
           </div>`;
         }
 

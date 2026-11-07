@@ -114,7 +114,7 @@ function renderPlayersList(players) {
     <div class="player-card" onclick="viewPlayer(${p.user_id})">
       <div class="player-avatar">👤</div>
       <div class="player-info">
-        <div class="player-name">${formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color)}</div>
+        <div class="player-name">${formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color, p.role)}</div>
         <div class="player-meta">Ур. ${p.level} · ${_onlineHtml(p.is_online)}${!p.is_online ? ` · <span class="last-seen">${formatLastSeen(p.last_seen)}</span>` : ''}</div>
       </div>
       <div class="player-money">${fmtMoney(p.balance)}₽</div>
@@ -149,7 +149,7 @@ async function viewPlayer(uid) {
     const colJs  = jsAttr(d.gang_tag_color || '');
     openModal(`
       <div class="shop-preview">${renderCharacterSVG(d.outfit, {width: 170, height: 340})}</div>
-      <h2 style="text-align:center;margin-bottom:4px">${formatNickWithTag(d.nickname, d.gang_tag, d.gang_tag_color)}</h2>
+      <h2 style="text-align:center;margin-bottom:4px">${formatNickWithTag(d.nickname, d.gang_tag, d.gang_tag_color, d.role)}</h2>
       <div style="text-align:center;margin-bottom:8px;">${onlineInfo}</div>
       <div style="text-align:center;margin:12px 0">
         <div style="font-size:16px;font-weight:700">Ур. ${d.level}</div>
@@ -160,6 +160,7 @@ async function viewPlayer(uid) {
         </div>
         <div style="font-size:20px;margin-top:8px">${ach}</div>
       </div>
+      ${(!isMe && ['admin','moderator'].includes(state.player.role) && !['admin','moderator'].includes(d.role)) ? `<button class="btn btn-secondary" style="background:rgba(231,76,60,.15);color:var(--danger);border:1px solid rgba(231,76,60,.3);margin-bottom:8px" onclick='showMuteModal(${uid}, ${nickJs})'>🔇 Замутить</button>` : ''}
       ${!isMe ? `<button class="btn btn-primary" style="background:linear-gradient(135deg,#c0392b,#e74c3c);margin-bottom:8px" onclick='challengePvP(${uid}, ${nickJs})'>⚔️ Гоп-стоп</button>` : ''}
       ${!isMe ? `<button class="btn btn-primary" onclick='showTradeOffer(${uid}, ${nickJs})'>🤝 Трейд</button>` : ''}
       ${(!isMe && !d.is_friend && !d.friend_pending) ? `<button class="btn btn-secondary" onclick="sendFriendRequest(${uid})">➕ В друзья</button>` : ''}
@@ -325,4 +326,35 @@ async function sendTradeOffer(uid) {
     closeModal();
     toast("✅ Предложение отправлено", "success");
   } catch(e) { toast(e.message, "error"); }
+}
+
+// ═══ МОДЕРАЦИЯ ═══
+function showMuteModal(uid, name) {
+  openModal(`
+    <h2 style="text-align:center;margin-bottom:8px;">🔇 Замутить игрока</h2>
+    <p style="text-align:center;color:var(--hint);font-size:13px;margin-bottom:16px;">Игрок: <b>${escapeHtml(name)}</b></p>
+    <label style="font-size:12px;color:var(--hint);margin-bottom:4px;display:block;">Срок</label>
+    <select id="mute-duration" style="width:100%;padding:12px;background:var(--bg-3);border:none;border-radius:8px;color:#fff;margin-bottom:12px;font-size:14px;">
+      <option value="10">10 минут</option>
+      <option value="30">30 минут</option>
+      <option value="60">1 час</option>
+      <option value="180">3 часа</option>
+    </select>
+    <label style="font-size:12px;color:var(--hint);margin-bottom:4px;display:block;">Причина</label>
+    <input id="mute-reason" type="text" placeholder="Например: спам, оскорбления" style="width:100%;padding:12px;background:var(--bg-3);border:none;border-radius:8px;color:#fff;margin-bottom:16px;font-size:14px;">
+    <button class="btn btn-primary" onclick="submitMute(${uid})" style="background:linear-gradient(135deg,#c0392b,#e74c3c);">Замутить</button>
+    <button class="btn btn-secondary" onclick="closeModal()" style="margin-top:8px;">Отмена</button>
+  `);
+}
+
+async function submitMute(uid) {
+  const duration = document.getElementById('mute-duration').value;
+  const reason = document.getElementById('mute-reason').value.trim() || "Без причины";
+  try {
+    await api("player/mute", { target_id: uid, duration_minutes: parseInt(duration), reason: reason });
+    toast("✅ Игрок заглушен", "success");
+    closeModal();
+  } catch(e) {
+    toast(e.message, "error");
+  }
 }

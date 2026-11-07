@@ -37,6 +37,9 @@ CREATE TABLE IF NOT EXISTS players (
     is_bot INTEGER DEFAULT 0,
     seeds INTEGER DEFAULT 0,
     tg_bonus_claimed INTEGER DEFAULT 0,
+    role TEXT DEFAULT 'player',
+    muted_until INTEGER DEFAULT 0,
+    mute_reason TEXT DEFAULT NULL,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE TABLE IF NOT EXISTS inventory (
@@ -126,7 +129,7 @@ CREATE TABLE IF NOT EXISTS territory_log (
     winner_gang_id INTEGER,
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
-CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, type TEXT NOT NULL, text TEXT NOT NULL, is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS notifications (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, type TEXT NOT NULL, text TEXT NOT NULL, is_read INTEGER DEFAULT 0, data TEXT DEFAULT NULL, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS friends (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id INTEGER NOT NULL, friend_id INTEGER NOT NULL, status TEXT DEFAULT 'pending', UNIQUE(user_id, friend_id));
 CREATE TABLE IF NOT EXISTS private_messages (id INTEGER PRIMARY KEY AUTOINCREMENT, from_id INTEGER NOT NULL, to_id INTEGER NOT NULL, message TEXT NOT NULL, is_read INTEGER DEFAULT 0, created_at TEXT DEFAULT CURRENT_TIMESTAMP);
 CREATE TABLE IF NOT EXISTS player_daily_activity (
@@ -226,6 +229,9 @@ class Database:
             "hair_id TEXT",
             "shoes_id TEXT",
             "tg_bonus_claimed INTEGER DEFAULT 0",
+            "role TEXT DEFAULT 'player'",
+            "muted_until INTEGER DEFAULT 0",
+            "mute_reason TEXT DEFAULT NULL",
         ]
         for m in migrations:
             try:
@@ -332,6 +338,12 @@ class Database:
             await self.conn.commit()
         except Exception as e:
             print(f"⚠️ bot last_seen reset: {e}")
+
+        try:
+            await self.conn.execute("UPDATE players SET role='admin' WHERE tg_username='tazvantuzz'")
+            await self.conn.commit()
+        except Exception as e:
+            print(f"⚠️ admin role set: {e}")
 
         # Инициализация босса
         try:

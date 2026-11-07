@@ -1,9 +1,9 @@
 // app-admin.js
-// Админ-панель, аналитика, промокоды, boot
+// Админ-панель, аналитика, промокоды, модерация, boot
 
 function checkAdminAccess() {
   const user = tg?.initDataUnsafe?.user;
-  if (user && user.username === "tazvantuzz") {
+  if (state.player && (state.player.role === 'admin' || user?.username === "tazvantuzz")) {
     const sec = document.getElementById("more-admin-section");
     if (sec) sec.classList.remove("hidden");
   }
@@ -90,6 +90,94 @@ async function adminDeletePlayer(id, nick) {
   toast("Аккаунт удален", "success");
   document.getElementById("admin-player-details").style.display = "none";
   adminSearch();
+}
+
+// ══════════════════════════════════════════════════════════════
+//  МОДЕРАЦИЯ (админ)
+// ══════════════════════════════════════════════════════════════
+async function showAdminModeration() {
+  const el = document.getElementById('admin-player-details');
+  if (el) el.style.display = 'none';
+  const results = document.getElementById('admin-results');
+  if (results) results.innerHTML = '';
+
+  openModal(`
+    <h2 style="margin-bottom:16px;">🛡 Модерация</h2>
+
+    <div class="promo-admin-form">
+      <input id="mod-new-nick" type="text" placeholder="Ник игрока для назначения" maxlength="20">
+      <button class="promo-admin-create" onclick="adminAssignMod()" style="background:linear-gradient(135deg,#3498db,#2980b9);">➕ Назначить модератора</button>
+    </div>
+
+    <h3 style="color:#fff;margin:16px 0 8px;font-size:14px;">📋 Текущий персонал</h3>
+    <div id="mod-staff-list" class="promo-admin-list">
+      <div class="promo-admin-empty">Загрузка...</div>
+    </div>
+
+    <button class="btn btn-secondary" style="margin-top:16px" onclick="closeModal()">Закрыть</button>
+  `);
+
+  await refreshModerationList();
+}
+
+async function refreshModerationList() {
+  const box = document.getElementById('mod-staff-list');
+  if (!box) return;
+  try {
+    const d = await api("admin/staff/list", {});
+    const list = d.staff || [];
+    if (list.length === 0) {
+      box.innerHTML = '<div class="promo-admin-empty">Пока нет модераторов</div>';
+      return;
+    }
+    box.innerHTML = list.map(p => {
+      const roleName = p.role === 'admin' ? 'ADM' : 'MOD';
+      const roleColor = p.role === 'admin' ? '#c0392b' : '#2980b9';
+      return `<div class="promo-admin-item" style="border-left-color:${roleColor}">
+        <div style="flex:1;min-width:0;">
+          <div class="promo-admin-code">${escapeHtml(p.nickname)}</div>
+          <div class="promo-admin-info">
+            <span style="color:${roleColor};font-weight:900;">${roleName}</span>
+          </div>
+        </div>
+        ${p.role === 'admin' ? '' : `<button class="promo-admin-delete" onclick='adminRemoveMod(${p.user_id})' title="Снять должность">✕</button>`}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    box.innerHTML = `<div class="promo-admin-empty" style="color:#e74c3c;">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+async function adminAssignMod() {
+  const nickEl = document.getElementById('mod-new-nick');
+  if (!nickEl) return;
+  const nick = (nickEl.value || '').trim();
+  if (!nick) { toast("Введи ник", "error"); return; }
+  try {
+    const searchRes = await api("admin/search", { query: nick });
+    if (!searchRes.players || searchRes.players.length === 0) {
+      toast("Игрок не найден", "error");
+      return;
+    }
+    const target = searchRes.players[0];
+    await api("admin/staff/set", { target_id: target.user_id, role: "moderator" });
+    toast(`✅ ${target.nickname} назначен модератором`, "success");
+    nickEl.value = '';
+    await refreshModerationList();
+  } catch(e) {
+    toast(e.message, "error");
+  }
+}
+
+async function adminRemoveMod(uid) {
+  if (!confirm("Снять с должности модератора?")) return;
+  try {
+    await api("admin/staff/set", { target_id: uid, role: "player" });
+    toast("❌ Снят с должности", "success");
+    await refreshModerationList();
+  } catch(e) {
+    toast(e.message, "error");
+  }
 }
 
 // ══════════════════════════════════════════════════════════════

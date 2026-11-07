@@ -59,7 +59,7 @@ async def api_location(request):
     
     now_ts = int(time.time())
     others = await db.fetchall(
-        "SELECT p.user_id, p.nickname, p.level, p.balance, p.last_seen, p.tg_username, p.is_bot, "
+        "SELECT p.user_id, p.nickname, p.level, p.balance, p.last_seen, p.tg_username, p.is_bot, p.role, "
         "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
         "FROM players p "
         "LEFT JOIN gang_members gm ON gm.user_id = p.user_id "
@@ -110,6 +110,7 @@ async def api_player_view(request):
         "gang_tag_color": t.get("gang_tag_color"),
         "tg_username": t.get("tg_username"),
         "level": t["level"], "balance": t["balance"],
+        "role": t.get("role", "player"),
         "last_seen": t.get("last_seen", 0),
         "outfit": get_outfit(t),
         "businesses_count": len(_json_biz(t)),
@@ -384,9 +385,8 @@ async def api_leaderboard(request):
     category = body.get("category", "money")
 
     if category == "money":
-        # ИСПРАВЛЕНО: добавлен p.user_id
         rows = await db.fetchall(
-            "SELECT p.user_id, p.nickname, p.balance, p.level, p.businesses, "
+            "SELECT p.user_id, p.nickname, p.balance, p.level, p.businesses, p.role, "
             "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
             "FROM players p "
             "LEFT JOIN gang_members gm ON gm.user_id = p.user_id "
@@ -395,13 +395,13 @@ async def api_leaderboard(request):
         result = [{"rank":i+1,"user_id":r["user_id"],"nickname":r["nickname"],
                    "gang_tag":r.get("gang_tag"),
                    "gang_tag_color":r.get("gang_tag_color"),
+                   "role": r.get("role", "player"),
                    "balance":r["balance"],"level":r["level"],
                    "businesses_count":len(_json_biz(r))}
                   for i,r in enumerate(rows)]
     elif category == "level":
-        # ИСПРАВЛЕНО: добавлен p.user_id
         rows = await db.fetchall(
-            "SELECT p.user_id, p.nickname, p.balance, p.level, p.xp, "
+            "SELECT p.user_id, p.nickname, p.balance, p.level, p.xp, p.role, "
             "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
             "FROM players p "
             "LEFT JOIN gang_members gm ON gm.user_id = p.user_id "
@@ -410,6 +410,7 @@ async def api_leaderboard(request):
         result = [{"rank":i+1,"user_id":r["user_id"],"nickname":r["nickname"],
                    "gang_tag":r.get("gang_tag"),
                    "gang_tag_color":r.get("gang_tag_color"),
+                   "role": r.get("role", "player"),
                    "level":r["level"],"xp":r["xp"],"balance":r["balance"]}
                   for i,r in enumerate(rows)]
     elif category == "gang":
@@ -450,7 +451,7 @@ async def api_friend_search(request):
     body = await request.json(); q = body.get("query", "").strip()
     if len(q) < 2: return web.json_response({"error": "Минимум 2 символа"}, status=400)
     rows = await db.fetchall(
-        "SELECT p.user_id, p.nickname, p.level, p.tg_username, p.is_bot, "
+        "SELECT p.user_id, p.nickname, p.level, p.tg_username, p.is_bot, p.role, p.last_seen, "
         "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
         "FROM players p "
         "LEFT JOIN gang_members gm ON gm.user_id = p.user_id "
@@ -527,7 +528,7 @@ async def api_friend_list(request):
     ud = await _user(request); uid = ud["id"]
     now = int(time.time())
     friends = await db.fetchall(
-        "SELECT f.friend_id as user_id, p.nickname, p.level, p.last_seen, p.tg_username, p.is_bot, "
+        "SELECT f.friend_id as user_id, p.nickname, p.level, p.last_seen, p.tg_username, p.is_bot, p.role, "
         "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
         "FROM friends f "
         "JOIN players p ON p.user_id=f.friend_id "
@@ -540,7 +541,7 @@ async def api_friend_list(request):
         else:
             f["is_online"] = (f.get("last_seen") or 0) > now - 120
     reqs = await db.fetchall(
-        "SELECT f.user_id, p.nickname, p.level, p.last_seen, p.tg_username, p.is_bot, "
+        "SELECT f.user_id, p.nickname, p.level, p.last_seen, p.tg_username, p.is_bot, p.role, "
         "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
         "FROM friends f "
         "JOIN players p ON p.user_id=f.user_id "
@@ -557,6 +558,13 @@ async def api_friend_list(request):
 # ═══════════ ЧАТ ═══════════
 async def api_chat_pm_send(request):
     ud = await _user(request); uid = ud["id"]
+    p = await _player(uid)
+    now = int(time.time())
+    if p.get("muted_until", 0) > now:
+        left = p["muted_until"] - now
+        mins = max(1, left // 60)
+        return web.json_response({"error": f"Вы заглушены. Осталось {mins} мин. Причина: {p.get('mute_reason', '')}"}, status=403)
+        
     body = await request.json(); to_id = int(body.get("to_id", 0)); msg = (body.get("message") or "").strip()
     if not msg: return web.json_response({"error": "Пустое"}, status=400)
     if len(msg) > 500: msg = msg[:500]
@@ -576,6 +584,7 @@ async def api_chat_pm_conversations(request):
         SELECT 
             t.other_id as user_id,
             p.nickname,
+            p.role,
             g.tag as gang_tag,
             g.tag_color as gang_tag_color,
             t.last_id,
@@ -624,11 +633,18 @@ async def api_chat_send(request):
         ud = await _user(request); uid = ud["id"]
         p = await _player(uid)
         if not p: return web.json_response({"error":"Нет игрока"}, status=400)
+        
+        now = int(time.time())
+        if p.get("muted_until", 0) > now:
+            left = p["muted_until"] - now
+            mins = max(1, left // 60)
+            return web.json_response({"error": f"Вы заглушены. Осталось {mins} мин. Причина: {p.get('mute_reason', '')}"}, status=403)
+
         body = await request.json()
         msg = (body.get("message") or "").strip()
         if not msg: return web.json_response({"error":"Пустое"}, status=400)
         if len(msg) > 200: msg = msg[:200]
-        now = int(time.time())
+        
         last = USER_LAST_CHAT.get(uid, 0)
         if now - last < CHAT_COOLDOWN:
             return web.json_response({"error": f"Кд {CHAT_COOLDOWN-(now-last)}с"}, status=400)
@@ -648,9 +664,10 @@ async def api_chat_send(request):
 async def api_chat_get(request):
     await _user(request)
     rows = await db.fetchall(
-        "SELECT c.user_id, c.nickname, c.level, c.message, c.created_at, "
+        "SELECT c.user_id, c.nickname, c.level, c.message, c.created_at, p.role, "
         "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
         "FROM chat_messages c "
+        "LEFT JOIN players p ON p.user_id = c.user_id "
         "LEFT JOIN gang_members gm ON gm.user_id = c.user_id "
         "LEFT JOIN gangs g ON g.gang_id = gm.gang_id "
         "ORDER BY c.id DESC LIMIT 50")

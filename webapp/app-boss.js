@@ -99,7 +99,7 @@ async function renderBossDetail() {
         <div class="boss-top-item" onclick="viewPlayer(${p.user_id})">
           <div class="boss-top-rank">${i===0?'🥇':i===1?'🥈':i===2?'🥉':'#'+(i+1)}</div>
           <div class="boss-top-info">
-            <div class="boss-top-name">${formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color)}</div>
+            <div class="boss-top-name">${formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color, p.role)}</div>
             <div class="boss-top-lvl">Ур. ${p.level}</div>
           </div>
           <div class="boss-top-dmg">${p.damage.toLocaleString('ru-RU')} DMG</div>
@@ -118,7 +118,6 @@ async function renderBossDetail() {
     const check1k = d.my_damage >= 1000 ? (reward1k ? '✅' : '🔓') : '🔒';
     const check10k = d.my_damage >= 10000 ? (reward10k ? '✅' : '🔓') : '🔒';
     
-    // Блок с кнопкой атаки или статусом
     let actionBtnHtml = '';
     if (isDead) {
         actionBtnHtml = `<div style="text-align:center;padding:16px;background:rgba(46,204,113,0.1);border:1px solid #2ecc71;border-radius:12px;color:#2ecc71;font-weight:900;font-size:16px;">🏆 БОСС ПОВЕРЖЕН!<br><span style="font-size:12px;font-weight:normal;">Награды распределены</span></div>`;
@@ -150,6 +149,11 @@ async function renderBossDetail() {
           <div class="boss-hp-fill" style="width:${hpPct}%"></div>
         </div>
       </div>
+
+      <div style="text-align:center;margin-bottom:14px;">
+        <div style="font-size:11px;color:var(--hint);text-transform:uppercase;letter-spacing:0.6px;font-weight:700;">Твой урон по боссу</div>
+        <div style="font-size:26px;font-weight:900;color:#e74c3c;line-height:1.1;margin-top:2px;">${d.my_damage.toLocaleString('ru-RU')} <span style="font-size:14px;color:var(--hint);font-weight:700;">DMG</span></div>
+      </div>
       
       ${actionBtnHtml}
       
@@ -160,7 +164,7 @@ async function renderBossDetail() {
       
       <h3 class="section-subtitle" style="margin-top:24px;">🎁 Награды</h3>
       <div class="boss-rewards">
-        <div class="boss-reward-card ${d.my_damage >= 1000 ? (reward1k ? 'claimed' : 'unlocked') : 'locked'}">
+        <div class="boss-reward-card ${d.my_damage >= 1000 ? (reward1k ? 'claimed' : 'unlocked') : 'locked'}" onclick="showBossRewardPreview('rh_pocyk')" style="cursor:pointer;">
           <div class="boss-reward-icon">${check1k}</div>
           <div class="boss-reward-info">
             <div class="boss-reward-title">Опасный Поцык (в руку)</div>
@@ -203,12 +207,10 @@ async function renderBossDetail() {
       </div>
     `;
     
-    // Включаем кулдаун на кнопку, если босс активен и есть кд
     if (isActive && d.my_cooldown > 0) {
       disableBossBtn(d.my_cooldown);
     }
     
-    // Запускаем таймер только если босс активен
     if (isActive) {
       bossTimerInterval = setInterval(() => {
         const tEl = document.getElementById("boss-timer");
@@ -217,7 +219,7 @@ async function renderBossDetail() {
         tEl.textContent = formatBossTime(left);
         if (left <= 0) {
             clearInterval(bossTimerInterval);
-            renderBossDetail(); // Перезагружаем, чтобы показать "Босс сбежал"
+            renderBossDetail();
         }
       }, 1000);
     }
@@ -240,7 +242,7 @@ async function attackBoss() {
     
     if (d.new_hp <= 0) {
       toast("🎉 БОСС ПОВЕРЖЕН! Награды распределены!", "success");
-      setTimeout(() => renderBossDetail(), 800); // Даем время прочитать тост и обновляем экран
+      setTimeout(() => renderBossDetail(), 800);
       return;
     }
     
@@ -253,7 +255,7 @@ async function attackBoss() {
       hpBar.style.width = pct + "%";
     }
     
-    setTimeout(() => renderBossDetail(), 500); // Перезагружаем топ и обновляем кд
+    setTimeout(() => renderBossDetail(), 500);
   } catch(e) {
     toast(e.message, "error");
     if (e.message.includes("Кд")) {
@@ -282,4 +284,15 @@ function disableBossBtn(seconds) {
       btn.textContent = `⏳ Кд ${left} сек`;
     }
   }, 1000);
+}
+
+function showBossRewardPreview(iid) {
+  const preview = {...state.player.outfit};
+  preview.right_hand_id = {item_id: iid};
+  openModal(`
+    <div class="shop-preview">${renderCharacterSVG(preview, {width: 190, height: 380})}</div>
+    <h2 style="text-align:center;margin-bottom:4px;">Опасный Поцык</h2>
+    <p style="text-align:center;color:var(--hint);margin-bottom:16px;font-size:13px;">Награда за 1000+ урона по боссу</p>
+    <button class="btn btn-primary" onclick="closeModal()">Закрыть</button>
+  `);
 }

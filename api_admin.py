@@ -22,7 +22,36 @@ async def _is_admin(request):
         user_str = parsed.get("user")
         if user_str:
             user = json.loads(user_str)
-            return user.get("username") == ADMIN_USERNAME
+            if user.get("username") == ADMIN_USERNAME:
+                return True
+            uid = user.get("id")
+            if uid:
+                p = await db.fetchone("SELECT role FROM players WHERE user_id=?", (uid,))
+                if p and p.get("role") == "admin":
+                    return True
+    except: pass
+    return False
+
+async def _is_staff(request):
+    try:
+        init_data = request.headers.get("X-Init-Data")
+        if not init_data:
+            body_bytes = await request.read()
+            body = json.loads(body_bytes)
+            init_data = body.get("initData")
+        if not init_data:
+            return False
+        parsed = dict(parse_qsl(init_data))
+        user_str = parsed.get("user")
+        if user_str:
+            user = json.loads(user_str)
+            if user.get("username") == ADMIN_USERNAME:
+                return True
+            uid = user.get("id")
+            if uid:
+                p = await db.fetchone("SELECT role FROM players WHERE user_id=?", (uid,))
+                if p and p.get("role") in ("admin", "moderator"):
+                    return True
     except: pass
     return False
 
@@ -113,19 +142,16 @@ async def api_admin_analytics(request):
         "SELECT COUNT(*) as c FROM players WHERE last_seen > ? AND is_bot=0",
         (now - 120,)))["c"]
     
-    # ИСПРАВЛЕНО: используем локальное время
     new_today = (await db.fetchone(
         "SELECT COUNT(*) as c FROM players WHERE date(created_at, 'localtime') = date('now', 'localtime') AND is_bot=0"
     ))["c"]
 
-    # ИСПРАВЛЕНО: активные сегодня (локальное время)
     active_today = (await db.fetchone(
         "SELECT COUNT(DISTINCT pda.user_id) as c FROM player_daily_activity pda "
         "JOIN players p ON p.user_id = pda.user_id "
         "WHERE date(pda.day * 86400, 'unixepoch', 'localtime') = date('now', 'localtime') AND p.is_bot=0"
     ))["c"]
 
-    # ИСПРАВЛЕНО: активные за неделю (локальное время)
     active_week = (await db.fetchone(
         "SELECT COUNT(DISTINCT pda.user_id) as c FROM player_daily_activity pda "
         "JOIN players p ON p.user_id = pda.user_id "
@@ -206,7 +232,6 @@ async def api_admin_analytics(request):
             "total_str": f"{hours}ч {mins}м" if hours > 0 else f"{mins}м",
         })
 
-    # ИСПРАВЛЕНО: график активности по локальным дням
     daily_activity = []
     rows = await db.fetchall(
         "SELECT date(pda.day * 86400, 'unixepoch', 'localtime') as local_date, COUNT(DISTINCT pda.user_id) as c "
@@ -314,4 +339,50 @@ async def api_admin_promo_delete(request):
         return web.json_response({"error": "Не указан код"}, status=400)
     await db.execute("DELETE FROM promo_codes WHERE code=?", (code,))
     await db.execute("DELETE FROM promo_used WHERE code=?", (code,))
+    return web.json_response({"ok": True})
+
+# ═══════════ МОДЕРАЦИЯ ═══════════
+async def api_admin_staff_list(request):
+    if not await _is_admin(request):
+        return web.json_response({"error": "Доступ запрещен"}, status=403)
+    rows = await db.fetchall("SELECT user_id, nickname, role FROM players WHERE role IN ('admin', 'moderator') ORDER BY role DESC")
+    return web.json_response({"staff": rows})
+
+async def api_admin_set_role(request):
+    if not await _is_admin(request):
+        return web.json_response({"error": "Доступ запрещен"}, status=403)
+    body = await request.json()
+    target_id = int(body.get("target_id"))
+    role = body.get("role")
+    if role not in ("player", "moderator", "admin"):
+        return web.json_response({"error": "Неверная роль"}, status=400)
+    await db.execute("UPDATE players SET role=? WHERE user_id=?", (role, target_id))
+    return web.json_response({"ok": True})
+
+async def api_player_mute(request):
+    if not await _is_staff(request):
+        return web.json_response({"error": "Доступ запрещен"}, status=403)
+    body = await request.json()
+    target_id = int(body.get("target_id"))
+    duration = int(body.get("duration_minutes", 10))
+    reason = body.get("reason", "Без причины")
+    
+    p = await db.fetchone("SELECT role FROM players WHERE user_id=?", (target_id,))
+    if p and p.get("role") in ("admin", "moderator"):
+        return web.json_response({"error": "Нельзя замутить персонал"}, status=400)
+        
+    until = int(time.time()) + duration * 60
+    await db.execute("UPDATE players SET muted_until=?, mute_reason=? WHERE user_id=?", (until, reason, target_id))
+    
+    ud = await _user(request)
+    admin_p = await _player(ud["id"])
+    admin_nick = admin_p["nickname"] if admin_p else "Админ"
+    
+    mins = duration
+    time_str = f"{mins} мин" if mins < 60 else f"{mins//60} ч"
+    
+    await db.execute(
+        "INSERT INTO notifications (user_id, type, text, data) VALUES (?, 'mute', ?, ?)",
+        (target_id, f"Вам выдан мут на {time_str}. Причина: {reason}. Выдал: {admin_nick}", json.dumps({}))
+    )
     return web.json_response({"ok": True})

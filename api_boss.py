@@ -65,7 +65,7 @@ async def api_boss_get(request):
     my_dmg_row = await db.fetchone("SELECT damage, last_attack_ts FROM boss_damage WHERE boss_id=? AND user_id=?", (BOSS_ID, uid))
     my_dmg = my_dmg_row['damage'] if my_dmg_row else 0
     
-    top = await db.fetchall("SELECT bd.user_id, bd.damage, p.nickname, p.level, g.tag as gang_tag, g.tag_color as gang_tag_color "
+    top = await db.fetchall("SELECT bd.user_id, bd.damage, p.nickname, p.level, p.role, g.tag as gang_tag, g.tag_color as gang_tag_color "
                             "FROM boss_damage bd JOIN players p ON p.user_id=bd.user_id "
                             "LEFT JOIN gang_members gm ON gm.user_id = p.user_id "
                             "LEFT JOIN gangs g ON g.gang_id = gm.gang_id "

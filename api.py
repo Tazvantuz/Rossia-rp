@@ -8,7 +8,7 @@ import api_social
 import api_gang
 import api_pvp
 import api_admin
-import api_boss  # <--- НОВЫЙ ИМПОРТ
+import api_boss
 
 def set_token(t):
     api_core.set_token(t)
@@ -31,6 +31,9 @@ def setup_routes(app):
     R.add_post("/api/admin/change_balance", api_admin.api_admin_change_balance)
     R.add_post("/api/admin/delete", api_admin.api_admin_delete)
     R.add_post("/api/admin/set_level", api_admin.api_admin_set_level)
+    R.add_post("/api/admin/staff/list", api_admin.api_admin_staff_list)
+    R.add_post("/api/admin/staff/set", api_admin.api_admin_set_role)
+    R.add_post("/api/player/mute", api_admin.api_player_mute)
 
     R.add_post("/api/promo/apply", api_economy.api_promo_apply)
     R.add_post("/api/admin/promo/list", api_admin.api_admin_promo_list)
@@ -136,6 +139,5 @@ def setup_routes(app):
     R.add_post("/api/pvp/action", api_pvp.api_pvp_action)
     R.add_post("/api/pvp/force_cancel", api_pvp.api_pvp_force_cancel)
 
-    # ═══ БОСС ═══
     R.add_post("/api/boss/get", api_boss.api_boss_get)
     R.add_post("/api/boss/attack", api_boss.api_boss_attack)

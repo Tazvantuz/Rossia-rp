@@ -8,7 +8,7 @@ let state = {
   shopFilter: "hair", appearanceMode: "shop", casinoGame: "coin",
   casinoLocked: false, casinoLockTime: 0, openPMs: [],
   chatWith: 'global', jobsCache: null, businessesCache: null, casesData: null,
-  bossView: 'list', // Для вкладки Боссы
+  bossView: 'list',
 };
 
 const MAIN_TABS = ['home', 'casino', 'cases', 'bosses', 'chat', 'more'];
@@ -25,11 +25,22 @@ const SUB_TAB_TITLES = {
   bosses: '💀 Боссы',
 };
 
-function formatNickWithTag(name, tag, color) {
+function getStaffBadge(role) {
+  if (role === 'admin') {
+    return `<span style="display:inline-flex;align-items:center;gap:2px;margin-left:4px;vertical-align:middle;"><img src="assets/personal.png" style="width:14px;height:14px;object-fit:contain;"><span style="background:#c0392b;color:#fff;font-size:10px;font-weight:900;padding:1px 4px;border-radius:4px;line-height:1;">ADM</span></span>`;
+  }
+  if (role === 'moderator') {
+    return `<span style="display:inline-flex;align-items:center;gap:2px;margin-left:4px;vertical-align:middle;"><img src="assets/personal.png" style="width:14px;height:14px;object-fit:contain;"><span style="background:#2980b9;color:#fff;font-size:10px;font-weight:900;padding:1px 4px;border-radius:4px;line-height:1;">MOD</span></span>`;
+  }
+  return '';
+}
+
+function formatNickWithTag(name, tag, color, role) {
   const safeName = escapeHtml(name || "");
-  if (!tag) return safeName;
+  const badge = getStaffBadge(role);
+  if (!tag) return safeName + badge;
   const c = color || "#f39c12";
-  return `<span class="gang-tag" style="color:${escapeHtml(c)};border-color:${escapeHtml(c)}">[${escapeHtml(tag)}]</span> ${safeName}`;
+  return `<span class="gang-tag" style="color:${escapeHtml(c)};border-color:${escapeHtml(c)}">[${escapeHtml(tag)}]</span> ${safeName}${badge}`;
 }
 
 function formatLastSeen(ts) {
@@ -290,6 +301,7 @@ async function loadConversations() {
         existing.name = c.nickname;
         existing.tag = c.gang_tag;
         existing.tag_color = c.gang_tag_color;
+        existing.role = c.role;
         existing.unread = c.unread;
         existing._ts = Date.now();
       } else {
@@ -298,6 +310,7 @@ async function loadConversations() {
           name: c.nickname,
           tag: c.gang_tag,
           tag_color: c.gang_tag_color,
+          role: c.role,
           unread: c.unread,
           _ts: Date.now()
         });
@@ -534,15 +547,11 @@ function nextStepGo() {
 // ══════════════════════════════════════════════════════════════
 function renderPlayer() {
   const p = state.player; if (!p) return;
-  $("#nick").innerHTML = p.gang_tag
-    ? formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color)
-    : escapeHtml(p.nickname);
+  $("#nick").innerHTML = formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color, p.role);
   const hasClothes = p.outfit.head_id.item_id || p.outfit.body_id.item_id || p.outfit.legs_id.item_id;
   $("#subtitle").textContent = `Ур. ${p.level} · ${hasClothes ? "модник" : "голый бомж"}`;
   $("#money").textContent = fmtMoney(p.balance);
-  $("#char-name").innerHTML = p.gang_tag
-    ? formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color)
-    : escapeHtml(p.nickname);
+  $("#char-name").innerHTML = formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color, p.role);
   $("#char-level").textContent = p.level;
   (function(){
     const cs = p.combat_stats || {};
