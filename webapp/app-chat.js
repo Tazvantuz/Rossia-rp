@@ -10,11 +10,11 @@ function startChatPolling() {
     else loadPM();
   };
   tick();
-  chatInterval = setInterval(tick, 3000);
+  chatInterval = setInterval(tick, 2000); // Real-time: 2 секунды
   if (window._convPoll) clearInterval(window._convPoll);
   window._convPoll = setInterval(() => {
     if (state.player) loadConversations();
-  }, 15000);
+  }, 5000); // Обновление списка бесед каждые 5 секунд
 }
 
 function stopChatPolling() {
@@ -76,8 +76,12 @@ function openPM(uid, name, tag, color) {
   state.chatWith = uid;
   const existing = state.openPMs.find(x => Number(x.uid) === uid);
   if (existing) existing.unread = 0;
+  
+  renderChatTabs(); // <-- СРАЗУ обновляем кнопки
   closeModal();
   showTab("chat");
+  loadPM(); // <-- сразу загружаем сообщения
+  loadConversations(); // <-- подтягиваем актуальный список
 }
 
 function renderChatTabs() {
@@ -101,12 +105,14 @@ async function loadPM() {
   try {
     const d = await api("chat/pm/get", { with_id: state.chatWith });
     const el = document.getElementById("chat-messages");
+    if (!el) return;
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
     el.innerHTML = d.messages.map(m => `
       <div class="chat-msg ${m.from_id === state.player.user_id ? 'my-msg' : ''}">
         <div>${escapeHtml(m.message)}</div>
       </div>
     `).join("");
-    el.scrollTop = el.scrollHeight;
+    if (atBottom) el.scrollTop = el.scrollHeight;
   } catch(e) {}
 }
 
@@ -123,6 +129,7 @@ async function sendChat() {
       await api("chat/pm/send", { to_id: state.chatWith, message: msg });
       loadPM();
       updateChatBadge();
+      loadConversations(); // <-- чтобы собеседник увидел диалог
     }
     inp.value = "";
     if (tg) tg.HapticFeedback?.impactOccurred("light");
@@ -178,7 +185,6 @@ async function loadFriends() {
     else {
       const sortedFriends = [...d.friends].sort((a, b) => (b.is_online ? 1 : 0) - (a.is_online ? 1 : 0));
       list.innerHTML = sortedFriends.map(f => {
-        // Безопасные литералы для inline-обработчиков
         const nickJs = jsAttr(f.nickname);
         const tagJs  = jsAttr(f.gang_tag || '');
         const colJs  = jsAttr(f.gang_tag_color || '');

@@ -74,7 +74,6 @@ async def api_location(request):
         (loc_id, uid))
     now_ts = int(time.time())
     for _o in others:
-        # Боты всегда оффлайн — независимо от is_bot или last_seen
         if _o.get("is_bot") or _is_known_bot(_o["user_id"]):
             _o["is_online"] = False
         else:
@@ -106,7 +105,6 @@ async def api_player_view(request):
     target_gang = await db.fetchone("SELECT gang_id FROM gang_members WHERE user_id=?", (target_id,))
     my_gang = await db.fetchone("SELECT gang_id, role FROM gang_members WHERE user_id=?", (uid,))
     now_ts = int(time.time())
-    # Боты всегда оффлайн
     if t.get("is_bot") or _is_known_bot(target_id):
         is_online = False
     else:
@@ -150,7 +148,6 @@ async def api_trade_send(request):
     body = await request.json()
     to_user = int(body.get("to_user",0))
     give_money = int(body.get("give_money",0))
-    # Дедуп: защита от двойного списания/начисления при повторяющихся item_id
     give_items = list(dict.fromkeys(body.get("give_items",[]) or []))
     want_money = int(body.get("want_money",0))
     want_items = list(dict.fromkeys(body.get("want_items",[]) or []))
@@ -255,8 +252,6 @@ async def api_trades_list(request):
     return web.json_response({"incoming": inc_enriched, "outgoing": out_enriched})
 
 async def api_trade_accept(request):
-    """Атомарное принятие трейда: все операции с деньгами/предметами защищены
-    от race condition (двойное нажатие, минус на балансе, дюп предметов)."""
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     try:
@@ -266,19 +261,16 @@ async def api_trade_accept(request):
     if not tid:
         return web.json_response({"error": "Неверный trade_id"}, status=400)
 
-    # ─── Список того, что нужно откатить при любой неудаче ───
-    withdrawn_money = []   # [(uid, amount)]
-    withdrawn_items = []   # [(uid, iid)]
+    withdrawn_money = []
+    withdrawn_items = []
     trade_claimed = False
 
     async def rollback():
-        # Возвращаем предметы
         for r_uid, r_iid in withdrawn_items:
             try:
                 await _add_inv(r_uid, r_iid, 1)
             except Exception as e:
                 print(f"⚠️ trade rollback item {r_uid}/{r_iid}: {e}")
-        # Возвращаем деньги
         for r_uid, r_amt in withdrawn_money:
             try:
                 await db.execute(
@@ -286,7 +278,6 @@ async def api_trade_accept(request):
                     (r_amt, r_uid))
             except Exception as e:
                 print(f"⚠️ trade rollback money {r_uid}/{r_amt}: {e}")
-        # Возвращаем трейд в pending, если он уже был заклеймлен
         if trade_claimed:
             try:
                 await db.execute(
@@ -296,7 +287,6 @@ async def api_trade_accept(request):
                 print(f"⚠️ trade rollback status {tid}: {e}")
 
     try:
-        # ═══ 1. АТОМАРНО захватываем трейд — защита от двойного accept ═══
         async with db.conn.execute(
             "UPDATE trades SET status='accepted' "
             "WHERE trade_id=? AND to_user=? AND status='pending'",
@@ -309,7 +299,6 @@ async def api_trade_accept(request):
                 {"error": "Трейд не найден или уже обработан"}, status=400)
         trade_claimed = True
 
-        # ═══ 2. Читаем актуальные данные трейда ═══
         t = await db.fetchone("SELECT * FROM trades WHERE trade_id=?", (tid,))
         if not t:
             await rollback()
@@ -321,7 +310,6 @@ async def api_trade_accept(request):
         give_items = list(dict.fromkeys(json.loads(t.get("give_items") or "[]")))
         want_items = list(dict.fromkeys(json.loads(t.get("want_items") or "[]")))
 
-        # ═══ 3. Атомарно списываем деньги у отправителя ═══
         if give_money > 0:
             if not await _atomic_withdraw_money(from_user, give_money):
                 await rollback()
@@ -329,7 +317,6 @@ async def api_trade_accept(request):
                     {"error": "У отправителя трейда недостаточно денег"}, status=400)
             withdrawn_money.append((from_user, give_money))
 
-        # ═══ 4. Атомарно списываем деньги у получателя ═══
         if want_money > 0:
             if not await _atomic_withdraw_money(uid, want_money):
                 await rollback()
@@ -337,7 +324,6 @@ async def api_trade_accept(request):
                     {"error": "У тебя недостаточно денег"}, status=400)
             withdrawn_money.append((uid, want_money))
 
-        # ═══ 5. Атомарно списываем предметы у отправителя ═══
         for iid in give_items:
             if not await _atomic_withdraw_item(from_user, iid, 1):
                 await rollback()
@@ -345,7 +331,6 @@ async def api_trade_accept(request):
                     {"error": f"У отправителя нет предмета: {iid}"}, status=400)
             withdrawn_items.append((from_user, iid))
 
-        # ═══ 6. Атомарно списываем предметы у получателя ═══
         for iid in want_items:
             if not await _atomic_withdraw_item(uid, iid, 1):
                 await rollback()
@@ -353,10 +338,8 @@ async def api_trade_accept(request):
                     {"error": f"У тебя нет предмета: {iid}"}, status=400)
             withdrawn_items.append((uid, iid))
 
-        # Убираем строки с нулевым количеством
         await db.execute("DELETE FROM inventory WHERE quantity<=0")
 
-        # ═══ 7. Начисляем всё получателям (эти операции уже не могут упасть) ═══
         if give_money > 0:
             await db.execute(
                 "UPDATE players SET balance = MIN(balance + ?, 999999999999) WHERE user_id = ?",
@@ -370,15 +353,12 @@ async def api_trade_accept(request):
         for iid in want_items:
             await _add_inv(from_user, iid, 1)
 
-        # ═══ 8. Счётчик трейдов ═══
         await db.execute(
             "UPDATE players SET trades_done=trades_done+1 WHERE user_id IN (?,?)",
             (from_user, uid))
 
-        # ═══ 9. Уведомление трейда — удалить ═══
         await _cleanup_trade_notifs(uid, tid)
 
-        # ═══ 10. Достижения ═══
         p_to2 = await _player(uid)
         await _check_achievements(uid, p_to2)
         await _check_achievements(from_user, await _player(from_user))
@@ -594,16 +574,32 @@ async def api_chat_pm_unread_count(request):
 
 async def api_chat_pm_conversations(request):
     ud = await _user(request); uid = ud["id"]
+    # ИСПРАВЛЕНИЕ: возвращаем всех, с кем есть переписка (и входящие, и исходящие)
     rows = await db.fetchall(
-        "SELECT pm.from_id as user_id, p.nickname, "
-        "g.tag as gang_tag, g.tag_color as gang_tag_color, MAX(pm.id) as last_id, "
-        "SUM(CASE WHEN pm.to_id=? AND pm.is_read=0 THEN 1 ELSE 0 END) as unread "
-        "FROM private_messages pm "
-        "JOIN players p ON p.user_id = pm.from_id "
-        "LEFT JOIN gang_members gm ON gm.user_id = p.user_id "
-        "LEFT JOIN gangs g ON g.gang_id = gm.gang_id "
-        "WHERE pm.to_id=? "
-        "GROUP BY pm.from_id ORDER BY last_id DESC LIMIT 30", (uid, uid))
+        """
+        SELECT 
+            t.other_id as user_id,
+            p.nickname,
+            g.tag as gang_tag,
+            g.tag_color as gang_tag_color,
+            t.last_id,
+            t.unread
+        FROM (
+            SELECT 
+                CASE WHEN pm.from_id = ? THEN pm.to_id ELSE pm.from_id END as other_id,
+                MAX(pm.id) as last_id,
+                SUM(CASE WHEN pm.to_id = ? AND pm.is_read = 0 THEN 1 ELSE 0 END) as unread
+            FROM private_messages pm
+            WHERE pm.from_id = ? OR pm.to_id = ?
+            GROUP BY other_id
+        ) t
+        JOIN players p ON p.user_id = t.other_id
+        LEFT JOIN gang_members gm ON gm.user_id = t.other_id
+        LEFT JOIN gangs g ON g.gang_id = gm.gang_id
+        ORDER BY t.last_id DESC
+        LIMIT 30
+        """,
+        (uid, uid, uid, uid))
     return web.json_response({"conversations": rows})
 
 async def api_chat_pm_get(request):
@@ -719,7 +715,6 @@ async def api_notifications_read(request):
 async def api_online_count(request):
     await _user(request)
     now = int(time.time())
-    # Считаем ТОЛЬКО реальных игроков, исключаем ботов по ID
     ids_placeholder = ",".join("?" * len(KNOWN_BOT_IDS))
     row = await db.fetchone(
         f"SELECT COUNT(*) as c FROM players "

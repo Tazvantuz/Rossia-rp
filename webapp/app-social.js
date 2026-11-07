@@ -24,7 +24,6 @@ async function claimRoulette() {
 
 // ══════════════════════════════════════════════════════════════
 //  БОНУС ЗА ПОДПИСКУ НА TELEGRAM-ГРУППУ
-//  Проверка на бэкенде через getChatMember(chat_id="@russiarpbot1").
 // ══════════════════════════════════════════════════════════════
 const TG_BONUS_CHANNEL_URL = "https://t.me/russiarpbot1";
 
@@ -165,7 +164,7 @@ async function viewPlayer(uid) {
       ${!isMe ? `<button class="btn btn-primary" onclick='showTradeOffer(${uid}, ${nickJs})'>🤝 Трейд</button>` : ''}
       ${(!isMe && !d.is_friend && !d.friend_pending) ? `<button class="btn btn-secondary" onclick="sendFriendRequest(${uid})">➕ В друзья</button>` : ''}
       ${(!isMe && d.friend_pending) ? `<button class="btn btn-secondary" disabled>⏳ Заявка отправлена</button>` : ''}
-      ${(!isMe && d.is_friend) ? `<button class="btn btn-secondary" onclick='openPM(${uid}, ${nickJs}, ${tagJs}, ${colJs})'>✉️ Написать ЛС</button>` : ''}
+      ${(!isMe) ? `<button class="btn btn-secondary" onclick='openPM(${uid}, ${nickJs}, ${tagJs}, ${colJs})'>✉️ Написать ЛС</button>` : ''}
       ${(!isMe && d.is_friend) ? `<button class="btn btn-secondary" style="background:rgba(231,76,60,.15);color:var(--danger);border:1px solid rgba(231,76,60,.3);" onclick='removeFriend(${uid}, ${nickJs})'>❌ Удалить из друзей</button>` : ''}
       ${(!isMe && d.my_role && ['leader','deputy'].includes(d.my_role) && !d.target_in_gang) ? `<button class="btn btn-secondary" onclick='inviteToGang(${uid}, ${nickJs})'>📨 Пригласить в банду</button>` : ''}
       ${(!isMe && d.tg_username) ? `<a href="https://t.me/${escapeHtml(d.tg_username)}" target="_blank" rel="noopener" class="btn btn-secondary" style="text-decoration:none;text-align:center;display:block;background:linear-gradient(135deg,#0088cc,#005f8f);border:none;color:#fff;font-weight:700;margin-top:8px;">✈️ Telegram @${escapeHtml(d.tg_username)}</a>` : ''}

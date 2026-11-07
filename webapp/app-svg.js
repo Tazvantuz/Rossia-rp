@@ -1,6 +1,6 @@
 // app-svg.js
-// v4.3 — Полное покрытие плеч и рук. Поднял линию торса и рукавов до y=90.
-// v4.2 — Идеальная посадка одежды: широкий торс, рукава полностью покрывают руки без зазоров.
+// v4.4 — Добавлены пропущенные предметы (маска Гая Фокса, шлем мотоциклиста, рога).
+// v4.3 — Исправлено обрезание широких предметов (расширен viewBox).
 // v4.1 — Ручки в руках увеличены (x1.8 / x2.2).
 
 const SKIN = "#e8b48a";
@@ -122,7 +122,7 @@ function renderBaseBody() {
   `;
 }
 
-// ═══ ХЕЛПЕРЫ РУКАВОВ (ОБНОВЛЕНЫ ДО y=90) ═══
+// ═══ ХЕЛПЕРЫ РУКАВОВ ═══
 const SL_SHORT_L = (fill, shade) => `
   <path d="M66 90 Q54 100 48 128 L62 134 Q68 118 74 110 Z" fill="${fill}"/>
   <path d="M66 90 Q54 100 48 128 L52 130 Q58 112 70 100 Z" fill="${shade}" opacity="0.4"/>
@@ -477,10 +477,35 @@ const ITEMS_SVG = {
     <path d="M94 56 Q100 58 106 56" stroke="#e74c3c" stroke-width="2" fill="none"/>
     <path d="M98 48 L96 58 L100 56 Z" fill="#f39c12"/>`,
 
-  // ═══════════════════════════════════════════════════════════
-  //  ТЕЛО (Торс теперь с y=90 и x=66..134)
-  // ═══════════════════════════════════════════════════════════
+  // ═══ НОВЫЕ ПРЕДМЕТЫ (ДОБАВЛЕНЫ) ═══
+  h_guy: `<path d="M68 36 Q100 4 132 36 Q132 60 100 82 Q68 60 68 36 Z" fill="#f0f0f0" stroke="#ccc" stroke-width="0.8"/>
+    <path d="M70 40 Q100 10 130 40" stroke="#ddd" stroke-width="0.6" fill="none" opacity="0.5"/>
+    <path d="M76 46 Q86 42 94 46" stroke="#2a1e10" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M124 46 Q114 42 106 46" stroke="#2a1e10" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <ellipse cx="86" cy="52" rx="6" ry="4" fill="#1a1a1a"/>
+    <ellipse cx="114" cy="52" rx="6" ry="4" fill="#1a1a1a"/>
+    <path d="M100 58 Q88 56 78 60 Q88 64 100 62 Q112 64 122 60 Q112 56 100 58 Z" fill="#1a1a1a"/>
+    <path d="M86 68 Q100 82 114 68 Q100 76 86 68 Z" fill="#1a1a1a"/>
+    <path d="M80 64 Q90 70 100 68 Q110 70 120 64" stroke="#1a1a1a" stroke-width="1.5" fill="none"/>
+    <path d="M75 30 Q100 12 125 30" stroke="#ccc" stroke-width="0.4" fill="none" opacity="0.6"/>`,
+  h_moto: `<path d="M64 40 Q64 4 100 4 Q136 4 136 40 L136 60 Q136 84 100 84 Q64 84 64 60 Z" fill="#2c3e50" stroke="#1a252f" stroke-width="1.5"/>
+    <path d="M68 40 Q68 10 100 10 Q132 10 132 40 L132 55 L68 55 Z" fill="#1a252f"/>
+    <path d="M66 40 Q100 26 134 40 Q134 56 100 62 Q66 56 66 40 Z" fill="#34495e" opacity="0.85"/>
+    <path d="M70 40 Q80 32 100 32 Q115 32 125 38" stroke="#5dade2" stroke-width="2" fill="none" opacity="0.6"/>
+    <path d="M68 56 Q100 64 132 56" stroke="#333" stroke-width="1" fill="none"/>
+    <path d="M76 62 Q100 70 124 62 L122 80 Q100 86 78 80 Z" fill="#1a252f"/>
+    <path d="M82 64 L118 64 M80 70 L120 70" stroke="#111" stroke-width="0.5"/>
+    <path d="M74 30 Q100 18 126 30" stroke="#444" stroke-width="0.8" fill="none" opacity="0.5"/>
+    <circle cx="100" cy="4" r="2.5" fill="#f1c40f"/>`,
+  h_horns: `<path d="M74 36 Q56 10 64 -6 Q74 10 78 30 Z" fill="#c0392b" stroke="#8b0000" stroke-width="0.5"/>
+    <path d="M126 36 Q144 10 136 -6 Q126 10 122 30 Z" fill="#c0392b" stroke="#8b0000" stroke-width="0.5"/>
+    <path d="M74 36 Q64 14 68 2" stroke="#e74c3c" stroke-width="0.6" fill="none" opacity="0.6"/>
+    <path d="M126 36 Q136 14 132 2" stroke="#e74c3c" stroke-width="0.6" fill="none" opacity="0.6"/>
+    <path d="M72 40 Q76 44 80 40 M120 40 Q124 44 128 40" stroke="#8b0000" stroke-width="0.8" fill="none" opacity="0.4"/>`,
 
+  // ═══════════════════════════════════════════════════════════
+  //  ТЕЛО
+  // ═══════════════════════════════════════════════════════════
   b_alco: `
     <path d="M66 90 L134 90 L134 205 L66 205 Z" fill="#f5f5f5" stroke="#d8d8d8" stroke-width="0.5"/>
     <path d="M104 90 L104 205 L134 205 L134 90 Z" fill="#e8e8e8" opacity="0.5"/>
@@ -1339,7 +1364,7 @@ const ITEMS_SVG = {
     <circle cx="113" cy="310" r="3.5" fill="#8b0000"/>`,
 
   // ═══════════════════════════════════════════════════════════
-  //  ПРАВАЯ РУКА — scale 1.8/2.2, rotate(+) = ОТ тела (вправо)
+  //  ПРАВАЯ РУКА
   // ═══════════════════════════════════════════════════════════
   rh_cig: `<g transform="translate(145, 197) rotate(22) scale(1.8)">
     <rect x="0" y="-2" width="32" height="4" rx="1.5" fill="#f5f5f5" stroke="#c0c0c0" stroke-width="0.4"/>
@@ -1625,7 +1650,7 @@ const ITEMS_SVG = {
   </g>`,
 
   // ═══════════════════════════════════════════════════════════
-  //  ЛЕВАЯ РУКА — scale 1.8/2.2, rotate(-) = ОТ тела (влево)
+  //  ЛЕВАЯ РУКА
   // ═══════════════════════════════════════════════════════════
   lh_phone: `<g transform="translate(55, 197) rotate(-22) scale(1.8)">
     <rect x="-8" y="-40" width="16" height="30" rx="2" fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.5"/>
@@ -1996,7 +2021,7 @@ const ITEMS_SVG = {
 };
 
 // ═══════════════════════════════════════════════════════════
-//  ГЛАВНЫЙ РЕНДЕР
+//  ГЛАВНЫЙ РЕНДЕР (ОБНОВЛЕН VIEWBOX)
 // ═══════════════════════════════════════════════════════════
 function renderCharacterSVG(outfit, opts = {}) {
   const baseH = opts.height || 300;
@@ -2014,9 +2039,11 @@ function renderCharacterSVG(outfit, opts = {}) {
   const leftW = leftCfg ? leftCfg.w : 0;
   const rightW = rightCfg ? rightCfg.w : 0;
 
-  let vx = 0, vy = -15, vw = 200, vh = 415;
-  if (leftW) { vx = -leftW; vw += leftW; }
-  if (rightW) { vw += rightW; }
+  // УВЕЛИЧЕННЫЙ VIEWBOX, чтобы длинные предметы не обрезались
+  let vx = -Math.max(leftW || 0, 70);
+  let vw = Math.abs(vx) + 200 + Math.max(rightW || 0, 70);
+  let vy = -30, vh = 440;
+
   const viewBox = `${vx} ${vy} ${vw} ${vh}`;
 
   let outW, outH;
