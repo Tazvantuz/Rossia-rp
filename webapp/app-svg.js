@@ -1921,51 +1921,6 @@ const ITEMS_SVG = {
   </g>`,
 
   // ═══════════════════════════════════════════════════════════
-  //  ПРИЧЁСКИ
-  // ═══════════════════════════════════════════════════════════
-  hair_short_black: `<path d="M72 48 Q72 20 100 18 Q128 20 128 48 Q126 36 100 34 Q74 36 72 48 Z"
-                       fill="#1a1a1a" stroke="#0a0a0a" stroke-width="0.4"/>
-    <path d="M75 36 Q82 30 92 30" stroke="#333" stroke-width="0.5" fill="none" opacity="0.5"/>
-    <path d="M108 30 Q118 30 125 36" stroke="#333" stroke-width="0.5" fill="none" opacity="0.5"/>
-    <path d="M78 42 Q82 40 86 42 M114 42 Q118 40 122 42" stroke="#0a0a0a" stroke-width="0.4" fill="none" opacity="0.4"/>
-    <path d="M84 26 Q92 22 100 24" stroke="#2a2a2a" stroke-width="0.4" fill="none" opacity="0.4"/>`,
-  hair_curly_brown: `<path d="M70 50 Q68 18 100 14 Q132 18 130 50 Q128 40 100 38 Q72 40 70 50 Z"
-                        fill="#5a3a1e" stroke="#3d2810" stroke-width="0.5"/>
-    <circle cx="74" cy="36" r="6" fill="#6b4a2a" opacity="0.9"/>
-    <circle cx="82" cy="28" r="7" fill="#6b4a2a" opacity="0.9"/>
-    <circle cx="94" cy="24" r="7" fill="#6b4a2a" opacity="0.9"/>
-    <circle cx="106" cy="24" r="7" fill="#6b4a2a" opacity="0.9"/>
-    <circle cx="118" cy="28" r="7" fill="#6b4a2a" opacity="0.9"/>
-    <circle cx="126" cy="36" r="6" fill="#6b4a2a" opacity="0.9"/>
-    <circle cx="80" cy="42" r="5" fill="#7a5a3a" opacity="0.6"/>
-    <circle cx="120" cy="42" r="5" fill="#7a5a3a" opacity="0.6"/>
-    <path d="M78 38 Q82 34 86 38" stroke="#3d2810" stroke-width="0.6" fill="none" opacity="0.5"/>
-    <circle cx="94" cy="22" r="2" fill="#7a5a3a" opacity="0.4"/>
-    <circle cx="106" cy="22" r="2" fill="#7a5a3a" opacity="0.4"/>`,
-  hair_long_red: `<path d="M70 50 Q68 16 100 14 Q132 16 130 50 Q128 40 100 38 Q72 40 70 50 Z"
-                     fill="#c0392b" stroke="#8b0000" stroke-width="0.4"/>
-    <path d="M70 50 Q62 90 64 135 Q72 140 78 135 Q74 90 76 55 Z" fill="#c0392b" stroke="#8b0000" stroke-width="0.4"/>
-    <path d="M130 50 Q138 90 136 135 Q128 140 122 135 Q126 90 124 55 Z" fill="#c0392b" stroke="#8b0000" stroke-width="0.4"/>
-    <path d="M74 60 Q68 100 70 130 M126 60 Q132 100 130 130" stroke="#8b0000" stroke-width="0.6" fill="none" opacity="0.5"/>
-    <path d="M78 30 Q86 24 94 28 M122 30 Q114 24 106 28" stroke="#e74c3c" stroke-width="0.6" fill="none" opacity="0.5"/>
-    <path d="M68 80 Q66 100 68 120" stroke="#8b0000" stroke-width="0.4" fill="none" opacity="0.4"/>`,
-  hair_mohawk_blue: `<path d="M88 8 Q92 -2 100 -4 Q108 -2 112 8 L112 20 Q100 16 88 20 Z" fill="#2c3e50" stroke="#1a252f" stroke-width="0.5"/>
-    <path d="M84 22 Q90 18 100 18 Q110 18 116 22 L114 48 Q100 44 86 48 Z" fill="#3498db" stroke="#2874a6" stroke-width="0.6"/>
-    <path d="M94 10 L100 0 L106 10 M92 16 L100 4 L108 16" stroke="#2c3e50" stroke-width="0.6" fill="none" opacity="0.7"/>
-    <path d="M78 42 Q88 40 96 42" stroke="#2980b9" stroke-width="0.6" fill="none" opacity="0.6"/>
-    <path d="M104 42 Q112 40 122 42" stroke="#2980b9" stroke-width="0.6" fill="none" opacity="0.6"/>
-    <path d="M90 14 L100 2 L110 14" stroke="#5dade2" stroke-width="0.6" fill="none" opacity="0.4"/>`,
-  hair_flowing_gold: `<path d="M68 52 Q66 14 100 12 Q134 14 132 52 Q130 40 100 38 Q70 40 68 52 Z"
-                         fill="#f1c40f" stroke="#b8860b" stroke-width="0.5"/>
-    <path d="M68 52 Q58 100 60 155 Q60 175 68 180 Q76 175 72 155 Q72 100 76 58 Z" fill="#f1c40f" stroke="#b8860b" stroke-width="0.5"/>
-    <path d="M132 52 Q142 100 140 155 Q140 175 132 180 Q124 175 128 155 Q128 100 124 58 Z" fill="#f1c40f" stroke="#b8860b" stroke-width="0.5"/>
-    <path d="M72 70 Q65 110 66 150 M128 70 Q135 110 134 150" stroke="#b8860b" stroke-width="0.6" fill="none" opacity="0.5"/>
-    <path d="M76 30 Q86 24 96 28 M124 30 Q114 24 104 28" stroke="#f9e079" stroke-width="0.7" fill="none" opacity="0.7"/>
-    <ellipse cx="80" cy="40" rx="4" ry="2" fill="#f9e079" opacity="0.5"/>
-    <ellipse cx="120" cy="40" rx="4" ry="2" fill="#f9e079" opacity="0.5"/>
-    <path d="M62 100 Q60 130 62 160" stroke="#b8860b" stroke-width="0.4" fill="none" opacity="0.4"/>`,
-
-  // ═══════════════════════════════════════════════════════════
   //  ОБУВЬ
   // ═══════════════════════════════════════════════════════════
   shoes_worn: `<ellipse cx="86" cy="378" rx="17" ry="8" fill="#888" stroke="#444" stroke-width="0.6"/>
