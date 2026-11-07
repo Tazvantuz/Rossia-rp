@@ -610,9 +610,19 @@ async def api_chat_pm_conversations(request):
 async def api_chat_pm_get(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json(); with_id = int(body.get("with_id", 0))
+
+    # Если собеседник = сам себе, ничего страшного, всё равно вернём пусто
     rows = await db.fetchall(
-        "SELECT * FROM private_messages WHERE (from_id=? AND to_id=?) OR (from_id=? AND to_id=?) "
-        "ORDER BY id ASC LIMIT 100", (uid, with_id, with_id, uid))
+        "SELECT pm.id, pm.from_id, pm.to_id, pm.message, pm.is_read, pm.created_at, "
+        "p.nickname AS sender_nickname, p.role AS sender_role, "
+        "g.tag AS sender_gang_tag, g.tag_color AS sender_gang_tag_color "
+        "FROM private_messages pm "
+        "LEFT JOIN players p ON p.user_id = pm.from_id "
+        "LEFT JOIN gang_members gm ON gm.user_id = pm.from_id "
+        "LEFT JOIN gangs g ON g.gang_id = gm.gang_id "
+        "WHERE (pm.from_id=? AND pm.to_id=?) OR (pm.from_id=? AND pm.to_id=?) "
+        "ORDER BY pm.id ASC LIMIT 100",
+        (uid, with_id, with_id, uid))
     await db.execute("UPDATE private_messages SET is_read=1 WHERE to_id=? AND from_id=?", (uid, with_id))
     return web.json_response({"messages": rows})
 
@@ -681,9 +691,15 @@ async def api_notifications_get(request):
     await _cleanup_stale_pvp()
     rows = await db.fetchall("SELECT * FROM notifications WHERE user_id=? ORDER BY id DESC LIMIT 30", (uid,))
     now_unix = int(time.time())
+
+    # Заранее узнаём — в банде ли уже игрок (для фильтрации gang_invite)
+    my_gang_row = await db.fetchone("SELECT gang_id FROM gang_members WHERE user_id=?", (uid,))
+    in_gang = bool(my_gang_row)
+
     result = []
     for row in rows:
         r = dict(row)
+
         if r.get("type") == "pvp" and r.get("data"):
             try:
                 data = json.loads(r["data"])
@@ -701,6 +717,7 @@ async def api_notifications_get(request):
                     else:
                         continue
             except: pass
+
         if r.get("type") == "trade" and r.get("data"):
             try:
                 tid = json.loads(r["data"]).get("trade_id")
@@ -709,6 +726,7 @@ async def api_notifications_get(request):
                     if not t or t["status"] != "pending":
                         continue
             except: pass
+
         if r.get("type") == "friend" and r.get("data"):
             try:
                 from_uid = json.loads(r["data"]).get("user_id")
@@ -719,6 +737,28 @@ async def api_notifications_get(request):
                     if not fr or fr["status"] != "pending":
                         continue
             except: pass
+
+        # ── ГАНГ-ИНВАЙТ: фильтруем невалидные ──
+        if r.get("type") == "gang_invite":
+            # Уже в какой-то банде → приглашение неактуально
+            if in_gang:
+                continue
+            # Проверим, что банда ещё существует и данные корректны
+            try:
+                gid = int(json.loads(r.get("data") or "{}").get("gang_id", 0))
+            except Exception:
+                gid = 0
+            if gid <= 0:
+                continue
+            gang = await db.fetchone("SELECT gang_id FROM gangs WHERE gang_id=?", (gid,))
+            if not gang:
+                # Банда распущена — удаляем мусорное уведомление
+                try:
+                    await db.execute("DELETE FROM notifications WHERE id=?", (r["id"],))
+                except Exception:
+                    pass
+                continue
+
         result.append(r)
     unread = sum(1 for r in result if not r.get("is_read"))
     return web.json_response({"notifications": result, "unread": unread})

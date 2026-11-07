@@ -139,13 +139,11 @@ async def api_gang_disband(request):
     gang = await db.fetchone("SELECT name FROM gangs WHERE gang_id=?", (gid,))
     gang_name = gang["name"] if gang else f"#{gid}"
 
-    # 1) Территории → нейтральные
     try:
         await db.execute("UPDATE gang_territories SET gang_id=NULL WHERE gang_id=?", (gid,))
     except Exception as e:
         print(f"⚠️ disband territories: {e}")
 
-    # 2) Активные захваты этой банды → отменяются
     try:
         await db.execute(
             "UPDATE territory_captures SET status='cancelled' WHERE gang_id=? AND status='active'",
@@ -153,13 +151,11 @@ async def api_gang_disband(request):
     except Exception as e:
         print(f"⚠️ disband captures: {e}")
 
-    # 3) Все участники → выгнать
     try:
         await db.execute("DELETE FROM gang_members WHERE gang_id=?", (gid,))
     except Exception as e:
         print(f"⚠️ disband members: {e}")
 
-    # 4) Висящие приглашения в эту банду — удалить
     try:
         rows = await db.fetchall(
             "SELECT id, data FROM notifications WHERE type='gang_invite'")
@@ -173,10 +169,8 @@ async def api_gang_disband(request):
     except Exception as e:
         print(f"⚠️ disband invites: {e}")
 
-    # 5) Сама банда
     await db.execute("DELETE FROM gangs WHERE gang_id=?", (gid,))
 
-    # 6) Записать в лог территорий (если был лог)
     try:
         await _log_territory_event(
             0, f"Банда {gang_name}", "disbanded",
@@ -288,22 +282,48 @@ async def api_gang_invite_accept(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     notif_id = int(body.get("notification_id", 0))
-    notif = await db.fetchone("SELECT * FROM notifications WHERE id=? AND user_id=? AND type='gang_invite'",
-                              (notif_id, uid))
-    if not notif: return web.json_response({"error": "Не найдено"}, status=404)
+    notif = await db.fetchone(
+        "SELECT * FROM notifications WHERE id=? AND user_id=? AND type='gang_invite'",
+        (notif_id, uid))
+    if not notif:
+        return web.json_response({"error": "Приглашение не найдено или уже обработано"}, status=404)
+
+    # Уже в банде — приглашение неактуально, удаляем и говорим об этом
     if await db.fetchone("SELECT 1 FROM gang_members WHERE user_id=?", (uid,)):
-        return web.json_response({"error": "Уже в банде"}, status=400)
+        await db.execute("DELETE FROM notifications WHERE id=?", (notif_id,))
+        return web.json_response({"error": "Ты уже состоишь в банде"}, status=400)
+
     try:
         gid = int(json.loads(notif.get("data") or "{}").get("gang_id", 0))
-    except: gid = 0
+    except Exception:
+        gid = 0
+
+    if gid <= 0:
+        # Битое приглашение — удаляем
+        await db.execute("DELETE FROM notifications WHERE id=?", (notif_id,))
+        return web.json_response({"error": "Повреждённое приглашение"}, status=400)
+
     gang = await db.fetchone("SELECT * FROM gangs WHERE gang_id=?", (gid,))
-    if not gang: return web.json_response({"error": "Банда не существует"}, status=404)
+    if not gang:
+        # Банда распущена — удаляем
+        await db.execute("DELETE FROM notifications WHERE id=?", (notif_id,))
+        return web.json_response({"error": "Банда была распущена"}, status=404)
+
     cnt = await db.fetchone("SELECT COUNT(*) as c FROM gang_members WHERE gang_id=?", (gid,))
     if cnt["c"] >= GANG_MAX_MEMBERS:
-        return web.json_response({"error": "Банда заполнена"}, status=400)
-    await db.execute("INSERT INTO gang_members (gang_id, user_id, role) VALUES (?, ?, 'member')", (gid, uid))
-    await db.execute("DELETE FROM notifications WHERE id=?", (notif_id,))
-    return web.json_response({"ok": True})
+        # Банда переполнена — удаляем приглашение
+        await db.execute("DELETE FROM notifications WHERE id=?", (notif_id,))
+        return web.json_response({"error": "Банда уже заполнена"}, status=400)
+
+    await db.execute(
+        "INSERT INTO gang_members (gang_id, user_id, role) VALUES (?, ?, 'member')",
+        (gid, uid))
+
+    # Удалить ВСЕ приглашения этого игрока (и в эту банду, и от других — они больше неактуальны)
+    await db.execute(
+        "DELETE FROM notifications WHERE user_id=? AND type='gang_invite'", (uid,))
+
+    return web.json_response({"ok": True, "gang_id": gid})
 
 async def api_gang_invite_decline(request):
     ud = await _user(request); uid = ud["id"]

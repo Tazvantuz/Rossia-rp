@@ -149,11 +149,26 @@ async function loadPM() {
     const el = document.getElementById("chat-messages");
     if (!el) return;
     const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 120;
-    el.innerHTML = d.messages.map(m => `
-      <div class="chat-msg ${m.from_id === state.player.user_id ? 'my-msg' : ''}">
-        <div>${escapeHtml(m.message)}</div>
-      </div>
-    `).join("");
+    if (!d.messages || d.messages.length === 0) {
+      el.innerHTML = '<p style="color:var(--hint);text-align:center;padding:40px">Пока нет сообщений. Напиши первым!</p>';
+    } else {
+      el.innerHTML = d.messages.map(m => {
+        const isMine = Number(m.from_id) === Number(state.player.user_id);
+        let time = "";
+        try {
+          const iso = m.created_at.replace(" ", "T") + "Z";
+          time = new Date(iso).toLocaleTimeString("ru-RU", {hour:"2-digit", minute:"2-digit"});
+        } catch(e) {}
+        const nick = m.sender_nickname || "Удалённый игрок";
+        return `<div class="chat-msg ${isMine ? 'my-msg' : ''}">
+          <div class="chat-msg-head">
+            <span class="chat-nick" onclick="viewPlayer(${m.from_id})">${formatNickWithTag(nick, m.sender_gang_tag, m.sender_gang_tag_color, m.sender_role)}</span>
+            <span class="chat-time">${time}</span>
+          </div>
+          <div>${escapeHtml(m.message)}</div>
+        </div>`;
+      }).join("");
+    }
     if (atBottom) el.scrollTop = el.scrollHeight;
   } catch(e) {}
 }
@@ -394,11 +409,39 @@ async function hideNotification(nid) {
 
 async function acceptGangInvite(nid) {
   try {
-    await api("gang/invite/accept", {notification_id: nid});
+    const res = await api("gang/invite/accept", {notification_id: nid});
     toast("✅ Вступил в банду!", "success");
     closeModal();
-    refreshPlayer();
-  } catch(e) { toast(e.message, "error"); }
+
+    // Принудительно обновляем всё, что могло измениться
+    await refreshPlayer();
+    if (typeof loadGang === "function") {
+      const gTab = document.querySelector('.tab-content[data-tab="gang"]');
+      if (gTab && gTab.classList.contains("active")) loadGang();
+    }
+    if (typeof loadConversations === "function") loadConversations();
+    if (typeof renderChatTabs === "function") renderChatTabs();
+    if (typeof loadChat === "function" && (!state.chatWith || state.chatWith === "global")) {
+      const cTab = document.querySelector('.tab-content[data-tab="chat"]');
+      if (cTab && cTab.classList.contains("active")) loadChat();
+    }
+
+    // Если сейчас открыт колокольчик — перерисуем (уберёт другие приглашения)
+    if (typeof showNotificationsSilent === "function") {
+      const d = await api("notifications/get").catch(() => null);
+      if (d) {
+        const badge = document.getElementById("bell-badge");
+        if (badge) {
+          if (d.unread > 0) { badge.textContent = d.unread; badge.classList.remove("hidden"); }
+          else { badge.classList.add("hidden"); }
+        }
+      }
+    }
+  } catch(e) {
+    toast(e.message, "error");
+    // если приглашение уже неактуально — перерисуем уведомления
+    showNotifications();
+  }
 }
 
 async function declineGangInvite(nid) {
