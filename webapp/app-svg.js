@@ -1,7 +1,7 @@
 // app-svg.js
-// v4.0 — детальная одежда: разные рукава, швы, складки, манжеты, градиентные тени.
-// Предметы в руках увеличены ×1.8 (большие ×2.2), повёрнуты ОТ тела.
-// v3: базовая геометрия тела сохранена.
+// v4.1 — рукава полностью покрывают руки (короткие — до середины плеча, длинные — до запястья, полные — широкий колокол).
+// v4.0 — детальная одежда со швами/складками/тенями.
+// v3: базовая геометрия тела.
 
 const SKIN = "#e8b48a";
 const SKIN_D = "#c99b6f";
@@ -15,7 +15,7 @@ const CUSTOM_IMAGES = {
     "rh_tyanka3": { url: "/assets/hands/rh_tyanka3.png", side: "right", y: 0,   w: 230, h: 400 }
 };
 
-// ═══ БАЗОВОЕ ТЕЛО (без изменений) ═══
+// ═══ БАЗОВОЕ ТЕЛО ═══
 function renderBaseBody() {
   return `
     <ellipse cx="100" cy="389" rx="58" ry="7" fill="rgba(0,0,0,0.42)"/>
@@ -123,46 +123,50 @@ function renderBaseBody() {
 }
 
 // ═══ ХЕЛПЕРЫ РУКАВОВ ═══
-// Длинный рукав — весь рукав (худи, пиджак, куртка)
-const SL_LONG_L = (fill, shade) => `
-  <path d="M73 96 L70 108 Q58 118 52 145 L47 183 Q45 194 53 198 L63 197 Q68 191 66 178 L68 145 L74 116 Z" fill="${fill}"/>
-  <path d="M73 96 L70 108 Q58 118 52 145 L47 183 Q45 194 53 198 L57 198 Q54 192 55 183 L60 145 Q62 118 73 108 Z" fill="${shade}" opacity="0.35"/>
-  <path d="M49 186 Q49 194 54 198" stroke="${shade}" stroke-width="1.2" fill="none" opacity="0.7"/>
-  <path d="M50 194 Q56 198 62 197" stroke="${shade}" stroke-width="0.8" fill="none" opacity="0.5"/>
-  <path d="M56 130 Q58 150 57 170" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.3"/>`;
-
-const SL_LONG_R = (fill, shade) => `
-  <path d="M127 96 L130 108 Q142 118 148 145 L153 183 Q155 194 147 198 L137 197 Q132 191 134 178 L132 145 L126 116 Z" fill="${fill}"/>
-  <path d="M127 96 L130 108 Q142 118 148 145 L153 183 Q155 194 147 198 L143 198 Q146 192 145 183 L140 145 Q138 118 127 108 Z" fill="${shade}" opacity="0.35"/>
-  <path d="M151 186 Q151 194 146 198" stroke="${shade}" stroke-width="1.2" fill="none" opacity="0.7"/>
-  <path d="M150 194 Q144 198 138 197" stroke="${shade}" stroke-width="0.8" fill="none" opacity="0.5"/>
-  <path d="M144 130 Q142 150 143 170" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.3"/>`;
-
-// Короткий рукав — до середины плеча (футболка)
+// Короткий рукав — до середины плеча, полностью покрывает руку по ширине
 const SL_SHORT_L = (fill, shade) => `
-  <path d="M73 96 L70 108 Q62 115 57 129 L64 136 Q70 131 73 120 L74 110 Z" fill="${fill}"/>
-  <path d="M70 108 Q62 115 57 129 L60 131 Q64 121 71 114 Z" fill="${shade}" opacity="0.35"/>
-  <path d="M57 129 L64 136" stroke="${shade}" stroke-width="1" fill="none" opacity="0.6"/>
-  <path d="M58 128 Q61 126 63 127" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.4"/>`;
+  <path d="M73 96 L66 105 L54 115 L52 133 L70 133 L74 118 Z" fill="${fill}"/>
+  <path d="M66 105 L54 115 L52 133 L55 133 Q57 117 68 107 Z" fill="${shade}" opacity="0.4"/>
+  <path d="M52 133 L70 133" stroke="${shade}" stroke-width="1.2" fill="none" opacity="0.75"/>
+  <path d="M54 131 L68 131" stroke="${shade}" stroke-width="0.4" fill="none" opacity="0.4"/>
+  <path d="M60 112 Q56 122 55 132" stroke="${shade}" stroke-width="0.4" fill="none" opacity="0.3"/>`;
 
 const SL_SHORT_R = (fill, shade) => `
-  <path d="M127 96 L130 108 Q138 115 143 129 L136 136 Q130 131 127 120 L126 110 Z" fill="${fill}"/>
-  <path d="M130 108 Q138 115 143 129 L140 131 Q136 121 129 114 Z" fill="${shade}" opacity="0.35"/>
-  <path d="M143 129 L136 136" stroke="${shade}" stroke-width="1" fill="none" opacity="0.6"/>
-  <path d="M142 128 Q139 126 137 127" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.4"/>`;
+  <path d="M127 96 L134 105 L146 115 L148 133 L130 133 L126 118 Z" fill="${fill}"/>
+  <path d="M134 105 L146 115 L148 133 L145 133 Q143 117 132 107 Z" fill="${shade}" opacity="0.4"/>
+  <path d="M148 133 L130 133" stroke="${shade}" stroke-width="1.2" fill="none" opacity="0.75"/>
+  <path d="M146 131 L132 131" stroke="${shade}" stroke-width="0.4" fill="none" opacity="0.4"/>
+  <path d="M140 112 Q144 122 145 132" stroke="${shade}" stroke-width="0.4" fill="none" opacity="0.3"/>`;
 
-// Широкая накидка (кимоно, пончо) — цельный верх
+// Длинный рукав — до запястья, полностью покрывает руку
+const SL_LONG_L = (fill, shade) => `
+  <path d="M73 96 L66 105 L54 115 L50 145 L46 178 Q44 186 48 186 L66 186 L66 140 L72 122 L74 118 L74 96 Z" fill="${fill}"/>
+  <path d="M66 105 L54 115 L50 145 L46 178 L50 180 L53 145 Q55 118 68 107 Z" fill="${shade}" opacity="0.35"/>
+  <path d="M46 178 Q44 186 48 186 L66 186" stroke="${shade}" stroke-width="1.2" fill="none" opacity="0.75"/>
+  <path d="M47 182 L64 184" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.4"/>
+  <path d="M56 128 Q52 150 52 170" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.3"/>
+  <path d="M62 186 L62 180" stroke="${shade}" stroke-width="0.4" fill="none" opacity="0.4"/>`;
+
+const SL_LONG_R = (fill, shade) => `
+  <path d="M127 96 L134 105 L146 115 L150 145 L154 178 Q156 186 152 186 L134 186 L134 140 L128 122 L126 118 L126 96 Z" fill="${fill}"/>
+  <path d="M134 105 L146 115 L150 145 L154 178 L150 180 L147 145 Q145 118 132 107 Z" fill="${shade}" opacity="0.35"/>
+  <path d="M154 178 Q156 186 152 186 L134 186" stroke="${shade}" stroke-width="1.2" fill="none" opacity="0.75"/>
+  <path d="M153 182 L136 184" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.4"/>
+  <path d="M144 128 Q148 150 148 170" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.3"/>
+  <path d="M138 186 L138 180" stroke="${shade}" stroke-width="0.4" fill="none" opacity="0.4"/>`;
+
+// Широкий рукав (кимоно, пончо) — колокол, цельный, до запястья
 const SL_FULL_L = (fill, shade, accent) => `
-  <path d="M73 96 L66 104 Q52 130 48 168 L44 195 L78 198 L78 96 Z" fill="${fill}"/>
-  <path d="M73 96 L66 104 Q52 130 48 168 L44 195 L50 196 L54 168 Q58 130 70 104 Z" fill="${shade}" opacity="0.28"/>
-  <path d="M46 190 Q52 196 78 197" stroke="${accent || shade}" stroke-width="1.5" fill="none" opacity="0.6"/>
-  <path d="M50 165 Q56 175 62 185" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.3"/>`;
+  <path d="M73 96 L64 104 Q50 130 46 165 L42 183 L48 186 L76 188 L76 96 Z" fill="${fill}"/>
+  <path d="M64 104 Q50 130 46 165 L42 183 L48 185 L52 165 Q56 130 70 104 Z" fill="${shade}" opacity="0.28"/>
+  <path d="M42 183 Q48 186 76 188" stroke="${accent || shade}" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <path d="M48 165 Q56 176 64 184" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.3"/>`;
 
 const SL_FULL_R = (fill, shade, accent) => `
-  <path d="M127 96 L134 104 Q148 130 152 168 L156 195 L122 198 L122 96 Z" fill="${fill}"/>
-  <path d="M127 96 L134 104 Q148 130 152 168 L156 195 L150 196 L146 168 Q142 130 130 104 Z" fill="${shade}" opacity="0.28"/>
-  <path d="M154 190 Q148 196 122 197" stroke="${accent || shade}" stroke-width="1.5" fill="none" opacity="0.6"/>
-  <path d="M150 165 Q144 175 138 185" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.3"/>`;
+  <path d="M127 96 L136 104 Q150 130 154 165 L158 183 L152 186 L124 188 L124 96 Z" fill="${fill}"/>
+  <path d="M136 104 Q150 130 154 165 L158 183 L152 185 L148 165 Q144 130 130 104 Z" fill="${shade}" opacity="0.28"/>
+  <path d="M158 183 Q152 186 124 188" stroke="${accent || shade}" stroke-width="1.5" fill="none" opacity="0.6"/>
+  <path d="M152 165 Q144 176 136 184" stroke="${shade}" stroke-width="0.5" fill="none" opacity="0.3"/>`;
 
 // ═══ ВСЕ ПРЕДМЕТЫ ═══
 const ITEMS_SVG = {
@@ -512,10 +516,9 @@ const ITEMS_SVG = {
     <path d="M98 48 L96 58 L100 56 Z" fill="#f39c12"/>`,
 
   // ═══════════════════════════════════════════════════════════
-  //  ТЕЛО — детальные рукава + складки + швы
+  //  ТЕЛО
   // ═══════════════════════════════════════════════════════════
 
-  // ─── МАЙКА-АЛКОГОЛИЧКА (без рукавов, тонкие лямки) ───
   b_alco: `
     <path d="M73 96 L73 205 L127 205 L127 96 Q100 92 73 96 Z" fill="#f5f5f5" stroke="#d8d8d8" stroke-width="0.5"/>
     <path d="M103 96 L103 205 L127 205 L127 96 Q117 94 103 96 Z" fill="#e8e8e8" opacity="0.5"/>
@@ -532,7 +535,6 @@ const ITEMS_SVG = {
     <path d="M108 140 Q110 155 108 170" stroke="#dcdcdc" stroke-width="0.5" fill="none" opacity="0.4"/>
     <ellipse cx="86" cy="180" rx="3" ry="1.5" fill="#d8d8d8" opacity="0.4"/>`,
 
-  // ─── ФУТБОЛКА "АУРА ФАРМИНГ" (короткие рукава) ───
   b_aura: `
     ${SL_SHORT_L("#1a1a1a", "#0a0a0a")}
     ${SL_SHORT_R("#1a1a1a", "#0a0a0a")}
@@ -551,7 +553,6 @@ const ITEMS_SVG = {
     <circle cx="78" cy="98" r="1" fill="#444" opacity="0.6"/>
     <circle cx="122" cy="98" r="1" fill="#444" opacity="0.6"/>`,
 
-  // ─── ФУТБОЛКА "Я БОГ" ───
   b_iambog: `
     ${SL_SHORT_L("#f5f5f5", "#e0e0e0")}
     ${SL_SHORT_R("#f5f5f5", "#e0e0e0")}
@@ -565,7 +566,6 @@ const ITEMS_SVG = {
     <path d="M73 203 L127 203" stroke="#d0d0d0" stroke-width="1.2"/>
     <path d="M73 201 L127 201" stroke="#fff" stroke-width="0.4" opacity="0.6"/>`,
 
-  // ─── РУБАШКА В КЛЕТКУ (длинные рукава) ───
   b_cage: `
     ${SL_LONG_L("#c0392b", "#8b0000")}
     ${SL_LONG_R("#c0392b", "#8b0000")}
@@ -586,7 +586,6 @@ const ITEMS_SVG = {
     <path d="M73 203 L127 203" stroke="#8b0000" stroke-width="1.2"/>
     <path d="M76 130 Q78 145 76 160" stroke="#a93226" stroke-width="0.5" fill="none" opacity="0.5"/>`,
 
-  // ─── ХУДИ SUPREME (длинные рукава + капюшон) ───
   b_supreme: `
     ${SL_LONG_L("#c0392b", "#8b0000")}
     ${SL_LONG_R("#c0392b", "#8b0000")}
@@ -609,7 +608,6 @@ const ITEMS_SVG = {
     <circle cx="90" cy="115" r="1.2" fill="#5a0000" opacity="0.6"/>
     <circle cx="110" cy="115" r="1.2" fill="#5a0000" opacity="0.6"/>`,
 
-  // ─── ПИДЖАК ARMANI ФЕЙК (длинные рукава, открытый) ───
   b_armani: `
     ${SL_LONG_L("#1a1a1a", "#0a0a0a")}
     ${SL_LONG_R("#1a1a1a", "#0a0a0a")}
@@ -633,7 +631,6 @@ const ITEMS_SVG = {
     <path d="M118 96 L118 105 L116 105 L116 96 Z" fill="#2a2a2a" opacity="0.5"/>
     <path d="M78 96 L80 130" stroke="#333" stroke-width="0.4" fill="none" opacity="0.4"/>`,
 
-  // ─── ПУХОВИК NORTH FACE (длинные рукава, стёганый) ───
   b_nf: `
     ${SL_LONG_L("#1a1a1a", "#0a0a0a")}
     ${SL_LONG_R("#1a1a1a", "#0a0a0a")}
@@ -650,7 +647,6 @@ const ITEMS_SVG = {
     <path d="M70 194 L130 194 M70 200 L130 200" stroke="#333" stroke-width="0.4" opacity="0.5"/>
     <path d="M76 130 Q78 145 76 160" stroke="#0a0a0a" stroke-width="0.5" fill="none" opacity="0.4"/>`,
 
-  // ─── КОЖАНАЯ КУРТКА (длинные рукава, молния) ───
   b_leather: `
     ${SL_LONG_L("#1a1a1a", "#000")}
     ${SL_LONG_R("#1a1a1a", "#000")}
@@ -675,7 +671,6 @@ const ITEMS_SVG = {
     <path d="M124 96 L124 105" stroke="#2a2a2a" stroke-width="0.6"/>
     <path d="M76 130 Q78 145 76 160" stroke="#000" stroke-width="0.5" fill="none" opacity="0.4"/>`,
 
-  // ─── СВАДЕБНОЕ ПЛАТЬЕ (цельный верх, струящееся) ───
   b_wedding: `
     <path d="M76 100 L76 205 L60 260 L140 260 L124 205 L124 100 Q100 94 76 100 Z" fill="#f8f8f8" stroke="#e0e0e0" stroke-width="0.5"/>
     <path d="M103 96 L103 205 L124 205 L140 260 L118 260 L103 205 Z" fill="#f0f0f0" opacity="0.5"/>
@@ -693,7 +688,6 @@ const ITEMS_SVG = {
     <circle cx="100" cy="185" r="2" fill="#fff" opacity="0.7"/>
     <path d="M76 200 L124 200" stroke="#e8e8e8" stroke-width="1"/>`,
 
-  // ─── БРОНЕЖИЛЕТ (без рукавов, тактический) ───
   b_vest: `
     <path d="M73 96 L73 205 L127 205 L127 96 Q100 92 73 96 Z" fill="#2c3e50" stroke="#1a252f" stroke-width="0.6"/>
     <path d="M103 96 L103 205 L127 205 L127 96 Q117 94 103 96 Z" fill="#1a252f" opacity="0.5"/>
@@ -716,7 +710,6 @@ const ITEMS_SVG = {
     <path d="M124 96 L124 108" stroke="#3d5060" stroke-width="0.6"/>
     <path d="M73 203 L127 203" stroke="#1a252f" stroke-width="1.2"/>`,
 
-  // ─── СМОКИНГ (длинные рукава, формальный) ───
   b_tuxedo: `
     ${SL_LONG_L("#000", "#000")}
     ${SL_LONG_R("#000", "#000")}
@@ -742,7 +735,6 @@ const ITEMS_SVG = {
     <path d="M124 96 L124 108" stroke="#333" stroke-width="0.5"/>
     <path d="M78 96 L80 130" stroke="#1a1a1a" stroke-width="0.4" fill="none" opacity="0.4"/>`,
 
-  // ─── КОСТЮМ САНТЫ (длинные рукава, мех) ───
   b_santa: `
     ${SL_LONG_L("#c0392b", "#8b0000")}
     ${SL_LONG_R("#c0392b", "#8b0000")}
@@ -765,7 +757,6 @@ const ITEMS_SVG = {
     <circle cx="114" cy="165" r="2.5" fill="#fff" opacity="0.7"/>
     <circle cx="100" cy="150" r="2" fill="#fff" opacity="0.6"/>`,
 
-  // ─── МАЙКА USA (без рукавов) ───
   b_tank_usa: `
     <path d="M73 96 L73 205 L127 205 L127 96 Q100 92 73 96 Z" fill="#f5f5f5"/>
     <path d="M103 96 L103 205 L127 205 L127 96 Q117 94 103 96 Z" fill="#e8e8e8" opacity="0.5"/>
@@ -787,7 +778,6 @@ const ITEMS_SVG = {
     <path d="M73 203 L127 203" stroke="#c8c8c8" stroke-width="1.2"/>
     <path d="M76 130 Q78 145 76 160" stroke="#dcdcdc" stroke-width="0.5" fill="none" opacity="0.5"/>`,
 
-  // ─── ЧЁРНОЕ ХУДИ (длинные рукава + капюшон + карман) ───
   b_hoodie: `
     ${SL_LONG_L("#1a1a1a", "#0a0a0a")}
     ${SL_LONG_R("#1a1a1a", "#0a0a0a")}
@@ -809,7 +799,6 @@ const ITEMS_SVG = {
     <circle cx="90" cy="112" r="1.2" fill="#555" opacity="0.6"/>
     <circle cx="110" cy="112" r="1.2" fill="#555" opacity="0.6"/>`,
 
-  // ─── ГАВАЙКА (короткие рукава, узор) ───
   b_hawaii: `
     ${SL_SHORT_L("#fff9e6", "#f0e6c0")}
     ${SL_SHORT_R("#fff9e6", "#f0e6c0")}
@@ -837,7 +826,6 @@ const ITEMS_SVG = {
     <path d="M76 130 Q78 145 76 160" stroke="#e8dcc0" stroke-width="0.5" fill="none" opacity="0.5"/>
     <path d="M73 203 L127 203" stroke="#e0d0a0" stroke-width="1"/>`,
 
-  // ─── РЫЦАРСКИЙ ДОСПЕХ (длинные рукава, латы) ───
   b_armor: `
     ${SL_LONG_L("#7f8c8d", "#5a6a6a")}
     ${SL_LONG_R("#7f8c8d", "#5a6a6a")}
@@ -861,7 +849,6 @@ const ITEMS_SVG = {
     <circle cx="88" cy="138" r="1.5" fill="#a8b8b8" opacity="0.6"/>
     <circle cx="112" cy="138" r="1.5" fill="#a8b8b8" opacity="0.6"/>`,
 
-  // ─── БОМБЕР (длинные рукава, оранжевая подкладка) ───
   b_bomber: `
     ${SL_LONG_L("#1a1a1a", "#0a0a0a")}
     ${SL_LONG_R("#1a1a1a", "#0a0a0a")}
@@ -885,7 +872,6 @@ const ITEMS_SVG = {
     <path d="M76 130 Q78 145 76 160" stroke="#0a0a0a" stroke-width="0.5" fill="none" opacity="0.4"/>
     <path d="M124 140 Q122 155 124 170" stroke="#0a0a0a" stroke-width="0.5" fill="none" opacity="0.4"/>`,
 
-  // ─── ПОНЧО (цельный верх, широкое) ───
   b_poncho: `
     ${SL_FULL_L("#8b4513", "#5a2e0a", "#a0522d")}
     ${SL_FULL_R("#8b4513", "#5a2e0a", "#a0522d")}
@@ -901,7 +887,6 @@ const ITEMS_SVG = {
     <path d="M68 210 L68 225" stroke="#a0522d" stroke-width="1" opacity="0.6"/>
     <path d="M132 210 L132 225" stroke="#a0522d" stroke-width="1" opacity="0.6"/>`,
 
-  // ─── КИМОНО (цельный верх, широкие рукава, оби) ───
   b_kimono: `
     ${SL_FULL_L("#e91e63", "#c2185b", "#f06292")}
     ${SL_FULL_R("#e91e63", "#c2185b", "#f06292")}
@@ -922,7 +907,6 @@ const ITEMS_SVG = {
     <path d="M124 140 Q122 155 124 170" stroke="#c2185b" stroke-width="0.5" fill="none" opacity="0.4"/>
     <path d="M76 96 Q88 92 100 92 Q112 92 124 96" stroke="#c2185b" stroke-width="0.6" fill="none" opacity="0.5"/>`,
 
-  // ─── СПОРТИВНАЯ МАЙКА (короткие рукава, номер) ───
   b_jersey: `
     ${SL_SHORT_L("#1a1a1a", "#0a0a0a")}
     ${SL_SHORT_R("#1a1a1a", "#0a0a0a")}
@@ -937,7 +921,6 @@ const ITEMS_SVG = {
     <path d="M73 201 L127 201" stroke="#333" stroke-width="0.4" opacity="0.4"/>
     <circle cx="100" cy="120" r="2" fill="#f1c40f" opacity="0.6"/>`,
 
-  // ─── КРАСНОЕ ПЛАТЬЕ (цельный верх, струящееся) ───
   b_dress_red: `
     <path d="M76 96 Q74 96 74 105 L84 130 L62 240 L138 240 L116 130 L126 105 Q126 96 124 96 L114 96 Q110 108 100 108 Q90 108 86 96 Z" fill="#c0392b"/>
     <path d="M105 96 L105 108 Q113 108 116 130 L138 240 L110 240 L100 178 Z" fill="#a93226" opacity="0.5"/>
@@ -952,7 +935,6 @@ const ITEMS_SVG = {
     <path d="M90 210 Q88 225 86 238 M110 210 Q112 225 114 238" stroke="#8b0000" stroke-width="0.8" fill="none" opacity="0.4"/>
     <path d="M62 238 L138 238" stroke="#8b0000" stroke-width="0.8"/>`,
 
-  // ─── РУБАШКА С ГАЛСТУКОМ (длинные рукава) ───
   b_shirt_tie: `
     ${SL_LONG_L("#fff", "#e8e8e8")}
     ${SL_LONG_R("#fff", "#e8e8e8")}
@@ -974,7 +956,6 @@ const ITEMS_SVG = {
     <path d="M73 203 L127 203" stroke="#e0e0e0" stroke-width="1.2"/>
     <path d="M73 201 L127 201" stroke="#fff" stroke-width="0.4" opacity="0.5"/>`,
 
-  // ─── ФУТБОЛКА КЛАНА (короткие рукава) ───
   b_gang_shirt: `
     ${SL_SHORT_L("#c0392b", "#8b0000")}
     ${SL_SHORT_R("#c0392b", "#8b0000")}
@@ -989,7 +970,6 @@ const ITEMS_SVG = {
     <path d="M76 130 Q78 145 76 160" stroke="#a93226" stroke-width="0.5" fill="none" opacity="0.5"/>
     <path d="M73 203 L127 203" stroke="#8b0000" stroke-width="1.2"/>`,
 
-  // ─── КУРТКА КЛАНА (длинные рукава, патчи) ───
   b_gang_jacket: `
     ${SL_LONG_L("#1a1a1a", "#0a0a0a")}
     ${SL_LONG_R("#1a1a1a", "#0a0a0a")}
@@ -1010,7 +990,6 @@ const ITEMS_SVG = {
     <rect x="78" y="115" width="10" height="8" fill="#8b0000" opacity="0.6"/>
     <rect x="112" y="115" width="10" height="8" fill="#8b0000" opacity="0.6"/>`,
 
-  // ─── БРОНЯ КЛАНА (длинные рукава, латы) ───
   b_gang_armor: `
     ${SL_LONG_L("#2c3e50", "#1a252f")}
     ${SL_LONG_R("#2c3e50", "#1a252f")}
@@ -1028,7 +1007,6 @@ const ITEMS_SVG = {
     <circle cx="118" cy="120" r="2" fill="#f39c12" opacity="0.6"/>
     <path d="M74 208 L126 208" stroke="#f39c12" stroke-width="1" opacity="0.5"/>`,
 
-  // ─── СПОРТИВКА КЕЙС (длинные рукава, полоски) ───
   b_case_tracksuit: `
     ${SL_LONG_L("#1a1a1a", "#0a0a0a")}
     ${SL_LONG_R("#1a1a1a", "#0a0a0a")}
@@ -1046,7 +1024,6 @@ const ITEMS_SVG = {
     <circle cx="82" cy="134" r="2" fill="#fff" opacity="0.6"/>
     <circle cx="118" cy="134" r="2" fill="#fff" opacity="0.6"/>`,
 
-  // ─── ARMANI НАСТОЯЩИЙ (длинные рукава, формальный) ───
   b_case_armani_real: `
     ${SL_LONG_L("#0a0a0a", "#000")}
     ${SL_LONG_R("#0a0a0a", "#000")}
@@ -1070,7 +1047,6 @@ const ITEMS_SVG = {
     <path d="M124 96 L124 108" stroke="#333" stroke-width="0.5"/>
     <path d="M78 96 L80 130" stroke="#1a1a1a" stroke-width="0.4" fill="none" opacity="0.4"/>`,
 
-  // ─── ДОСПЕХ ДРАКОНА (длинные рукава, латы) ───
   b_case_dragon_armor: `
     ${SL_LONG_L("#2c3e50", "#1a252f")}
     ${SL_LONG_R("#2c3e50", "#1a252f")}
@@ -1092,7 +1068,6 @@ const ITEMS_SVG = {
     <circle cx="88" cy="172" r="1.5" fill="#f39c12" opacity="0.6"/>
     <circle cx="112" cy="172" r="1.5" fill="#f39c12" opacity="0.6"/>`,
 
-  // ─── БРОНЯ МАКСИМУСА (длинные рукава, палдроны) ───
   b_case_top1_body: `
     ${SL_LONG_L("#1a0f2e", "#0f0819")}
     ${SL_LONG_R("#1a0f2e", "#0f0819")}
@@ -1114,7 +1089,6 @@ const ITEMS_SVG = {
     <path d="M70 96 L70 108" stroke="#ffd700" stroke-width="0.8" opacity="0.6"/>
     <path d="M130 96 L130 108" stroke="#ffd700" stroke-width="0.8" opacity="0.6"/>`,
 
-  // ─── МАНТИЯ ИМПЕРАТОРА (длинные рукава, золото) ───
   b_case_top2_body: `
     ${SL_LONG_L("#8b0000", "#5a0000", "#ffd700")}
     ${SL_LONG_R("#8b0000", "#5a0000", "#ffd700")}
@@ -1134,7 +1108,6 @@ const ITEMS_SVG = {
     <path d="M136 90 L130 102" stroke="#ffd700" stroke-width="0.8" fill="none" opacity="0.5"/>
     <path d="M64 210 L136 210" stroke="#ffd700" stroke-width="1.5" opacity="0.6"/>`,
 
-  // ─── ФУТБОЛКА С ЦЕПЯМИ (короткие рукава) ───
   b_case_chains: `
     ${SL_SHORT_L("#1a1a1a", "#0a0a0a")}
     ${SL_SHORT_R("#1a1a1a", "#0a0a0a")}
@@ -1433,7 +1406,7 @@ const ITEMS_SVG = {
     <circle cx="113" cy="310" r="3.5" fill="#8b0000"/>`,
 
   // ═══════════════════════════════════════════════════════════
-  //  ПРАВАЯ РУКА — scale 1.8 (большие 2.2), rotate(+) = ОТ тела (вправо)
+  //  ПРАВАЯ РУКА — scale 1.8/2.2, rotate(+) = ОТ тела (вправо)
   // ═══════════════════════════════════════════════════════════
 
   rh_cig: `<g transform="translate(145, 197) rotate(22) scale(1.8)">
@@ -1493,7 +1466,7 @@ const ITEMS_SVG = {
     <ellipse cx="-6" cy="-46" rx="4" ry="2" fill="#27ae60" transform="rotate(-20 -6 -46)"/>
   </g>`,
 
-  rh_rod: `<g transform="translate(145, 197) rotate(22) scale(1.8)">
+  rh_rod: `<g transform="translate(145, 197) rotate(22) scale(2.2)">
     <line x1="0" y1="0" x2="0" y2="-95" stroke="#8b6914" stroke-width="3"/>
     <line x1="0" y1="-95" x2="0" y2="-5" stroke="#a07828" stroke-width="1" opacity="0.6"/>
     <line x1="1" y1="-95" x2="1" y2="-5" stroke="#c09040" stroke-width="0.4" opacity="0.5"/>
@@ -1506,7 +1479,7 @@ const ITEMS_SVG = {
     <path d="M-3 -90 L-3 -10" stroke="#fff" stroke-width="0.3" opacity="0.4"/>
   </g>`,
 
-  rh_bat: `<g transform="translate(145, 197) rotate(22) scale(1.8)">
+  rh_bat: `<g transform="translate(145, 197) rotate(22) scale(2.2)">
     <rect x="-4" y="-85" width="8" height="85" rx="3" fill="#8b6914" stroke="#5a3a0a" stroke-width="0.5"/>
     <rect x="-4" y="-85" width="3" height="85" fill="#a07828" opacity="0.5"/>
     <rect x="-7" y="-105" width="14" height="25" rx="5" fill="#a07020" stroke="#6b4a14" stroke-width="0.6"/>
@@ -1527,7 +1500,7 @@ const ITEMS_SVG = {
     <rect x="-4" y="-12" width="20" height="2" fill="#fdd835" opacity="0.5"/>
   </g>`,
 
-  rh_flag_rus: `<g transform="translate(145, 197) rotate(22) scale(1.8)">
+  rh_flag_rus: `<g transform="translate(145, 197) rotate(22) scale(2.2)">
     <line x1="0" y1="0" x2="0" y2="-85" stroke="#888" stroke-width="2.5"/>
     <line x1="0" y1="-85" x2="0" y2="-5" stroke="#aaa" stroke-width="0.8" opacity="0.5"/>
     <rect x="0" y="-85" width="45" height="11" fill="#fff"/>
@@ -1683,7 +1656,7 @@ const ITEMS_SVG = {
     <rect x="-2" y="14" width="4" height="4" fill="#8b6914"/>
   </g>`,
 
-  rh_case_dragon_sword: `<g transform="translate(145, 197) rotate(22) scale(1.8)">
+  rh_case_dragon_sword: `<g transform="translate(145, 197) rotate(22) scale(2.2)">
     <rect x="-6" y="-2" width="12" height="18" rx="2" fill="#2c3e50" stroke="#1a252f" stroke-width="0.5"/>
     <rect x="-8" y="-4" width="16" height="4" rx="1" fill="#f39c12"/>
     <path d="M-5 -4 L5 -4 L4 -85 L0 -95 L-4 -85 Z" fill="#d4d4d4" stroke="#888" stroke-width="0.6"/>
@@ -1716,7 +1689,7 @@ const ITEMS_SVG = {
     <circle cx="0" cy="-72" r="2.5" fill="#e74c3c"/>
   </g>`,
 
-  rh_gang_bat: `<g transform="translate(145, 197) rotate(22) scale(1.8)">
+  rh_gang_bat: `<g transform="translate(145, 197) rotate(22) scale(2.2)">
     <rect x="-4" y="-78" width="8" height="78" rx="3" fill="#3d2a10" stroke="#1a0f05" stroke-width="0.5"/>
     <rect x="-4" y="-78" width="3" height="78" fill="#5a3a1e" opacity="0.5"/>
     <rect x="-7" y="-98" width="14" height="22" rx="5" fill="#5a3a1e" stroke="#3d2a10" stroke-width="0.6"/>
@@ -1726,7 +1699,7 @@ const ITEMS_SVG = {
     <path d="M-3 -95 L3 -95" stroke="#f39c12" stroke-width="1.5"/>
   </g>`,
 
-  rh_gang_mace: `<g transform="translate(145, 197) rotate(22) scale(1.8)">
+  rh_gang_mace: `<g transform="translate(145, 197) rotate(22) scale(2.2)">
     <rect x="-4" y="-14" width="8" height="30" fill="#5a3a1e" stroke="#3d2a10" stroke-width="0.5"/>
     <rect x="-4" y="-14" width="3" height="30" fill="#7a5028" opacity="0.5"/>
     <circle cx="0" cy="-32" r="16" fill="#7f8c8d" stroke="#f39c12" stroke-width="1.5"/>
@@ -1747,7 +1720,7 @@ const ITEMS_SVG = {
   </g>`,
 
   // ═══════════════════════════════════════════════════════════
-  //  ЛЕВАЯ РУКА — scale 1.8 (большие 2.2), rotate(-) = ОТ тела (влево)
+  //  ЛЕВАЯ РУКА — scale 1.8/2.2, rotate(-) = ОТ тела (влево)
   // ═══════════════════════════════════════════════════════════
 
   lh_phone: `<g transform="translate(55, 197) rotate(-22) scale(1.8)">
@@ -1807,7 +1780,7 @@ const ITEMS_SVG = {
     <circle cx="6" cy="8" r="1.2" fill="#b8860b"/>
   </g>`,
 
-  lh_shield: `<g transform="translate(55, 197) rotate(-22) scale(1.8)">
+  lh_shield: `<g transform="translate(55, 197) rotate(-22) scale(2.2)">
     <path d="M-20 -30 L20 -30 L20 -10 Q0 15 -20 -10 Z" fill="#7f8c8d" stroke="#5a6a6a" stroke-width="1"/>
     <path d="M-20 -30 L0 -30 L0 15 Q-10 0 -20 -10 Z" fill="#95a5a6" opacity="0.4"/>
     <path d="M-20 -30 L20 -30" stroke="#e74c3c" stroke-width="2.5"/>
@@ -1817,7 +1790,7 @@ const ITEMS_SVG = {
     <path d="M16 -30 L16 -22 L12 -22" stroke="#5a6a6a" stroke-width="0.6" fill="none"/>
   </g>`,
 
-  lh_sword: `<g transform="translate(55, 197) rotate(-22) scale(1.8)">
+  lh_sword: `<g transform="translate(55, 197) rotate(-22) scale(2.2)">
     <line x1="0" y1="-8" x2="0" y2="-90" stroke="#bdc3c7" stroke-width="4.5"/>
     <line x1="-1.5" y1="-8" x2="-1.5" y2="-88" stroke="#fff" stroke-width="1" opacity="0.5"/>
     <path d="M0 -90 L-4 -80 L0 -75 L4 -80 Z" fill="#bdc3c7" stroke="#888" stroke-width="0.4"/>
@@ -1827,7 +1800,7 @@ const ITEMS_SVG = {
     <circle cx="0" cy="6" r="1" fill="#fff" opacity="0.6"/>
   </g>`,
 
-  lh_flag_ussr: `<g transform="translate(55, 197) rotate(-22) scale(1.8)">
+  lh_flag_ussr: `<g transform="translate(55, 197) rotate(-22) scale(2.2)">
     <line x1="0" y1="0" x2="0" y2="-85" stroke="#888" stroke-width="2.5"/>
     <line x1="0" y1="-85" x2="0" y2="-5" stroke="#aaa" stroke-width="0.8" opacity="0.5"/>
     <rect x="-42" y="-85" width="42" height="26" fill="#c0392b" stroke="#8b0000" stroke-width="0.5"/>
@@ -1945,7 +1918,7 @@ const ITEMS_SVG = {
     <path d="M-20 -15 L20 -15" stroke="#333" stroke-width="0.4" opacity="0.4"/>
   </g>`,
 
-  lh_pizza: `<g transform="translate(55, 197) rotate(-20) scale(1.8)">
+  lh_pizza: `<g transform="translate(55, 197) rotate(-20) scale(2.2)">
     <path d="M-20 -5 L20 -5 L22 0 L-22 0 Z" fill="#f39c12" stroke="#d68910" stroke-width="0.5"/>
     <path d="M-20 -5 L0 -45 L20 -5 Z" fill="#f39c12" stroke="#d68910" stroke-width="0.5"/>
     <path d="M-18 -3 L0 -40 L18 -3" stroke="#d68910" stroke-width="0.5" fill="none" opacity="0.4"/>
@@ -2001,7 +1974,7 @@ const ITEMS_SVG = {
     <circle cx="0" cy="-7" r="1.2" fill="#fff" opacity="0.9"/>
   </g>`,
 
-  lh_case_top1_artifact: `<g transform="translate(55, 197) rotate(-22) scale(1.8)">
+  lh_case_top1_artifact: `<g transform="translate(55, 197) rotate(-22) scale(2.2)">
     <circle cx="0" cy="-25" r="20" fill="#1a0f2e" stroke="#ffd700" stroke-width="2"/>
     <circle cx="0" cy="-25" r="14" fill="#2c1810"/>
     <path d="M0 -38 L4 -30 L13 -30 L6 -24 L9 -15 L0 -20 L-9 -15 L-6 -24 L-13 -30 L-4 -30 Z" fill="#ffd700" stroke="#b8860b" stroke-width="0.6"/>
@@ -2009,7 +1982,7 @@ const ITEMS_SVG = {
     <circle cx="0" cy="-25" r="1.2" fill="#fff"/>
   </g>`,
 
-  lh_case_top2_artifact: `<g transform="translate(55, 197) rotate(-22) scale(1.8)">
+  lh_case_top2_artifact: `<g transform="translate(55, 197) rotate(-22) scale(2.2)">
     <ellipse cx="0" cy="-25" rx="22" ry="20" fill="#ffd700" stroke="#8b0000" stroke-width="2.5"/>
     <ellipse cx="0" cy="-25" rx="16" ry="14" fill="#1a0f2e"/>
     <path d="M0 -40 L5 -30 L16 -28 L8 -21 L10 -10 L0 -16 L-10 -10 L-8 -21 L-16 -28 L-5 -30 Z" fill="#ffd700" stroke="#b8860b" stroke-width="0.6"/>
@@ -2019,14 +1992,14 @@ const ITEMS_SVG = {
     <circle cx="0" cy="-3" r="1.8" fill="#fff"/>
   </g>`,
 
-  lh_gang_banner: `<g transform="translate(55, 197) rotate(-22) scale(1.8)">
+  lh_gang_banner: `<g transform="translate(55, 197) rotate(-22) scale(2.2)">
     <line x1="0" y1="0" x2="0" y2="-75" stroke="#5a3a1e" stroke-width="2.5"/>
     <path d="M0 -75 L38 -70 L33 -60 L38 -50 L0 -55 Z" fill="#c0392b" stroke="#8b0000" stroke-width="0.6"/>
     <text x="19" y="-60" text-anchor="middle" font-size="9" fill="#f39c12" font-weight="900">ГАНГ</text>
     <circle cx="0" cy="-75" r="2" fill="#3d2a10"/>
   </g>`,
 
-  lh_gang_shield: `<g transform="translate(55, 197) rotate(-22) scale(1.8)">
+  lh_gang_shield: `<g transform="translate(55, 197) rotate(-22) scale(2.2)">
     <path d="M-20 -30 L20 -30 L20 -8 Q0 16 -20 -8 Z" fill="#2c3e50" stroke="#f39c12" stroke-width="2"/>
     <path d="M-20 -30 L0 -30 L0 16 Q-10 0 -20 -8 Z" fill="#34495e" opacity="0.4"/>
     <path d="M-20 -30 L20 -30" stroke="#c0392b" stroke-width="3"/>
@@ -2035,7 +2008,7 @@ const ITEMS_SVG = {
     <circle cx="0" cy="-14" r="3" fill="#c0392b"/>
   </g>`,
 
-  lh_gang_trophy: `<g transform="translate(55, 197) rotate(-22) scale(1.8)">
+  lh_gang_trophy: `<g transform="translate(55, 197) rotate(-22) scale(2.2)">
     <path d="M-14 -38 L14 -38 L12 -20 Q0 -14 -12 -20 Z" fill="#ffd700" stroke="#b8860b" stroke-width="1"/>
     <path d="M-14 -38 L-16 -32 Q-16 -25 -10 -22 M14 -38 L16 -32 Q16 -25 10 -22" stroke="#b8860b" stroke-width="1.2" fill="none"/>
     <path d="M-12 -38 L-12 -22 Q0 -18 0 -22 Z" fill="#ffe66d" opacity="0.5"/>
@@ -2147,7 +2120,7 @@ const ITEMS_SVG = {
     <ellipse cx="120" cy="366" rx="3" ry="1" fill="#fff" opacity="0.7"/>`,
 
   // ═══════════════════════════════════════════════════════════
-  //  ТЯНКИ — заглушки для CUSTOM_IMAGES
+  //  ТЯНКИ — заглушки
   // ═══════════════════════════════════════════════════════════
 
   lh_tyanka: null,
