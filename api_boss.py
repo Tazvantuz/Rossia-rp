@@ -1,5 +1,5 @@
 # api_boss.py
-"""Логика глобального босса."""
+"""Логика глобального босса (ОДНОРАЗОВЫЙ)."""
 import time
 from aiohttp import web
 from database import db
@@ -19,11 +19,6 @@ async def _ensure_boss():
                          (BOSS_ID, BOSS_MAX_HP, BOSS_MAX_HP, now + BOSS_DURATION))
         return await db.fetchone("SELECT * FROM boss_state WHERE boss_id=?", (BOSS_ID,))
     return row
-
-async def _reset_boss():
-    now = int(time.time())
-    await db.execute("UPDATE boss_state SET current_hp=max_hp, ends_at=?, status='active' WHERE boss_id=?", (now + BOSS_DURATION, BOSS_ID))
-    await db.execute("DELETE FROM boss_damage WHERE boss_id=?", (BOSS_ID,))
 
 async def _distribute_rewards(boss):
     # Top 3
@@ -49,12 +44,17 @@ async def _distribute_rewards(boss):
 async def _check_boss_state():
     boss = await _ensure_boss()
     now = int(time.time())
+    
+    # Если босс жив, проверяем, не истекло ли время
     if boss['status'] == 'active':
         if boss['current_hp'] <= 0:
+            # Он умер. Начисляем награды и ставим статус dead.
             await _distribute_rewards(boss)
-            await _reset_boss()
+            await db.execute("UPDATE boss_state SET status='dead' WHERE boss_id=?", (BOSS_ID,))
         elif boss['ends_at'] < now:
-            await _reset_boss()
+            # Время вышло, он сбежал. Награды не выдаем.
+            await db.execute("UPDATE boss_state SET status='expired' WHERE boss_id=?", (BOSS_ID,))
+            
     return await db.fetchone("SELECT * FROM boss_state WHERE boss_id=?", (BOSS_ID,))
 
 async def api_boss_get(request):
@@ -72,7 +72,6 @@ async def api_boss_get(request):
                             "WHERE bd.boss_id=? AND bd.damage > 0 ORDER BY bd.damage DESC LIMIT 5", (BOSS_ID,))
     
     claimed = await db.fetchall("SELECT reward_type FROM boss_rewards WHERE boss_id=? AND user_id=?", (BOSS_ID, uid))
-    
     stats = get_combat_stats(p)
     
     return web.json_response({
@@ -82,7 +81,7 @@ async def api_boss_get(request):
             "hp": max(0, boss["current_hp"]),
             "max_hp": boss["max_hp"],
             "ends_at": boss["ends_at"],
-            "status": boss["status"]
+            "status": boss["status"] # 'active', 'dead', 'expired'
         },
         "my_damage": my_dmg,
         "my_cooldown": max(0, 3 - (int(time.time()) - (my_dmg_row['last_attack_ts'] if my_dmg_row else 0))),
@@ -95,8 +94,9 @@ async def api_boss_get(request):
 async def api_boss_attack(request):
     ud = await _user(request); uid = ud["id"]
     boss = await _check_boss_state()
-    if boss['status'] != 'active' or boss['current_hp'] <= 0:
-        return web.json_response({"error": "Босс уже мертв или неактивен"}, status=400)
+    
+    if boss['status'] != 'active':
+        return web.json_response({"error": "Босс уже мертв или сбежал"}, status=400)
         
     p = await _player(uid)
     stats = get_combat_stats(p)
@@ -119,6 +119,6 @@ async def api_boss_attack(request):
     
     if new_hp <= 0:
         await _distribute_rewards(boss)
-        await _reset_boss()
+        await db.execute("UPDATE boss_state SET status='dead' WHERE boss_id=?", (BOSS_ID,))
         
     return web.json_response({"ok": True, "damage": dmg, "new_hp": new_hp})

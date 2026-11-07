@@ -1,4 +1,5 @@
 // app-boss.js
+// Логика и UI глобального одноразового босса "Опасный Поцык".
 
 let bossTimerInterval = null;
 
@@ -35,9 +36,17 @@ function renderBossList() {
   api("boss/get").then(d => {
     const hpEl = document.getElementById("list-boss-hp");
     if (hpEl) {
-      const hpStr = d.boss.hp.toLocaleString('ru-RU');
-      const maxStr = d.boss.max_hp.toLocaleString('ru-RU');
-      hpEl.textContent = `${hpStr} / ${maxStr} HP`;
+      if (d.boss.status === 'dead') {
+        hpEl.textContent = "💀 ПОВЕРЖЕН";
+        hpEl.style.color = "#2ecc71";
+      } else if (d.boss.status === 'expired') {
+        hpEl.textContent = "🏃 СБЕЖАЛ";
+        hpEl.style.color = "#e74c3c";
+      } else {
+        const hpStr = d.boss.hp.toLocaleString('ru-RU');
+        const maxStr = d.boss.max_hp.toLocaleString('ru-RU');
+        hpEl.textContent = `${hpStr} / ${maxStr} HP`;
+      }
     }
   }).catch(()=>{});
 }
@@ -76,6 +85,10 @@ async function renderBossDetail() {
     const d = await api("boss/get");
     const b = d.boss;
     
+    const isDead = b.status === 'dead' || b.hp <= 0;
+    const isExpired = b.status === 'expired';
+    const isActive = !isDead && !isExpired;
+
     const hpPct = Math.min(100, (b.hp / b.max_hp) * 100);
     const hpStr = b.hp.toLocaleString('ru-RU');
     const maxStr = b.max_hp.toLocaleString('ru-RU');
@@ -105,17 +118,29 @@ async function renderBossDetail() {
     const check1k = d.my_damage >= 1000 ? (reward1k ? '✅' : '🔓') : '🔒';
     const check10k = d.my_damage >= 10000 ? (reward10k ? '✅' : '🔓') : '🔒';
     
+    // Блок с кнопкой атаки или статусом
+    let actionBtnHtml = '';
+    if (isDead) {
+        actionBtnHtml = `<div style="text-align:center;padding:16px;background:rgba(46,204,113,0.1);border:1px solid #2ecc71;border-radius:12px;color:#2ecc71;font-weight:900;font-size:16px;">🏆 БОСС ПОВЕРЖЕН!<br><span style="font-size:12px;font-weight:normal;">Награды распределены</span></div>`;
+    } else if (isExpired) {
+        actionBtnHtml = `<div style="text-align:center;padding:16px;background:rgba(231,76,60,0.1);border:1px solid #e74c3c;border-radius:12px;color:#e74c3c;font-weight:900;font-size:16px;">💀 БОСС СБЕЖАЛ!<br><span style="font-size:12px;font-weight:normal;">Время истекло</span></div>`;
+    } else {
+        actionBtnHtml = `<button class="btn btn-primary boss-attack-btn" onclick="attackBoss()" id="btn-attack-boss">
+            ⚔️ Атаковать (${d.my_stats.damage} DMG)
+        </button>`;
+    }
+
     el.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
         <button class="btn btn-secondary" style="width:auto;padding:8px 12px;margin:0;" onclick="closeBoss()">← Назад</button>
         <h2 style="margin:0;">💀 Опасный Поцык</h2>
       </div>
       
-      <div class="boss-timer-box">
+      <div class="boss-timer-box" style="${isActive ? '' : 'display:none;'}">
         ⏳ До конца ивента: <span id="boss-timer" style="color:#e74c3c;font-weight:900;">${formatBossTime(b.ends_at - d.now)}</span>
       </div>
       
-      <div class="boss-image-wrap">
+      <div class="boss-image-wrap" style="${isDead ? 'filter:grayscale(1) brightness(0.5);' : ''}">
         <img src="/assets/pocyk.png" class="boss-main-img">
       </div>
       
@@ -126,9 +151,7 @@ async function renderBossDetail() {
         </div>
       </div>
       
-      <button class="btn btn-primary boss-attack-btn" onclick="attackBoss()" id="btn-attack-boss">
-        ⚔️ Атаковать (${d.my_stats.damage} DMG)
-      </button>
+      ${actionBtnHtml}
       
       <h3 class="section-subtitle" style="margin-top:24px;">🏆 Топ по урону</h3>
       <div class="boss-top-list">
@@ -180,17 +203,24 @@ async function renderBossDetail() {
       </div>
     `;
     
-    if (d.my_cooldown > 0) {
+    // Включаем кулдаун на кнопку, если босс активен и есть кд
+    if (isActive && d.my_cooldown > 0) {
       disableBossBtn(d.my_cooldown);
     }
     
-    bossTimerInterval = setInterval(() => {
-      const tEl = document.getElementById("boss-timer");
-      if (!tEl) { clearInterval(bossTimerInterval); return; }
-      const left = b.ends_at - Math.floor(Date.now() / 1000);
-      tEl.textContent = formatBossTime(left);
-      if (left <= 0) clearInterval(bossTimerInterval);
-    }, 1000);
+    // Запускаем таймер только если босс активен
+    if (isActive) {
+      bossTimerInterval = setInterval(() => {
+        const tEl = document.getElementById("boss-timer");
+        if (!tEl) { clearInterval(bossTimerInterval); return; }
+        const left = b.ends_at - Math.floor(Date.now() / 1000);
+        tEl.textContent = formatBossTime(left);
+        if (left <= 0) {
+            clearInterval(bossTimerInterval);
+            renderBossDetail(); // Перезагружаем, чтобы показать "Босс сбежал"
+        }
+      }, 1000);
+    }
     
   } catch(e) {
     el.innerHTML = `<div style="color:#e74c3c;text-align:center;padding:20px;">Ошибка: ${e.message}</div>`;
@@ -210,7 +240,7 @@ async function attackBoss() {
     
     if (d.new_hp <= 0) {
       toast("🎉 БОСС ПОВЕРЖЕН! Награды распределены!", "success");
-      closeBoss();
+      setTimeout(() => renderBossDetail(), 800); // Даем время прочитать тост и обновляем экран
       return;
     }
     
@@ -223,7 +253,7 @@ async function attackBoss() {
       hpBar.style.width = pct + "%";
     }
     
-    setTimeout(() => renderBossDetail(), 500); // Перезагружаем топ
+    setTimeout(() => renderBossDetail(), 500); // Перезагружаем топ и обновляем кд
   } catch(e) {
     toast(e.message, "error");
     if (e.message.includes("Кд")) {
