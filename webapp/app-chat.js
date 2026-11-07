@@ -11,10 +11,12 @@ function startChatPolling() {
   };
   tick();
   chatInterval = setInterval(tick, 2000); // Real-time: 2 секунды
+  
   if (window._convPoll) clearInterval(window._convPoll);
+  if (state.player) loadConversations(); // <--- Мгновенная загрузка при открытии
   window._convPoll = setInterval(() => {
     if (state.player) loadConversations();
-  }, 5000); // Обновление списка бесед каждые 5 секунд
+  }, 5000);
 }
 
 function stopChatPolling() {
@@ -67,21 +69,22 @@ function openPM(uid, name, tag, color) {
   uid = Number(uid);
   if (!state.openPMs) state.openPMs = [];
   if (!state.openPMs.find(x => Number(x.uid) === uid)) {
-    state.openPMs.push({uid: uid, name: name, tag: tag || null, tag_color: color || null});
+    state.openPMs.push({uid: uid, name: name, tag: tag || null, tag_color: color || null, _ts: Date.now()});
   } else {
     const p = state.openPMs.find(x => Number(x.uid) === uid);
     if (tag) p.tag = tag;
     if (color) p.tag_color = color;
+    p._ts = Date.now();
   }
   state.chatWith = uid;
   const existing = state.openPMs.find(x => Number(x.uid) === uid);
   if (existing) existing.unread = 0;
   
-  renderChatTabs(); // <-- СРАЗУ обновляем кнопки
+  renderChatTabs();
   closeModal();
   showTab("chat");
-  loadPM(); // <-- сразу загружаем сообщения
-  loadConversations(); // <-- подтягиваем актуальный список
+  loadPM();
+  loadConversations();
 }
 
 function renderChatTabs() {
@@ -89,15 +92,54 @@ function renderChatTabs() {
   if (!tabs) return;
   const isGlobal = !state.chatWith || state.chatWith === 'global';
   let html = `<button class="chat-tab ${isGlobal ? 'active' : ''}" data-chat="global" onclick="switchChat('global')">🌐 Общий</button>`;
+  
+  let activePm = null;
+
   if (Array.isArray(state.openPMs)) {
     for (const p of state.openPMs) {
       const isActive = Number(state.chatWith) === Number(p.uid);
+      if (isActive) activePm = p;
       const unreadDot = (p.unread && p.unread > 0) ? `<span style="background:#e74c3c;color:#fff;border-radius:8px;padding:0 5px;font-size:10px;margin-left:4px;">${p.unread}</span>` : '';
       const tagHtml = p.tag ? `<span class="gang-tag" style="color:${escapeHtml(p.tag_color || '#f39c12')};border-color:${escapeHtml(p.tag_color || '#f39c12')}">[${escapeHtml(p.tag)}]</span> ` : '';
       html += `<button class="chat-tab ${isActive ? 'active' : ''}" data-chat="${p.uid}" onclick="switchChat(${p.uid})">👤 ${tagHtml}${escapeHtml(p.name)}${unreadDot}</button>`;
     }
   }
   tabs.innerHTML = html;
+
+  const header = document.getElementById("chat-pm-header");
+  if (header) {
+    if (activePm) {
+      header.style.display = "flex";
+      const tagHtml = activePm.tag ? `<span class="gang-tag" style="color:${escapeHtml(activePm.tag_color || '#f39c12')};border-color:${escapeHtml(activePm.tag_color || '#f39c12')}">[${escapeHtml(activePm.tag)}]</span> ` : '';
+      header.innerHTML = `
+        <div style="flex:1; font-weight:bold; color:#fff; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+          ✉️ ${tagHtml}${escapeHtml(activePm.name)}
+        </div>
+        <button onclick="deletePM()" style="background:transparent;border:none;color:#e74c3c;font-size:22px;padding:0 10px;cursor:pointer;line-height:1;" title="Удалить переписку">✕</button>
+      `;
+    } else {
+      header.style.display = "none";
+      header.innerHTML = "";
+    }
+  }
+}
+
+async function deletePM() {
+  if (!state.chatWith || state.chatWith === 'global') return;
+  if (!confirm("Удалить всю переписку с этим игроком? Это действие нельзя отменить.")) return;
+  try {
+    await api("chat/pm/delete", { with_id: state.chatWith });
+    toast("❌ Переписка удалена");
+    
+    if (state.openPMs) {
+      state.openPMs = state.openPMs.filter(x => Number(x.uid) !== Number(state.chatWith));
+    }
+    state.chatWith = 'global';
+    switchChat('global');
+    loadConversations();
+  } catch(e) {
+    toast(e.message, "error");
+  }
 }
 
 async function loadPM() {
@@ -129,7 +171,7 @@ async function sendChat() {
       await api("chat/pm/send", { to_id: state.chatWith, message: msg });
       loadPM();
       updateChatBadge();
-      loadConversations(); // <-- чтобы собеседник увидел диалог
+      loadConversations();
     }
     inp.value = "";
     if (tg) tg.HapticFeedback?.impactOccurred("light");

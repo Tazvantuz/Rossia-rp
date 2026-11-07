@@ -21,10 +21,7 @@ def _is_known_bot(user_id):
 
 # ═══════════ АТОМАРНЫЕ ХЕЛПЕРЫ ДЛЯ ТРЕЙДОВ ═══════════
 async def _atomic_withdraw_money(uid, amount):
-    """Атомарно списывает деньги, только если баланс >= amount.
-    Возвращает True при успехе, False если не хватает (ничего не списано)."""
-    if amount <= 0:
-        return True
+    if amount <= 0: return True
     try:
         async with db.conn.execute(
             "UPDATE players SET balance = balance - ? WHERE user_id = ? AND balance >= ?",
@@ -37,10 +34,7 @@ async def _atomic_withdraw_money(uid, amount):
         return False
 
 async def _atomic_withdraw_item(uid, iid, qty=1):
-    """Атомарно списывает qty предметов, если quantity >= qty.
-    Возвращает True при успехе, False если нет (ничего не списано)."""
-    if qty <= 0:
-        return True
+    if qty <= 0: return True
     try:
         async with db.conn.execute(
             "UPDATE inventory SET quantity = quantity - ? "
@@ -574,7 +568,6 @@ async def api_chat_pm_unread_count(request):
 
 async def api_chat_pm_conversations(request):
     ud = await _user(request); uid = ud["id"]
-    # ИСПРАВЛЕНИЕ: возвращаем всех, с кем есть переписка (и входящие, и исходящие)
     rows = await db.fetchall(
         """
         SELECT 
@@ -610,6 +603,18 @@ async def api_chat_pm_get(request):
         "ORDER BY id ASC LIMIT 100", (uid, with_id, with_id, uid))
     await db.execute("UPDATE private_messages SET is_read=1 WHERE to_id=? AND from_id=?", (uid, with_id))
     return web.json_response({"messages": rows})
+
+async def api_chat_pm_delete(request):
+    ud = await _user(request); uid = ud["id"]
+    body = await request.json()
+    with_id = int(body.get("with_id", 0))
+    if not with_id:
+        return web.json_response({"error": "Неверный ID"}, status=400)
+    await db.execute(
+        "DELETE FROM private_messages WHERE (from_id=? AND to_id=?) OR (from_id=? AND to_id=?)",
+        (uid, with_id, with_id, uid)
+    )
+    return web.json_response({"ok": True})
 
 async def api_chat_send(request):
     try:

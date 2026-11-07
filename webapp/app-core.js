@@ -264,17 +264,47 @@ async function updateChatBadge() {
 async function loadConversations() {
   try {
     const d = await api("chat/pm/conversations", {});
+    const serverConvs = d.conversations || [];
     if (!state.openPMs) state.openPMs = [];
-    for (const c of (d.conversations || [])) {
-      if (!state.openPMs.find(x => Number(x.uid) === Number(c.user_id))) {
-        state.openPMs.push({uid: c.user_id, name: c.nickname, tag: c.gang_tag, tag_color: c.gang_tag_color, unread: c.unread});
-      } else {
-        const existing = state.openPMs.find(x => Number(x.uid) === Number(c.user_id));
-        existing.unread = c.unread;
-        existing.tag = c.gang_tag;
-        existing.tag_color = c.gang_tag_color;
+
+    const serverUids = new Set(serverConvs.map(c => Number(c.user_id)));
+    
+    // Удаляем локальные чаты, которых нет на сервере, КРОМЕ тех, что были открыты менее 15 секунд назад (защита от пропадания при наборе текста)
+    state.openPMs = state.openPMs.filter(p => {
+      if (serverUids.has(Number(p.uid))) return true;
+      if (Number(p.uid) === Number(state.chatWith) && p._ts && Date.now() - p._ts < 15000) return true;
+      return false;
+    });
+
+    // Если открытый чат исчез с сервера и не является новым, переключаем на общий
+    if (state.chatWith && state.chatWith !== 'global' && !serverUids.has(Number(state.chatWith))) {
+      const activePm = state.openPMs.find(p => Number(p.uid) === Number(state.chatWith));
+      if (!activePm) {
+        state.chatWith = 'global';
+        if (typeof loadChat === 'function') loadChat();
       }
     }
+
+    for (const c of serverConvs) {
+      const existing = state.openPMs.find(x => Number(x.uid) === Number(c.user_id));
+      if (existing) {
+        existing.name = c.nickname;
+        existing.tag = c.gang_tag;
+        existing.tag_color = c.gang_tag_color;
+        existing.unread = c.unread;
+        existing._ts = Date.now();
+      } else {
+        state.openPMs.push({
+          uid: c.user_id,
+          name: c.nickname,
+          tag: c.gang_tag,
+          tag_color: c.gang_tag_color,
+          unread: c.unread,
+          _ts: Date.now()
+        });
+      }
+    }
+
     if (typeof renderChatTabs === 'function') renderChatTabs();
   } catch(_) {}
 }
