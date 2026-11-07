@@ -112,19 +112,25 @@ async def api_admin_analytics(request):
     online = (await db.fetchone(
         "SELECT COUNT(*) as c FROM players WHERE last_seen > ? AND is_bot=0",
         (now - 120,)))["c"]
+    
+    # ИСПРАВЛЕНО: используем локальное время
     new_today = (await db.fetchone(
-        "SELECT COUNT(*) as c FROM players WHERE strftime('%s', created_at) > ? AND is_bot=0",
-        (today_day * 86400,)))["c"]
+        "SELECT COUNT(*) as c FROM players WHERE date(created_at, 'localtime') = date('now', 'localtime') AND is_bot=0"
+    ))["c"]
 
+    # ИСПРАВЛЕНО: активные сегодня (локальное время)
     active_today = (await db.fetchone(
         "SELECT COUNT(DISTINCT pda.user_id) as c FROM player_daily_activity pda "
         "JOIN players p ON p.user_id = pda.user_id "
-        "WHERE pda.day=? AND p.is_bot=0", (today_day,)))["c"]
-    week_start = today_day - 6
+        "WHERE date(pda.day * 86400, 'unixepoch', 'localtime') = date('now', 'localtime') AND p.is_bot=0"
+    ))["c"]
+
+    # ИСПРАВЛЕНО: активные за неделю (локальное время)
     active_week = (await db.fetchone(
         "SELECT COUNT(DISTINCT pda.user_id) as c FROM player_daily_activity pda "
         "JOIN players p ON p.user_id = pda.user_id "
-        "WHERE pda.day>=? AND p.is_bot=0", (week_start,)))["c"]
+        "WHERE date(pda.day * 86400, 'unixepoch', 'localtime') >= date('now', 'localtime', '-6 days') AND p.is_bot=0"
+    ))["c"]
 
     sessions_rows = await db.fetchall(
         "SELECT pda.user_id, pda.day, pda.requests, pda.first_seen, pda.last_seen "
@@ -200,17 +206,18 @@ async def api_admin_analytics(request):
             "total_str": f"{hours}ч {mins}м" if hours > 0 else f"{mins}м",
         })
 
+    # ИСПРАВЛЕНО: график активности по локальным дням
     daily_activity = []
+    rows = await db.fetchall(
+        "SELECT date(pda.day * 86400, 'unixepoch', 'localtime') as local_date, COUNT(DISTINCT pda.user_id) as c "
+        "FROM player_daily_activity pda JOIN players p ON p.user_id=pda.user_id "
+        "WHERE pda.day >= ? AND p.is_bot=0 GROUP BY local_date", (today_day - 6,))
+    counts = {r['local_date']: r['c'] for r in rows}
     for i in range(6, -1, -1):
-        d = today_day - i
-        cnt = (await db.fetchone(
-            "SELECT COUNT(DISTINCT pda.user_id) as c FROM player_daily_activity pda "
-            "JOIN players p ON p.user_id = pda.user_id "
-            "WHERE pda.day=? AND p.is_bot=0", (d,)))["c"]
-        daily_activity.append({
-            "date": time.strftime("%d.%m", time.gmtime(d * 86400)),
-            "count": cnt,
-        })
+        d = time.localtime(time.time() - i * 86400)
+        date_str = time.strftime("%Y-%m-%d", d)
+        label = time.strftime("%d.%m", d)
+        daily_activity.append({"date": label, "count": counts.get(date_str, 0)})
 
     recent_rows = await db.fetchall(
         "SELECT user_id, nickname, strftime('%s', created_at) as created_ts "

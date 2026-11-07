@@ -22,9 +22,6 @@ async function claimRoulette() {
   } catch(e) { toast(e.message, "error"); }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  БОНУС ЗА ПОДПИСКУ НА TELEGRAM-ГРУППУ
-// ══════════════════════════════════════════════════════════════
 const TG_BONUS_CHANNEL_URL = "https://t.me/russiarpbot1";
 
 function claimTgBonus() {
@@ -109,13 +106,16 @@ function renderLocationInfo(loc) {
 
 function renderPlayersList(players) {
   if (players.length === 0) { $("#players-list").innerHTML = '<p style="color:var(--hint);text-align:center;padding:20px">Никого нет</p>'; return; }
-  players = [...players].sort((a, b) => (b.is_online ? 1 : 0) - (a.is_online ? 1 : 0));
+  players = [...players].sort((a, b) => {
+    if (a.is_online !== b.is_online) return b.is_online ? 1 : -1;
+    return (b.last_seen || 0) - (a.last_seen || 0);
+  });
   $("#players-list").innerHTML = players.map(p=>`
     <div class="player-card" onclick="viewPlayer(${p.user_id})">
       <div class="player-avatar">👤</div>
       <div class="player-info">
         <div class="player-name">${formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color)}</div>
-        <div class="player-meta">Ур. ${p.level} · ${_onlineHtml(p.is_online)}${!p.is_online && p.last_seen ? ` · <span class="last-seen">${formatLastSeen(p.last_seen)}</span>` : ''}</div>
+        <div class="player-meta">Ур. ${p.level} · ${_onlineHtml(p.is_online)}${!p.is_online ? ` · <span class="last-seen">${formatLastSeen(p.last_seen)}</span>` : ''}</div>
       </div>
       <div class="player-money">${fmtMoney(p.balance)}₽</div>
     </div>`).join("");
@@ -143,7 +143,7 @@ async function viewPlayer(uid) {
     const stats = d.combat_stats || {hp: 100, damage: 5};
     const onlineInfo = d.is_online
       ? _onlineHtml(true)
-      : `${_onlineHtml(false)}${d.last_seen ? ` · <span class="last-seen">🕐 Был(а) в сети: ${formatLastSeen(d.last_seen)}</span>` : ''}`;
+      : `${_onlineHtml(false)} · <span class="last-seen">🕐 Был(а) в сети: ${formatLastSeen(d.last_seen)}</span>`;
     const nickJs = jsAttr(d.nickname);
     const tagJs  = jsAttr(d.gang_tag || '');
     const colJs  = jsAttr(d.gang_tag_color || '');

@@ -13,13 +13,11 @@ from api_core import (
     USER_LAST_CHAT, CHAT_COOLDOWN,
 )
 
-# ═══ Жёстко зашитые ID ботов ═══
 KNOWN_BOT_IDS = {9900000001, 9900000002, 9900000003, 9900000004, 9900000005}
 
 def _is_known_bot(user_id):
     return user_id in KNOWN_BOT_IDS
 
-# ═══════════ АТОМАРНЫЕ ХЕЛПЕРЫ ДЛЯ ТРЕЙДОВ ═══════════
 async def _atomic_withdraw_money(uid, amount):
     if amount <= 0: return True
     try:
@@ -58,20 +56,24 @@ async def api_location(request):
     if loc_id is None: loc_id = p["location_id"]
     if loc_id < 0 or loc_id >= len(LOCATIONS):
         return web.json_response({"error":"Локация"}, status=400)
+    
+    now_ts = int(time.time())
+    # ИСПРАВЛЕНО: Показываем только тех, кто был онлайн < 24ч назад (или ботов)
     others = await db.fetchall(
         "SELECT p.user_id, p.nickname, p.level, p.balance, p.last_seen, p.tg_username, p.is_bot, "
         "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
         "FROM players p "
         "LEFT JOIN gang_members gm ON gm.user_id = p.user_id "
         "LEFT JOIN gangs g ON g.gang_id = gm.gang_id "
-        "WHERE p.location_id=? AND p.user_id!=?",
-        (loc_id, uid))
-    now_ts = int(time.time())
+        "WHERE p.location_id=? AND p.user_id!=? AND (p.last_seen > ? OR p.is_bot=1)",
+        (loc_id, uid, now_ts - 86400))
+        
     for _o in others:
         if _o.get("is_bot") or _is_known_bot(_o["user_id"]):
             _o["is_online"] = False
         else:
             _o["is_online"] = (_o.get("last_seen") or 0) > now_ts - 120
+            
     return web.json_response({
         "location": LOCATIONS[loc_id],
         "locations": LOCATIONS,

@@ -37,9 +37,7 @@ function formatLastSeen(ts) {
   if (diff < 60) return "только что";
   if (diff < 3600) return Math.floor(diff / 60) + " мин назад";
   if (diff < 86400) return Math.floor(diff / 3600) + " ч назад";
-  if (diff < 604800) return Math.floor(diff / 86400) + " дн назад";
-  const d = new Date(Number(ts) * 1000);
-  return d.toLocaleDateString("ru-RU", {day:"numeric", month:"short"});
+  return "давно";
 }
 
 function escapeHtml(text) {
@@ -269,14 +267,12 @@ async function loadConversations() {
 
     const serverUids = new Set(serverConvs.map(c => Number(c.user_id)));
     
-    // Удаляем локальные чаты, которых нет на сервере, КРОМЕ тех, что были открыты менее 15 секунд назад (защита от пропадания при наборе текста)
     state.openPMs = state.openPMs.filter(p => {
       if (serverUids.has(Number(p.uid))) return true;
       if (Number(p.uid) === Number(state.chatWith) && p._ts && Date.now() - p._ts < 15000) return true;
       return false;
     });
 
-    // Если открытый чат исчез с сервера и не является новым, переключаем на общий
     if (state.chatWith && state.chatWith !== 'global' && !serverUids.has(Number(state.chatWith))) {
       const activePm = state.openPMs.find(p => Number(p.uid) === Number(state.chatWith));
       if (!activePm) {
@@ -561,7 +557,6 @@ function renderPlayer() {
   renderCreditBanner();
   updateNextStepBanner();
 
-  // Кнопка бонуса за ТГ
   const tgBtn = document.getElementById("tg-bonus-btn");
   if (tgBtn) {
     if (p.tg_bonus_claimed) {

@@ -10,10 +10,10 @@ function startChatPolling() {
     else loadPM();
   };
   tick();
-  chatInterval = setInterval(tick, 2000); // Real-time: 2 секунды
+  chatInterval = setInterval(tick, 2000);
   
   if (window._convPoll) clearInterval(window._convPoll);
-  if (state.player) loadConversations(); // <--- Мгновенная загрузка при открытии
+  if (state.player) loadConversations();
   window._convPoll = setInterval(() => {
     if (state.player) loadConversations();
   }, 5000);
@@ -209,12 +209,15 @@ async function loadFriends() {
     const d = await api("friend/list");
     const reqBox = document.getElementById("friend-requests-box");
     if (d.requests.length > 0) {
-      const sortedReqs = [...d.requests].sort((a, b) => (b.is_online ? 1 : 0) - (a.is_online ? 1 : 0));
+      const sortedReqs = [...d.requests].sort((a, b) => {
+        if (a.is_online !== b.is_online) return b.is_online ? 1 : -1;
+        return (b.last_seen || 0) - (a.last_seen || 0);
+      });
       reqBox.innerHTML = `<h3 class="section-subtitle" style="color:#f39c12">Запросы (${d.requests.length})</h3>` + sortedReqs.map(r => `
         <div class="player-card">
           <div class="player-info">
             <div class="player-name">${formatNickWithTag(r.nickname, r.gang_tag, r.gang_tag_color)}</div>
-            <div class="player-meta">${_onlineHtml(r.is_online)}${!r.is_online && r.last_seen ? ` · <span class="last-seen">${formatLastSeen(r.last_seen)}</span>` : ''}</div>
+            <div class="player-meta">${_onlineHtml(r.is_online)}${!r.is_online ? ` · <span class="last-seen">${formatLastSeen(r.last_seen)}</span>` : ''}</div>
           </div>
           <button class="btn btn-primary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick="respondFriend(${r.user_id}, true)">✅</button>
           <button class="btn btn-secondary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;margin-left:4px;" onclick="respondFriend(${r.user_id}, false)">❌</button>
@@ -225,7 +228,10 @@ async function loadFriends() {
     const list = document.getElementById("friend-list");
     if (d.friends.length === 0) list.innerHTML = '<p style="color:var(--hint);text-align:center;">Пока нет друзей</p>';
     else {
-      const sortedFriends = [...d.friends].sort((a, b) => (b.is_online ? 1 : 0) - (a.is_online ? 1 : 0));
+      const sortedFriends = [...d.friends].sort((a, b) => {
+        if (a.is_online !== b.is_online) return b.is_online ? 1 : -1;
+        return (b.last_seen || 0) - (a.last_seen || 0);
+      });
       list.innerHTML = sortedFriends.map(f => {
         const nickJs = jsAttr(f.nickname);
         const tagJs  = jsAttr(f.gang_tag || '');
@@ -235,7 +241,7 @@ async function loadFriends() {
           <div class="player-avatar">👤</div>
           <div class="player-info">
             <div class="player-name">${formatNickWithTag(f.nickname, f.gang_tag, f.gang_tag_color)}</div>
-            <div class="player-meta">Ур. ${f.level} · ${_onlineHtml(f.is_online)}${!f.is_online && f.last_seen ? ` · <span class="last-seen">${formatLastSeen(f.last_seen)}</span>` : ''}</div>
+            <div class="player-meta">Ур. ${f.level} · ${_onlineHtml(f.is_online)}${!f.is_online ? ` · <span class="last-seen">${formatLastSeen(f.last_seen)}</span>` : ''}</div>
           </div>
           <button class="btn btn-secondary" style="width:auto;padding:6px 12px;margin:0;font-size:12px;" onclick='event.stopPropagation(); openPM(${f.user_id}, ${nickJs}, ${tagJs}, ${colJs})'>✉️ ЛС</button>
           <button class="btn btn-secondary" style="width:auto;padding:6px 8px;margin:0 0 0 4px;font-size:12px;color:var(--danger);" onclick='event.stopPropagation(); removeFriend(${f.user_id}, ${nickJs})'>✕</button>
