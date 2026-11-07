@@ -58,7 +58,6 @@ async def api_location(request):
         return web.json_response({"error":"Локация"}, status=400)
     
     now_ts = int(time.time())
-    # ИСПРАВЛЕНО: Показываем только тех, кто был онлайн < 24ч назад (или ботов)
     others = await db.fetchall(
         "SELECT p.user_id, p.nickname, p.level, p.balance, p.last_seen, p.tg_username, p.is_bot, "
         "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
@@ -385,28 +384,30 @@ async def api_leaderboard(request):
     category = body.get("category", "money")
 
     if category == "money":
+        # ИСПРАВЛЕНО: добавлен p.user_id
         rows = await db.fetchall(
-            "SELECT p.nickname, p.balance, p.level, p.businesses, "
+            "SELECT p.user_id, p.nickname, p.balance, p.level, p.businesses, "
             "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
             "FROM players p "
             "LEFT JOIN gang_members gm ON gm.user_id = p.user_id "
             "LEFT JOIN gangs g ON g.gang_id = gm.gang_id "
             "ORDER BY p.balance DESC LIMIT 20")
-        result = [{"rank":i+1,"nickname":r["nickname"],
+        result = [{"rank":i+1,"user_id":r["user_id"],"nickname":r["nickname"],
                    "gang_tag":r.get("gang_tag"),
                    "gang_tag_color":r.get("gang_tag_color"),
                    "balance":r["balance"],"level":r["level"],
                    "businesses_count":len(_json_biz(r))}
                   for i,r in enumerate(rows)]
     elif category == "level":
+        # ИСПРАВЛЕНО: добавлен p.user_id
         rows = await db.fetchall(
-            "SELECT p.nickname, p.balance, p.level, p.xp, "
+            "SELECT p.user_id, p.nickname, p.balance, p.level, p.xp, "
             "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
             "FROM players p "
             "LEFT JOIN gang_members gm ON gm.user_id = p.user_id "
             "LEFT JOIN gangs g ON g.gang_id = gm.gang_id "
             "ORDER BY p.level DESC, p.xp DESC LIMIT 20")
-        result = [{"rank":i+1,"nickname":r["nickname"],
+        result = [{"rank":i+1,"user_id":r["user_id"],"nickname":r["nickname"],
                    "gang_tag":r.get("gang_tag"),
                    "gang_tag_color":r.get("gang_tag_color"),
                    "level":r["level"],"xp":r["xp"],"balance":r["balance"]}

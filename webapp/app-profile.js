@@ -153,15 +153,17 @@ async function showLeaderboard(category = null) {
     if (d.leaders.length === 0) {
       listHtml = '<p style="color:var(--hint);text-align:center;padding:30px">Пусто</p>';
     } else if (lbCategory === "money") {
+      // ИСПРАВЛЕНО: добавлен onclick="viewPlayer(...)" и cursor:pointer
       listHtml = d.leaders.map(l => `
-        <div class="lb-row ${l.rank<=3?'top-'+l.rank:''}">
+        <div class="lb-row ${l.rank<=3?'top-'+l.rank:''}" onclick="viewPlayer(${l.user_id})" style="cursor:pointer;">
           <div class="lb-rank">${l.rank===1?'🥇':l.rank===2?'🥈':l.rank===3?'🥉':'#'+l.rank}</div>
           <div class="lb-info"><div class="lb-name">${formatNickWithTag(l.nickname, l.gang_tag, l.gang_tag_color)}</div><div class="lb-meta">Ур. ${l.level} · ${l.businesses_count} бизнесов</div></div>
           <div class="lb-level">${fmtMoney(l.balance)}₽</div>
         </div>`).join("");
     } else if (lbCategory === "level") {
+      // ИСПРАВЛЕНО: добавлен onclick="viewPlayer(...)" и cursor:pointer
       listHtml = d.leaders.map(l => `
-        <div class="lb-row ${l.rank<=3?'top-'+l.rank:''}">
+        <div class="lb-row ${l.rank<=3?'top-'+l.rank:''}" onclick="viewPlayer(${l.user_id})" style="cursor:pointer;">
           <div class="lb-rank">${l.rank===1?'🥇':l.rank===2?'🥈':l.rank===3?'🥉':'#'+l.rank}</div>
           <div class="lb-info"><div class="lb-name">${formatNickWithTag(l.nickname, l.gang_tag, l.gang_tag_color)}</div><div class="lb-meta">${fmtMoney(l.balance)}₽ · ${l.xp} XP</div></div>
           <div class="lb-level">Ур. ${l.level}</div>
