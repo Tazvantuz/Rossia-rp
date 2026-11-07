@@ -168,6 +168,29 @@ CREATE TABLE IF NOT EXISTS promo_used (
     used_at TEXT DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(code, user_id)
 );
+
+-- ═══════════ НОВЫЕ ТАБЛИЦЫ ДЛЯ БОССА ═══════════
+CREATE TABLE IF NOT EXISTS boss_state (
+    boss_id TEXT PRIMARY KEY,
+    current_hp INTEGER NOT NULL,
+    max_hp INTEGER NOT NULL,
+    ends_at INTEGER NOT NULL,
+    status TEXT DEFAULT 'active'
+);
+CREATE TABLE IF NOT EXISTS boss_damage (
+    boss_id TEXT,
+    user_id INTEGER,
+    damage INTEGER DEFAULT 0,
+    last_attack_ts INTEGER DEFAULT 0,
+    PRIMARY KEY (boss_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS boss_rewards (
+    boss_id TEXT,
+    user_id INTEGER,
+    reward_type TEXT,
+    PRIMARY KEY (boss_id, user_id, reward_type)
+);
+
 CREATE INDEX IF NOT EXISTS idx_activity_day ON player_daily_activity(day);
 CREATE INDEX IF NOT EXISTS idx_activity_user ON player_daily_activity(user_id);
 CREATE INDEX IF NOT EXISTS idx_promo_used_user ON promo_used(user_id);
@@ -310,6 +333,17 @@ class Database:
         except Exception as e:
             print(f"⚠️ bot last_seen reset: {e}")
 
+        # Инициализация босса
+        try:
+            row = await self.fetchone("SELECT * FROM boss_state WHERE boss_id='pocyk'")
+            if not row:
+                import time
+                now = int(time.time())
+                await self.execute("INSERT INTO boss_state (boss_id, current_hp, max_hp, ends_at, status) VALUES ('pocyk', 10000000, 10000000, ?, 'active')", (now + 7*86400,))
+                print("✅ Босс Опасный Поцык инициализирован")
+        except Exception as e:
+            print(f"⚠️ boss init: {e}")
+
     async def fetchone(self, q, p=()):
         async with self.conn.execute(q, p) as cur:
             r = await cur.fetchone()
@@ -324,7 +358,6 @@ class Database:
         if self.conn: await self.conn.close()
 
 db = Database()
-
 
 async def migrate_referrals():
     try:

@@ -1,5 +1,6 @@
 # game.py
 """РП Россия — данные игры: одежда, работы, бизнесы, локации, казино."""
+import time
 
 MAX_LEVEL = 100
 START_LOCATION = 0
@@ -173,11 +174,9 @@ def crypto_price_old_at_hour(hour):
     return 500 + (int(h[:4], 16) % 1000)
 
 def crypto_price():
-    import time
     return crypto_price_at_hour(int(time.time() / 3600))
 
 def crypto_history_24h():
-    import time
     now_hour = int(time.time() / 3600)
     return [crypto_price_at_hour(now_hour - i) for i in range(23, -1, -1)]
 
@@ -278,8 +277,6 @@ ITEMS.update({
     "hair_long_red":    {"name":"Длинные рыжие","emoji":"💇","slot":"hair","price":5000,"rarity":"rare","desc":"Огненные волосы"},
     "hair_mohawk_blue": {"name":"Ирокез синий","emoji":"💇","slot":"hair","price":15000,"rarity":"epic","desc":"Панк-рок жив"},
     "hair_flowing_gold":{"name":"Золотые локоны","emoji":"💇","slot":"hair","price":50000,"rarity":"legendary","desc":"Как у полубога"},
-    
-    # НОВЫЕ ПРИЧЁСКИ (v29)
     "hair_long_brown":  {"name":"Длинные каштановые","emoji":"💇","slot":"hair","price":2500,"rarity":"uncommon","desc":"Густые и шелковистые"},
     "hair_gopnik":      {"name":"Гоп-стрижка","emoji":"💇","slot":"hair","price":800,"rarity":"common","desc":"Полу бокс, полу боб"},
     "hair_slick_back":  {"name":"Зачес назад","emoji":"💇","slot":"hair","price":4000,"rarity":"rare","desc":"Стиль мафии"},
@@ -294,6 +291,11 @@ ITEMS.update({
     "shoes_nike":     {"name":"Nike Air","emoji":"👟","slot":"shoes","price":8000,"rarity":"rare","desc":"Свежие с салона","hp":50},
     "shoes_jordan":   {"name":"Jordan Retro","emoji":"👟","slot":"shoes","price":25000,"rarity":"epic","desc":"Легендарные баскетбольные","hp":100},
     "shoes_gold":     {"name":"Золотые кроссы","emoji":"👟","slot":"shoes","price":100000,"rarity":"legendary","desc":"Для настоящего короля","hp":200},
+})
+
+# ═══════ БОСС-ПРЕДМЕТ ═══════
+ITEMS.update({
+    "rh_pocyk": {"name":"Опасный Поцык","emoji":"🧟","slot":"right_hand","price":0,"rarity":"epic","desc":"Коллекционный предмет с босса","damage":350,"is_case_only":True}
 })
 
 print("✅ Загружено предметов (базовые):", len(ITEMS))

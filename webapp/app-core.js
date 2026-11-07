@@ -8,9 +8,10 @@ let state = {
   shopFilter: "hair", appearanceMode: "shop", casinoGame: "coin",
   casinoLocked: false, casinoLockTime: 0, openPMs: [],
   chatWith: 'global', jobsCache: null, businessesCache: null, casesData: null,
+  bossView: 'list', // Для вкладки Боссы
 };
 
-const MAIN_TABS = ['home', 'casino', 'cases', 'chat', 'more'];
+const MAIN_TABS = ['home', 'casino', 'cases', 'bosses', 'chat', 'more'];
 const SUB_TAB_TITLES = {
   appearance: '👕 Шмот',
   work: '💼 Работа',
@@ -21,6 +22,7 @@ const SUB_TAB_TITLES = {
   gang: '🚬 Банда',
   ghetto: '🗺️ Гетто',
   promo: '🎁 Промокоды',
+  bosses: '💀 Боссы',
 };
 
 function formatNickWithTag(name, tag, color) {
@@ -157,6 +159,7 @@ function showTab(tab) {
   if (tab==="ghetto" && typeof renderGhetto === 'function') renderGhetto();
   if (tab==="referral" && typeof renderReferral === 'function') renderReferral();
   if (tab==="chat" && typeof startChatPolling === 'function') startChatPolling();
+  if (tab==="bosses" && typeof loadBosses === 'function') loadBosses();
   if (tab==="more" && typeof updateMoreBadges === 'function') { updateMoreBadges(); checkAdminAccess?.(); }
   if (tab==="cases" && typeof loadCases === 'function') loadCases();
   if (tab==="gang" && typeof loadGang === 'function') loadGang();

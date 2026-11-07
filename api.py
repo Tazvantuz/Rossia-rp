@@ -8,6 +8,7 @@ import api_social
 import api_gang
 import api_pvp
 import api_admin
+import api_boss  # <--- НОВЫЙ ИМПОРТ
 
 def set_token(t):
     api_core.set_token(t)
@@ -101,7 +102,7 @@ def setup_routes(app):
     R.add_post("/api/chat/pm/get", api_social.api_chat_pm_get)
     R.add_post("/api/chat/pm/unread_count", api_social.api_chat_pm_unread_count)
     R.add_post("/api/chat/pm/conversations", api_social.api_chat_pm_conversations)
-    R.add_post("/api/chat/pm/delete", api_social.api_chat_pm_delete) # <--- НОВЫЙ РОУТ
+    R.add_post("/api/chat/pm/delete", api_social.api_chat_pm_delete)
     R.add_post("/api/notifications/get", api_social.api_notifications_get)
     R.add_post("/api/notifications/read", api_social.api_notifications_read)
     R.add_post("/api/notifications/delete", api_social.api_notifications_delete)
@@ -134,3 +135,7 @@ def setup_routes(app):
     R.add_post("/api/pvp/state", api_pvp.api_pvp_state)
     R.add_post("/api/pvp/action", api_pvp.api_pvp_action)
     R.add_post("/api/pvp/force_cancel", api_pvp.api_pvp_force_cancel)
+
+    # ═══ БОСС ═══
+    R.add_post("/api/boss/get", api_boss.api_boss_get)
+    R.add_post("/api/boss/attack", api_boss.api_boss_attack)
