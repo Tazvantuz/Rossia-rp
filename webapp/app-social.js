@@ -75,10 +75,10 @@ async function doCrime() {
 
 async function loadPeople() {
   try {
-    const [loc, trades] = await Promise.all([api("location"), api("trade/list")]);
+    const loc = await api("location");
     state.location = loc;
     renderLocationTabs(loc); renderLocationInfo(loc);
-    renderPlayersList(loc.players); renderTrades(trades);
+    renderPlayersList(loc.players);
   } catch(e) { toast(e.message, "error"); }
 }
 
@@ -173,26 +173,63 @@ async function viewPlayer(uid) {
   } catch(e) { toast(e.message, "error"); }
 }
 
+// ══════════════════════════════════════════════════════════════
+//  ТРЕЙДЫ (отдельный раздел)
+// ══════════════════════════════════════════════════════════════
+async function loadTrades() {
+  try {
+    const d = await api("trade/list");
+    renderTrades(d);
+  } catch(e) { toast(e.message, "error"); }
+}
+
+function _tradeItemsSummary(t) {
+  const giveCount = (t.give_items || []).length;
+  const wantCount = (t.want_items || []).length;
+  const totalItems = giveCount + wantCount;
+  const money = (t.give_money || 0) + (t.want_money || 0);
+  const parts = [];
+  if (totalItems > 0) parts.push(`📦 ${totalItems} предмет${totalItems === 1 ? '' : (totalItems < 5 ? 'а' : 'ов')}`);
+  if (money > 0) parts.push(`💰 ${fmtMoney(money)}₽`);
+  if (!parts.length) parts.push('Пусто');
+  return parts.join(' · ');
+}
+
 function renderTrades(trades) {
-  const incEl = $("#trades-incoming"), outEl = $("#trades-outgoing");
-  if (trades.incoming.length === 0 && trades.outgoing.length === 0) {
-    incEl.innerHTML = '<p style="color:var(--hint);text-align:center;padding:20px">Нет трейдов</p>';
-    outEl.innerHTML = ""; return;
+  const incEl = document.getElementById("trades-incoming");
+  const outEl = document.getElementById("trades-outgoing");
+  if (!incEl || !outEl) return;
+
+  // ── ВХОДЯЩИЕ ──
+  if (!trades.incoming || trades.incoming.length === 0) {
+    incEl.innerHTML = '<div style="color:var(--hint);text-align:center;padding:20px;background:var(--bg-2);border-radius:12px;font-size:13px;">Входящих трейдов нет</div>';
+  } else {
+    incEl.innerHTML = trades.incoming.map(t => `
+      <div class="trade-card" style="cursor:pointer;border-left-color:var(--money);" onclick="showTradeDetailsModal(${t.trade_id})">
+        <div class="trade-title">📥 От ${formatNickWithTag(t.other_nickname, t.other_gang_tag, t.other_gang_tag_color)}</div>
+        <div class="trade-content">${_tradeItemsSummary(t)}</div>
+        <div class="trade-actions" style="grid-template-columns:1fr;">
+          <button class="trade-accept" onclick="event.stopPropagation(); showTradeDetailsModal(${t.trade_id})">👀 Посмотреть</button>
+        </div>
+      </div>
+    `).join("");
   }
-  incEl.innerHTML = trades.incoming.map(t=>{
-    return `<div class="trade-card" onclick="showTradeDetailsModal(${t.trade_id})" style="cursor:pointer;">
-      <div class="trade-title">📥 От ${formatNickWithTag(t.other_nickname, t.other_gang_tag, t.other_gang_tag_color)}</div>
-      <div class="trade-content">Нажми, чтобы посмотреть детали и принять решение</div>
-    </div>`;
-  }).join("");
-  outEl.innerHTML = trades.outgoing.length > 0
-    ? '<div style="font-size:12px;color:var(--hint);margin-top:8px;margin-bottom:4px">📤 Отправленные</div>'
-      + trades.outgoing.map(t=>`<div class="trade-card" style="border-left-color:var(--hint)">
-        <div class="trade-title">К ${formatNickWithTag(t.other_nickname, t.other_gang_tag, t.other_gang_tag_color)}</div>
-        <div class="trade-content">Ожидает ответа...</div>
-        <div class="trade-actions"><button class="trade-decline" onclick="declineTrade(${t.trade_id})">Отменить</button></div>
-      </div>`).join("")
-    : "";
+
+  // ── ИСХОДЯЩИЕ ──
+  if (!trades.outgoing || trades.outgoing.length === 0) {
+    outEl.innerHTML = '<div style="color:var(--hint);text-align:center;padding:20px;background:var(--bg-2);border-radius:12px;font-size:13px;">Ты ещё не отправлял трейды</div>';
+  } else {
+    outEl.innerHTML = trades.outgoing.map(t => `
+      <div class="trade-card" style="border-left-color:var(--hint);">
+        <div class="trade-title">📤 Для ${formatNickWithTag(t.other_nickname, t.other_gang_tag, t.other_gang_tag_color)}</div>
+        <div class="trade-content">${_tradeItemsSummary(t)}</div>
+        <div class="trade-actions" style="grid-template-columns:1fr 1fr;">
+          <button class="btn btn-secondary" style="padding:10px;border-radius:8px;font-weight:700;font-size:13px;border:none;margin:0;" onclick="showTradeDetailsModal(${t.trade_id})">👀 Посмотреть</button>
+          <button class="trade-decline" onclick="declineTrade(${t.trade_id})">❌ Отменить</button>
+        </div>
+      </div>
+    `).join("");
+  }
 }
 
 async function showTradeDetailsModal(tid) {
@@ -209,24 +246,44 @@ async function showTradeDetailsModal(tid) {
         <div class="trade-item-name">${it.name}</div>
       </div>`).join('');
 
+    const isReceiver = !!d.is_receiver;
+    const headerLabel = isReceiver
+      ? `🤝 Трейд от ${formatNickWithTag(d.from_nickname, d.from_gang_tag, d.from_gang_tag_color)}`
+      : `🤝 Твой трейд для ${formatNickWithTag(d.to_nickname, d.to_gang_tag, d.to_gang_tag_color)}`;
+
+    const giveLabel = isReceiver ? '📥 Он даёт тебе:' : '📤 Ты даёшь:';
+    const wantLabel = isReceiver ? '📤 Ты отдаёшь:' : '📥 Ты хочешь:';
+
+    let buttonsHtml = '';
+    if (isReceiver) {
+      buttonsHtml = `
+        <button class="btn btn-primary" onclick="acceptTrade(${tid})" style="background:var(--success);border:none;margin:0;">✅ Принять</button>
+        <button class="btn btn-secondary" onclick="declineTrade(${tid})" style="background:var(--danger);color:#fff;border:none;margin:0;">❌ Отклонить</button>
+      `;
+    } else {
+      buttonsHtml = `
+        <button class="btn btn-secondary" onclick="closeModal()" style="background:var(--bg-3);margin:0;">← Закрыть</button>
+        <button class="btn btn-secondary" onclick="declineTrade(${tid})" style="background:var(--danger);color:#fff;border:none;margin:0;">❌ Отменить трейд</button>
+      `;
+    }
+
     openModal(`
-      <h2 style="text-align:center;margin-bottom:16px">🤝 Трейд от ${formatNickWithTag(d.from_nickname, d.from_gang_tag, d.from_gang_tag_color)}</h2>
+      <h2 style="text-align:center;margin-bottom:16px;font-size:16px;">${headerLabel}</h2>
 
       <div style="background:var(--bg-3);padding:12px;border-radius:10px;margin-bottom:12px;">
-        <p style="font-weight:700;margin-bottom:6px;color:var(--success);">📥 Он даёт тебе:</p>
+        <p style="font-weight:700;margin-bottom:6px;color:var(--success);">${giveLabel}</p>
         ${d.give_money > 0 ? `<div style="font-size:16px;font-weight:900;color:var(--money);margin-bottom:8px;">💰 ${fmtMoney(d.give_money)}₽</div>` : ''}
-        <div class="trade-inventory" style="margin-bottom:0;">${giveItemsHtml || '<span style="color:var(--hint);text-align:center;width:100%;">Пусто</span>'}</div>
+        <div class="trade-inventory" style="margin-bottom:0;">${giveItemsHtml || '<span style="color:var(--hint);text-align:center;width:100%;font-size:12px;">Пусто</span>'}</div>
       </div>
 
       <div style="background:var(--bg-3);padding:12px;border-radius:10px;margin-bottom:16px;">
-        <p style="font-weight:700;margin-bottom:6px;color:var(--danger);">📤 Ты отдаёшь:</p>
+        <p style="font-weight:700;margin-bottom:6px;color:var(--danger);">${wantLabel}</p>
         ${d.want_money > 0 ? `<div style="font-size:16px;font-weight:900;color:var(--money);margin-bottom:8px;">💰 ${fmtMoney(d.want_money)}₽</div>` : ''}
-        <div class="trade-inventory" style="margin-bottom:0;">${wantItemsHtml || '<span style="color:var(--hint);text-align:center;width:100%;">Пусто</span>'}</div>
+        <div class="trade-inventory" style="margin-bottom:0;">${wantItemsHtml || '<span style="color:var(--hint);text-align:center;width:100%;font-size:12px;">Пусто</span>'}</div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <button class="btn btn-primary" onclick="acceptTrade(${tid})" style="background:var(--success);border:none;">✅ Принять</button>
-        <button class="btn btn-secondary" onclick="declineTrade(${tid})" style="background:var(--danger);color:#fff;border:none;">❌ Отклонить</button>
+        ${buttonsHtml}
       </div>
     `);
   } catch(e) { toast(e.message, "error"); }
@@ -239,7 +296,13 @@ async function acceptTrade(tid) {
     renderPlayer();
     toast("✅ Трейд принят", "success");
     closeModal();
-    loadPeople();
+
+    const tradesTab = document.querySelector('.tab-content[data-tab="trades"]');
+    if (tradesTab && tradesTab.classList.contains("active")) loadTrades();
+
+    const peopleTab = document.querySelector('.tab-content[data-tab="people"]');
+    if (peopleTab && peopleTab.classList.contains("active")) loadPeople();
+
     if (typeof showNotificationsSilent === 'function') showNotificationsSilent();
     const modal = document.getElementById("modal");
     if (modal && !modal.classList.contains("hidden")) showNotifications();
@@ -250,9 +313,15 @@ async function acceptTrade(tid) {
 async function declineTrade(tid) {
   try {
     await api("trade/decline", {trade_id: tid});
-    toast("❌ Отклонён");
+    toast("❌ Трейд отменён/отклонён");
     closeModal();
-    loadPeople();
+
+    const tradesTab = document.querySelector('.tab-content[data-tab="trades"]');
+    if (tradesTab && tradesTab.classList.contains("active")) loadTrades();
+
+    const peopleTab = document.querySelector('.tab-content[data-tab="people"]');
+    if (peopleTab && peopleTab.classList.contains("active")) loadPeople();
+
     if (typeof showNotificationsSilent === 'function') showNotificationsSilent();
     const modal = document.getElementById("modal");
     if (modal && !modal.classList.contains("hidden")) showNotifications();

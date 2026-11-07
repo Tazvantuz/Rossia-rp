@@ -174,29 +174,45 @@ async def api_trade_details(request):
     tid = int(body.get("trade_id", 0))
     if not tid:
         return web.json_response({"error": "Нет trade_id"}, status=400)
+
+    # Разрешаем смотреть и отправителю, и получателю
     t = await db.fetchone(
-        "SELECT * FROM trades WHERE trade_id=? AND to_user=? AND status='pending'",
-        (tid, uid))
+        "SELECT * FROM trades WHERE trade_id=? AND (to_user=? OR from_user=?) AND status='pending'",
+        (tid, uid, uid))
     if not t:
         return web.json_response({"error": "Трейд не найден или уже обработан"}, status=404)
-    from_user = t["from_user"]
+
+    from_user = int(t["from_user"])
+    to_user = int(t["to_user"])
+    is_receiver = (uid == to_user)
+
     p_from = await _player(from_user)
+    p_to = await _player(to_user)
+
     give_items_ids = json.loads(t.get("give_items") or "[]")
     want_items_ids = json.loads(t.get("want_items") or "[]")
+
     give_items_data = []
     for iid in give_items_ids:
         ij = item_json(iid)
         if ij: give_items_data.append(ij)
+
     want_items_data = []
     for iid in want_items_ids:
         ij = item_json(iid)
         if ij: want_items_data.append(ij)
+
     return web.json_response({
         "trade_id": tid,
+        "is_receiver": is_receiver,
         "from_user": from_user,
+        "to_user": to_user,
         "from_nickname": p_from["nickname"] if p_from else "?",
         "from_gang_tag": p_from.get("gang_tag") if p_from else None,
         "from_gang_tag_color": p_from.get("gang_tag_color") if p_from else None,
+        "to_nickname": p_to["nickname"] if p_to else "?",
+        "to_gang_tag": p_to.get("gang_tag") if p_to else None,
+        "to_gang_tag_color": p_to.get("gang_tag_color") if p_to else None,
         "give_money": t["give_money"],
         "give_items": give_items_data,
         "want_money": t["want_money"],
@@ -354,6 +370,7 @@ async def api_trade_accept(request):
             (from_user, uid))
 
         await _cleanup_trade_notifs(uid, tid)
+        await _cleanup_trade_notifs(from_user, tid)
 
         p_to2 = await _player(uid)
         await _check_achievements(uid, p_to2)
@@ -371,10 +388,17 @@ async def api_trade_decline(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     tid = int(body.get("trade_id",0))
+
+    t = await db.fetchone("SELECT from_user, to_user FROM trades WHERE trade_id=?", (tid,))
     await db.execute(
         "UPDATE trades SET status='declined' WHERE trade_id=? AND (to_user=? OR from_user=?)",
         (tid, uid, uid))
-    await _cleanup_trade_notifs(uid, tid)
+
+    if t:
+        await _cleanup_trade_notifs(int(t["to_user"]), tid)
+        if int(t["from_user"]) != int(t["to_user"]):
+            await _cleanup_trade_notifs(int(t["from_user"]), tid)
+
     return web.json_response({"ok": True})
 
 # ═══════════ ЛИДЕРБОРД ═══════════
@@ -611,7 +635,6 @@ async def api_chat_pm_get(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json(); with_id = int(body.get("with_id", 0))
 
-    # Если собеседник = сам себе, ничего страшного, всё равно вернём пусто
     rows = await db.fetchall(
         "SELECT pm.id, pm.from_id, pm.to_id, pm.message, pm.is_read, pm.created_at, "
         "p.nickname AS sender_nickname, p.role AS sender_role, "
@@ -692,7 +715,6 @@ async def api_notifications_get(request):
     rows = await db.fetchall("SELECT * FROM notifications WHERE user_id=? ORDER BY id DESC LIMIT 30", (uid,))
     now_unix = int(time.time())
 
-    # Заранее узнаём — в банде ли уже игрок (для фильтрации gang_invite)
     my_gang_row = await db.fetchone("SELECT gang_id FROM gang_members WHERE user_id=?", (uid,))
     in_gang = bool(my_gang_row)
 
@@ -738,12 +760,9 @@ async def api_notifications_get(request):
                         continue
             except: pass
 
-        # ── ГАНГ-ИНВАЙТ: фильтруем невалидные ──
         if r.get("type") == "gang_invite":
-            # Уже в какой-то банде → приглашение неактуально
             if in_gang:
                 continue
-            # Проверим, что банда ещё существует и данные корректны
             try:
                 gid = int(json.loads(r.get("data") or "{}").get("gang_id", 0))
             except Exception:
@@ -752,7 +771,6 @@ async def api_notifications_get(request):
                 continue
             gang = await db.fetchone("SELECT gang_id FROM gangs WHERE gang_id=?", (gid,))
             if not gang:
-                # Банда распущена — удаляем мусорное уведомление
                 try:
                     await db.execute("DELETE FROM notifications WHERE id=?", (r["id"],))
                 except Exception:

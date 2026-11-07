@@ -23,6 +23,7 @@ const SUB_TAB_TITLES = {
   ghetto: '🗺️ Гетто',
   promo: '🎁 Промокоды',
   bosses: '💀 Боссы',
+  trades: '📬 Трейды',
 };
 
 function getStaffBadge(role) {
@@ -175,6 +176,7 @@ function showTab(tab) {
   if (tab==="cases" && typeof loadCases === 'function') loadCases();
   if (tab==="gang" && typeof loadGang === 'function') loadGang();
   if (tab==="friends" && typeof loadFriends === 'function') loadFriends();
+  if (tab==="trades" && typeof loadTrades === 'function') loadTrades();
   if (tab==="home" && typeof loadNotifications === 'function') loadNotifications();
   if (tab==="promo") {
     const resultBox = document.getElementById('promo-result-box');

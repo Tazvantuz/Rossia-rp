@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
 <title>РП Россия</title>
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<link rel="stylesheet" href="style.css?v=40">
+<link rel="stylesheet" href="style.css?v=41">
 </head>
 <body>
 <div id="app">
@@ -172,8 +172,16 @@
       <div class="location-info" id="location-info"></div>
       <h3 class="section-subtitle">Игроки здесь</h3>
       <div id="players-list"></div>
-      <h3 class="section-subtitle">📬 Трейды</h3>
+    </section>
+
+    <section class="tab-content" data-tab="trades">
+      <h2 class="section-title">📬 Трейды</h2>
+      <p style="color:var(--hint);margin-bottom:16px;font-size:13px;line-height:1.5;">
+        Здесь входящие и исходящие предложения обмена.
+      </p>
+      <h3 class="section-subtitle" style="color:#f39c12;">📥 Входящие</h3>
       <div id="trades-incoming"></div>
+      <h3 class="section-subtitle">📤 Отправленные</h3>
       <div id="trades-outgoing"></div>
     </section>
 
@@ -327,6 +335,14 @@
         </div>
       </div>
 
+      <h3 class="more-group-title">📬 Сделки</h3>
+      <div class="more-grid">
+        <div class="more-card" onclick="showTab('trades')">
+          <div class="more-card-icon">🤝</div>
+          <div class="more-card-title">Трейды</div>
+        </div>
+      </div>
+
       <h3 class="more-group-title">👥 Социальное</h3>
       <div class="more-grid">
         <div class="more-card" onclick="showTab('people')">
@@ -427,20 +443,20 @@
   </div>
 </div>
 
-<script src="app-svg.js?v=40"></script>
-<script src="app-svg-hair.js?v=40"></script>
-<script src="app-svg-custom.js?v=40"></script>
-<script src="app-core.js?v=40"></script>
-<script src="app-shop.js?v=40"></script>
-<script src="app-social.js?v=40"></script>
-<script src="app-chat.js?v=40"></script>
-<script src="app-profile.js?v=40"></script>
-<script src="app-crypto.js?v=40"></script>
-<script src="app-gang.js?v=40"></script>
-<script src="app-pvp.js?v=40"></script>
-<script src="app-boss.js?v=40"></script>
-<script src="app-admin.js?v=40"></script>
-<script src="casino.js?v=40"></script>
-<script src="gang.js?v=40"></script>
+<script src="app-svg.js?v=41"></script>
+<script src="app-svg-hair.js?v=41"></script>
+<script src="app-svg-custom.js?v=41"></script>
+<script src="app-core.js?v=41"></script>
+<script src="app-shop.js?v=41"></script>
+<script src="app-social.js?v=41"></script>
+<script src="app-chat.js?v=41"></script>
+<script src="app-profile.js?v=41"></script>
+<script src="app-crypto.js?v=41"></script>
+<script src="app-gang.js?v=41"></script>
+<script src="app-pvp.js?v=41"></script>
+<script src="app-boss.js?v=41"></script>
+<script src="app-admin.js?v=41"></script>
+<script src="casino.js?v=41"></script>
+<script src="gang.js?v=41"></script>
 </body>
 </html>
