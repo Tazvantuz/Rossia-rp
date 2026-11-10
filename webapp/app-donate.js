@@ -26,8 +26,9 @@ async function loadDonate() {
         <p style="color:#2ecc71; margin-bottom: 8px;"><b>✅ Как это работает:</b></p>
         <ol style="text-align: left; font-size: 12px; color: var(--hint); padding-left: 20px; line-height: 1.5; margin-bottom: 12px;">
           <li>Нажми на нужный пакет ниже.</li>
-          <li>На странице оплаты <b>сумма и твой ID уже будут введены</b>.</li>
-          <li>Просто оплати и подожди 1–2 минуты.</li>
+          <li>На странице оплаты <b>сумма уже будет введена</b>.</li>
+          <li>Если поле «Сообщение» пустое — вставь туда свой ID.</li>
+          <li>Оплати и подожди 1–2 минуты.</li>
         </ol>
         
         <div style="background: var(--bg-3); border-radius: 10px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
@@ -99,17 +100,20 @@ async function buyDonatePack(packId, price) {
 
   const myId = state.player ? state.player.user_id : "";
   
-  // Формируем ссылку с автозаполнением суммы (sum) и сообщения (comment)
+  // Формируем ссылку с автозаполнением
   try {
     const url = new URL(_donateUrl);
     url.searchParams.set('sum', price);
+    
     if (myId) {
+      // Передаем ID в разных вариантах, чтобы DonatePay точно его подхватил
       url.searchParams.set('comment', myId);
+      url.searchParams.set('message', myId);
+      url.searchParams.set('name', myId);
     }
     
     openDonateLink(url.toString());
   } catch (e) {
-    // Если URL некорректный, открываем как есть
     openDonateLink(_donateUrl);
   }
 
