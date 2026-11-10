@@ -169,7 +169,10 @@ function showTab(tab) {
   if (tab === "work" && typeof loadWork === 'function') loadWork();
   if (tab === "business" && typeof loadBusinesses === 'function') loadBusinesses();
   if (tab === "casino" && typeof renderCasino === 'function') renderCasino();
-  if (tab === "map" && typeof loadMap === 'function') loadMap();
+  
+  // Изменено: теперь при входе на карту принудительно открываем улицу
+  if (tab === "map" && typeof openMapTab === 'function') openMapTab(); 
+
   if (tab === "ghetto" && typeof renderGhetto === 'function') renderGhetto();
   if (tab === "referral" && typeof renderReferral === 'function') renderReferral();
   if (tab === "chat" && typeof startChatPolling === 'function') startChatPolling();

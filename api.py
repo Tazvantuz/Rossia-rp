@@ -102,6 +102,7 @@ def setup_routes(app):
     # ═══ КАРТА ═══
     R.add_post("/api/map/get", api_map.api_map_get)
     R.add_post("/api/map/move", api_map.api_map_move)
+    R.add_post("/api/map/online_players", api_map.api_online_players)
     R.add_post("/api/house/rent", api_map.api_house_rent)
     R.add_post("/api/house/cancel", api_map.api_house_cancel)
     R.add_post("/api/house/toggle_open", api_map.api_house_toggle_open)

@@ -84,8 +84,7 @@ async def _process_house_rentals():
 
 async def _get_my_active_house(uid, now):
     row = await db.fetchone(
-        "SELECT house_id, expires_at, started_at, is_open FROM house_rentals "
-        "WHERE user_id=? AND expires_at>?", (uid, now))
+        "SELECT * FROM house_rentals WHERE user_id=? AND expires_at>?", (uid, now))
     if not row:
         return None
     h = get_house(row["house_id"])
@@ -95,7 +94,7 @@ async def _get_my_active_house(uid, now):
     out["expires_at"] = row["expires_at"]
     out["started_at"] = row["started_at"]
     out["seconds_left"] = max(0, row["expires_at"] - now)
-    out["is_open"] = bool(row["is_open"])
+    out["is_open"] = bool(row.get("is_open", 0))
     return out
 
 
@@ -142,7 +141,7 @@ async def api_map_get(request):
                 "nickname": r["nickname"],
                 "expires_at": r["expires_at"],
                 "seconds_left": max(0, r["expires_at"] - now),
-                "is_open": bool(r["is_open"]),
+                "is_open": bool(r.get("is_open", 0)),
             }
 
     houses = []
@@ -197,7 +196,9 @@ async def api_map_get(request):
         try:
             h_info = get_house(inside_house_id)
             if h_info:
-                h_rental = await db.fetchone("SELECT is_open FROM house_rentals WHERE house_id=?", (inside_house_id,))
+                h_rental = await db.fetchone("SELECT * FROM house_rentals WHERE house_id=?", (inside_house_id,))
+                is_open = bool(h_rental.get("is_open", 0)) if h_rental else False
+                
                 house_players = await db.fetchall(
                     "SELECT p.user_id, p.nickname, p.level, p.role, p.last_seen, p.head_id, p.body_id, p.legs_id, p.right_hand_id, p.left_hand_id, p.hair_id, p.shoes_id, "
                     "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
@@ -211,16 +212,11 @@ async def api_map_get(request):
                 
                 house_inside_data = {
                     "house": h_info,
-                    "is_open": bool(h_rental["is_open"]) if h_rental else False,
+                    "is_open": is_open,
                     "players": house_players
                 }
-            else:
-                inside_house_id = 0
-                await db.execute("UPDATE players SET inside_house_id=0 WHERE user_id=?", (uid,))
         except Exception as e:
             print(f"⚠️ house_inside build error: {e}")
-            inside_house_id = 0
-            await db.execute("UPDATE players SET inside_house_id=0 WHERE user_id=?", (uid,))
 
     my_house = await _get_my_active_house(uid, now)
 
@@ -425,7 +421,7 @@ async def api_house_enter(request):
     if not rental:
         return web.json_response({"error": "Дом не арендован (пустует)"}, status=400)
 
-    if rental["user_id"] != uid and not rental["is_open"]:
+    if rental["user_id"] != uid and not rental.get("is_open", 0):
         return web.json_response({"error": "Дверь закрыта. Вас не приглашали."}, status=403)
 
     await db.execute("UPDATE players SET inside_house_id=? WHERE user_id=?", (house_id, uid))
@@ -448,3 +444,47 @@ async def api_house_my(request):
     now = int(time.time())
     house = await _get_my_active_house(uid, now)
     return web.json_response({"house": house})
+
+
+# ═══════════ ОНЛАЙН ИГРОКИ ═══════════
+async def api_online_players(request):
+    await _ensure_map_columns()
+    ud = await _user(request)
+    uid = ud["id"]
+    body = await request.json()
+    
+    try:
+        city_id = body.get("city_id")
+        if city_id is not None:
+            city_id = int(city_id)
+    except Exception:
+        city_id = None
+
+    now = int(time.time())
+    
+    query = (
+        "SELECT p.user_id, p.nickname, p.level, p.role, p.last_seen, "
+        "p.city_id, p.street_id, "
+        "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
+        "FROM players p "
+        "LEFT JOIN gang_members gm ON gm.user_id = p.user_id "
+        "LEFT JOIN gangs g ON g.gang_id = gm.gang_id "
+        "WHERE (p.is_bot=0 OR p.is_bot IS NULL) "
+        "AND p.last_seen > ? "
+    )
+    params = [now - PLAYER_ACTIVE_LAST_SEEN]
+
+    if city_id is not None:
+        query += "AND p.city_id = ? "
+        params.append(city_id)
+
+    query += "ORDER BY p.last_seen DESC"
+
+    rows = await db.fetchall(query, tuple(params))
+
+    for r in rows:
+        r["is_online"] = (r.get("last_seen") or 0) > now - 120
+        c_id = r.get("city_id", 0)
+        r["city_name"] = CITIES[c_id]["name"] if c_id is not None and 0 <= c_id < len(CITIES) else "?"
+
+    return web.json_response({"players": rows})

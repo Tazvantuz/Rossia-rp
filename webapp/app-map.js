@@ -9,6 +9,7 @@ let mapState = {
   streetId: null,
   movingTimer: null,
   movingData: null,
+  forceStreet: false, // Флаг для принудительного открытия улицы при входе на вкладку
 };
 
 // ─── утилиты ───
@@ -47,13 +48,30 @@ function _housesOnStreet(cid, sid) {
   return [];
 }
 
+// ─── Вход на вкладку ───
+async function openMapTab() {
+  mapState.forceStreet = true;
+  await loadMap();
+}
+
 // ─── API ───
 async function loadMap() {
   try {
     const d = await api("map/get");
     mapState.data = d;
     mapState.loaded = true;
-    mapState.selectedCity = d.current.city_id;
+
+    // Если это принудительный вход на вкладку, сбрасываем вид на текущую улицу игрока
+    if (mapState.forceStreet) {
+        mapState.view = 'street';
+        mapState.selectedCity = d.current.city_id;
+        mapState.streetId = d.current.street_id;
+        mapState.forceStreet = false;
+    } else if (mapState.view === 'street' && mapState.streetId === null) {
+        // Если просто перешли на улицу без выбора (например, после выхода из дома)
+        mapState.selectedCity = d.current.city_id;
+        mapState.streetId = d.current.street_id;
+    }
 
     if (d.moving) {
       startMovingScreen(d.moving);
@@ -131,6 +149,38 @@ async function mapExitHouse() {
   } catch (e) { toast(e.message, "error"); }
 }
 
+// ─── ОНЛАЙН ИГРОКИ ───
+async function showOnlinePlayers(cityId = null) {
+  try {
+    const d = await api("map/online_players", { city_id: cityId });
+    const players = d.players || [];
+    const cityName = cityId !== null ? (_cityById(cityId)?.name || "городе") : null;
+    
+    let html = `<h2>👥 ${cityName ? 'Игроки в ' + cityName : 'Все игроки'}</h2>`;
+    
+    if (players.length === 0) {
+      html += '<p style="color:var(--hint);text-align:center;padding:20px;">Никого нет</p>';
+    } else {
+      html += players.map(p => `
+        <div class="player-card" onclick="closeModal(); viewPlayer(${p.user_id})" style="cursor:pointer;">
+          <div class="player-avatar">👤</div>
+          <div class="player-info">
+            <div class="player-name">${formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color, p.role)}</div>
+            <div class="player-meta">
+              Ур. ${p.level} · ${_onlineHtml(p.is_online)}
+              ${cityId === null && p.city_name ? ` · 🏙 ${p.city_name}` : ''}
+            </div>
+          </div>
+        </div>
+      `).join("");
+    }
+    
+    openModal(html);
+  } catch (e) {
+    toast(e.message, "error");
+  }
+}
+
 // ─── экран перемещения ───
 function startMovingScreen(moving) {
   mapState.movingData = moving;
@@ -174,8 +224,11 @@ function renderMapScreen() {
   // Если внутри дома — рендерим интерьер
   if (mapState.data.house_inside) {
     try {
-      el.innerHTML = renderHouseInside();
-      return;
+      const html = renderHouseInside();
+      if (html) {
+          el.innerHTML = html;
+          return;
+      }
     } catch(e) {
       console.error("renderHouseInside error:", e);
       mapState.data.house_inside = null;
@@ -208,7 +261,7 @@ function renderCityHeader() {
         <span class="map-loc-dot"></span>
         <span>${cityName} · ${streetName}</span>
       </div>
-      <div style="font-size:12px; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:12px; color:#2ecc71;">
+      <div style="font-size:12px; background:rgba(255,255,255,0.1); padding:2px 8px; border-radius:12px; color:#2ecc71; cursor:pointer;" onclick="showOnlinePlayers(${cur.city_id})">
         👤 Онлайн: ${onlineCount}
       </div>
     </div>
@@ -568,7 +621,7 @@ function renderMovingScreen() {
 function renderHouseInside() {
   const hData = mapState.data.house_inside;
   if (!hData || !hData.house) {
-    mapExitHouse();
+    mapState.data.house_inside = null;
     return "";
   }
   
