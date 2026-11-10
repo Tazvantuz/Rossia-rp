@@ -1043,6 +1043,7 @@ input[type=number]{-moz-appearance:textfield}
 .map-street-card-meta {
   font-size: 11px; color: var(--hint);
   margin-top: 6px; font-weight: 600;
+  display: flex; justify-content: space-between; align-items: center;
 }
 
 .map-move-hint {

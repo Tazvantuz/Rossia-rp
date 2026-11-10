@@ -408,10 +408,6 @@ async def api_house_enter(request):
         return web.json_response({"error": "Дом не найден"}, status=400)
 
     p = await _player(uid)
-    
-    # Если уже внутри этого дома — просто ок
-    if p.get("inside_house_id") == house_id:
-        return web.json_response({"ok": True})
 
     if int(p.get("city_id") or 0) != house["city_id"] or int(p.get("street_id") or 0) != house["street_id"]:
         return web.json_response({"error": "Ты не на этой улице"}, status=400)
@@ -424,6 +420,10 @@ async def api_house_enter(request):
     if rental["user_id"] != uid and not rental.get("is_open", 0):
         return web.json_response({"error": "Дверь закрыта. Вас не приглашали."}, status=403)
 
+    # Всегда делаем UPDATE — это идемпотентно.
+    # Раньше был early-return `if p.get("inside_house_id") == house_id`,
+    # но т.к. house_id может быть 0 (первый дом), а 0 = "не в доме",
+    # это блокировало вход. Убрали early-return.
     await db.execute("UPDATE players SET inside_house_id=? WHERE user_id=?", (house_id, uid))
     return web.json_response({"ok": True})
 

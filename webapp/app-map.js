@@ -9,8 +9,12 @@ let mapState = {
   streetId: null,
   movingTimer: null,
   movingData: null,
-  forceStreet: false, // Флаг для принудительного открытия улицы при входе на вкладку
+  forceStreet: false,
 };
+
+// Кэш позиций игроков на текущей улице (чтобы не «прыгали» при каждом рендере)
+let _streetPlayerPositions = {};
+let _streetPlayerPositionsKey = '';
 
 // ─── утилиты ───
 function _mapEscape(s) {
@@ -61,14 +65,12 @@ async function loadMap() {
     mapState.data = d;
     mapState.loaded = true;
 
-    // Если это принудительный вход на вкладку, сбрасываем вид на текущую улицу игрока
     if (mapState.forceStreet) {
         mapState.view = 'street';
         mapState.selectedCity = d.current.city_id;
         mapState.streetId = d.current.street_id;
         mapState.forceStreet = false;
     } else if (mapState.view === 'street' && mapState.streetId === null) {
-        // Если просто перешли на улицу без выбора (например, после выхода из дома)
         mapState.selectedCity = d.current.city_id;
         mapState.streetId = d.current.street_id;
     }
@@ -93,6 +95,10 @@ async function mapMoveTo(toCity, toStreet) {
   try {
     const res = await api("map/move", { to_city: toCity, to_street: toStreet });
     toast(`🚶 В путь! ${res.duration} сек`, "success");
+    // Сбрасываем кэш позиций (переход на новую улицу)
+    _streetPlayerPositions = {};
+    _streetPlayerPositionsKey = '';
+    
     const d = await api("map/get");
     mapState.data = d;
     if (d.moving) startMovingScreen(d.moving);
@@ -221,7 +227,6 @@ function renderMapScreen() {
     return;
   }
   
-  // Если внутри дома — рендерим интерьер
   if (mapState.data.house_inside) {
     try {
       const html = renderHouseInside();
@@ -315,11 +320,18 @@ function renderCityView() {
   const inAnotherCity = cur.city_id !== city.id;
 
   const playersByStreet = {};
+  const onlineByStreet = {};
+  
   (d.city_players || []).forEach(p => {
     playersByStreet[p.street_id] = (playersByStreet[p.street_id] || 0) + 1;
+    if (p.is_online) {
+      onlineByStreet[p.street_id] = (onlineByStreet[p.street_id] || 0) + 1;
+    }
   });
+  
   if (isHere && !cur.inside_house_id) {
     playersByStreet[cur.street_id] = (playersByStreet[cur.street_id] || 0) + 1;
+    onlineByStreet[cur.street_id] = (onlineByStreet[cur.street_id] || 0) + 1;
   }
 
   return `
@@ -339,6 +351,11 @@ function renderCityView() {
       ${city.streets.map(s => {
         const here = isHere && cur.street_id === s.id;
         const cnt = playersByStreet[s.id] || 0;
+        const onl = onlineByStreet[s.id] || 0;
+        
+        let leftPart = here ? '📍 Ты здесь' : (cnt > 0 ? `👤 ${cnt} игрок(ов)` : '👤 никого');
+        let rightPart = onl > 0 ? `<span style="color:#2ecc71; font-weight:800;">🟢 ${onl} онлайн</span>` : '';
+
         return `
           <div class="map-street-card ${here ? 'here' : ''}" onclick="mapOpenStreet(${city.id}, ${s.id})">
             <div class="map-street-card-head">
@@ -346,7 +363,8 @@ function renderCityView() {
               <span class="map-street-card-name">${_mapEscape(s.name)}</span>
             </div>
             <div class="map-street-card-meta">
-              ${here ? '📍 Ты здесь' : (cnt > 0 ? `👤 ${cnt} игрок(ов)` : '👤 никого')}
+              <span>${leftPart}</span>
+              ${rightPart}
             </div>
           </div>
         `;
@@ -365,6 +383,9 @@ function mapOpenStreet(cid, sid) {
   mapState.selectedCity = cid;
   mapState.view = 'street';
   mapState.streetId = sid;
+  // Сбрасываем кэш позиций при переходе на другую улицу
+  _streetPlayerPositions = {};
+  _streetPlayerPositionsKey = '';
   renderMapScreen();
 }
 
@@ -384,18 +405,35 @@ function renderStreetView() {
 
   players.sort((a, b) => (a.pos_y || 0) - (b.pos_y || 0));
 
-  // Раздвигаем игроков, чтобы не накладывались
-  const placed = [];
+  const cacheKey = `${cid}-${sid}`;
+  if (_streetPlayerPositionsKey !== cacheKey) {
+    _streetPlayerPositions = {};
+    _streetPlayerPositionsKey = cacheKey;
+  }
+
+  const activeIds = new Set(players.map(p => p.user_id));
+  Object.keys(_streetPlayerPositions).forEach(uidStr => {
+    if (!activeIds.has(Number(uidStr))) {
+      delete _streetPlayerPositions[uidStr];
+    }
+  });
+
   players.forEach(p => {
-    let px = p.pos_x || 300;
-    let py = p.pos_y || 320;
+    if (_streetPlayerPositions[p.user_id]) {
+      p.render_x = _streetPlayerPositions[p.user_id].x;
+      p.render_y = _streetPlayerPositions[p.user_id].y;
+      return;
+    }
+    let px = p.pos_x || (200 + Math.random() * 200);
+    let py = p.pos_y || (300 + Math.random() * 60);
     let tries = 0;
+    const placed = Object.values(_streetPlayerPositions);
     while (tries < 12) {
       let overlap = false;
       for (const pt of placed) {
         if (Math.abs(pt.x - px) < 44 && Math.abs(pt.y - py) < 44) {
           overlap = true;
-          px += (Math.random() > 0.5 ? 32 : -32);
+          px += 32;
           break;
         }
       }
@@ -404,10 +442,9 @@ function renderStreetView() {
     }
     p.render_x = Math.max(24, Math.min(576, px));
     p.render_y = Math.max(260, Math.min(378, py));
-    placed.push({ x: p.render_x, y: p.render_y });
+    _streetPlayerPositions[p.user_id] = { x: p.render_x, y: p.render_y };
   });
 
-  // ─── Рендер домов ───
   const W = 600, H = 400;
   const GROUND_Y = 200;
   const HOUSE_X = [30, 170, 310, 450];
@@ -424,19 +461,15 @@ function renderStreetView() {
     const rented = h.rented_by;
     const svgContent = HOUSE_SVGS[slug] || HOUSE_SVGS.obshaga;
 
-    // Подсветка (подложка) — своя/чужая/свободная
     const haloColor = isMine ? 'rgba(243,156,18,0.4)' :
                       (rented ? 'rgba(46,204,113,0.35)' : 'rgba(82,136,193,0.15)');
 
     housesSvg += `
       <g class="map-house" onclick="mapHouseClick(${h.id})" style="cursor:pointer;">
-        <!-- Мягкое свечение под домом -->
         <ellipse cx="${x + HOUSE_W/2}" cy="${GROUND_Y - 2}" rx="${HOUSE_W/2 + 6}" ry="6" fill="${haloColor}"/>
-        <!-- Сам дом -->
         <svg x="${x}" y="${y}" width="${HOUSE_W}" height="${hHeight}" viewBox="0 0 120 ${hHeight}" preserveAspectRatio="xMidYMax meet">
           ${svgContent}
         </svg>
-        <!-- Табличка с названием и статусом под домом -->
         <rect x="${x + 10}" y="${GROUND_Y + 2}" width="${HOUSE_W - 20}" height="15" rx="4" fill="rgba(0,0,0,0.75)" stroke="${isMine ? '#f39c12' : (rented ? '#2ecc71' : '#5288c1')}" stroke-width="0.8"/>
         <text x="${x + HOUSE_W/2}" y="${GROUND_Y + 12}" text-anchor="middle" font-size="8"
               font-weight="800" fill="#fff">${_mapEscape(h.name.replace(/^[^ ]+ /, ''))}</text>
@@ -448,10 +481,8 @@ function renderStreetView() {
     `;
   });
 
-  // ─── Рендер игроков ───
   const playersSvg = players.map(p => {
     const outfit = p.outfit || {};
-    // Высота 72, ширина автоматическая (чтобы тяночки не плющило)
     const miniSvg = renderCharacterSVG(outfit, { height: 72 });
     const nick = _mapEscape(p.nickname);
     const tag = p.gang_tag ? `[${_mapEscape(p.gang_tag)}] ` : '';
@@ -504,13 +535,11 @@ function renderStreetView() {
 
           <rect width="${W}" height="${H}" fill="url(#stsky)"/>
 
-          <!-- Луна -->
           <circle cx="535" cy="50" r="22" fill="url(#moonGlow)"/>
           <circle cx="535" cy="50" r="18" fill="#f5e8c8"/>
           <circle cx="529" cy="46" r="3.5" fill="#d8cbb0" opacity="0.6"/>
           <circle cx="541" cy="56" r="2.5" fill="#d8cbb0" opacity="0.5"/>
 
-          <!-- Звёзды -->
           ${[...Array(22)].map((_, i) => {
             const sx = (i * 73 + 17) % W;
             const sy = (i * 41 + 13) % 190 + 20;
@@ -521,15 +550,12 @@ function renderStreetView() {
             </circle>`;
           }).join("")}
 
-          <!-- Земля -->
           <rect y="200" width="${W}" height="${H - 200}" fill="url(#groundGrad)"/>
           <path d="M0 200 Q ${W/2} 185 ${W} 200 L ${W} 210 L 0 210 Z" fill="${city.theme.ground}" opacity="0.7"/>
 
-          <!-- Тротуар -->
           <rect y="280" width="${W}" height="8" fill="rgba(255,255,255,0.08)"/>
           <rect y="360" width="${W}" height="4" fill="rgba(255,255,255,0.05)"/>
 
-          <!-- Фонари -->
           ${[130, 330, 530].map(x => `
             <rect x="${x-2}" y="200" width="4" height="80" fill="#222"/>
             <circle cx="${x}" cy="200" r="6" fill="#f39c12" opacity="0.85">
@@ -538,10 +564,8 @@ function renderStreetView() {
             <circle cx="${x}" cy="200" r="20" fill="url(#moonGlow)" opacity="0.3"/>
           `).join("")}
 
-          <!-- Дома -->
           ${housesSvg || '<text x="300" y="160" text-anchor="middle" fill="#888">Дома появятся...</text>'}
 
-          <!-- Игроки -->
           ${playersSvg}
         </svg>
       </div>
