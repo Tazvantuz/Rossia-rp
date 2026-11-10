@@ -13,19 +13,14 @@ let mapState = {
   forceStreet: false,
 };
 
-// Кэш позиций игроков на текущей улице (чтобы не «прыгали» при каждом рендере)
 let _streetPlayerPositions = {};
 let _streetPlayerPositionsKey = '';
-
-// Guard от многократного нажатия «Войти»
 let _enteringHouse = false;
 
-// Вспомогательная функция: считаем игрока "на улице"
 function _isOnStreet(insideId) {
   return typeof insideId === 'number' && insideId < 0;
 }
 
-// ─── утилиты ───
 function _mapEscape(s) {
   return String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -80,17 +75,6 @@ async function loadMap() {
     } else if (mapState.view === 'street' && mapState.streetId === null) {
       mapState.selectedCity = d.current.city_id;
       mapState.streetId = d.current.street_id;
-    }
-
-    // ── ДЕБАГ: логируем, что пришло про дом ──
-    if (d.house_inside) {
-      api("debug_log", {
-        text: `CLIENT map/get: house_inside=YES name=${d.house_inside.house?.name} inside_id=${d.current.inside_house_id}`
-      }).catch(() => {});
-    } else if (typeof d.current.inside_house_id === 'number' && d.current.inside_house_id >= 0) {
-      api("debug_log", {
-        text: `CLIENT map/get: inside_id=${d.current.inside_house_id} BUT house_inside=null`
-      }).catch(() => {});
     }
 
     if (d.moving) {
@@ -161,12 +145,9 @@ async function mapEnterHouse(houseId) {
   _enteringHouse = true;
   closeModal();
   try {
-    await api("debug_log", { text: `CLIENT enter start house_id=${houseId}` }).catch(() => {});
     const resp = await api("house/enter", { house_id: houseId });
-    await api("debug_log", { text: `CLIENT enter ok resp=${JSON.stringify(resp)}` }).catch(() => {});
     await loadMap();
   } catch (e) {
-    await api("debug_log", { text: `CLIENT enter error: ${e.message}` }).catch(() => {});
     toast(e.message, "error");
   } finally {
     _enteringHouse = false;
@@ -343,16 +324,22 @@ function renderCityView() {
   const playersByStreet = {};
   const onlineByStreet = {};
 
-  (d.city_players || []).forEach(p => {
-    playersByStreet[p.street_id] = (playersByStreet[p.street_id] || 0) + 1;
+  // Используем all_players — все активные игроки со всех городов.
+  // Фильтруем только по выбранному городу.
+  const allPlayers = d.all_players || d.city_players || [];
+  allPlayers.filter(p => Number(p.city_id) === Number(city.id)).forEach(p => {
+    const sid = Number(p.street_id);
+    playersByStreet[sid] = (playersByStreet[sid] || 0) + 1;
     if (p.is_online) {
-      onlineByStreet[p.street_id] = (onlineByStreet[p.street_id] || 0) + 1;
+      onlineByStreet[sid] = (onlineByStreet[sid] || 0) + 1;
     }
   });
 
+  // Добавляем себя, если я в этом городе и на улице
   if (isHere && _isOnStreet(cur.inside_house_id)) {
-    playersByStreet[cur.street_id] = (playersByStreet[cur.street_id] || 0) + 1;
-    onlineByStreet[cur.street_id] = (onlineByStreet[cur.street_id] || 0) + 1;
+    const sid = Number(cur.street_id);
+    playersByStreet[sid] = (playersByStreet[sid] || 0) + 1;
+    onlineByStreet[sid] = (onlineByStreet[sid] || 0) + 1;
   }
 
   return `
@@ -370,7 +357,7 @@ function renderCityView() {
     <div class="map-streets-title">Улицы</div>
     <div class="map-streets-grid">
       ${city.streets.map(s => {
-        const here = isHere && cur.street_id === s.id;
+        const here = isHere && Number(cur.street_id) === Number(s.id);
         const cnt = playersByStreet[s.id] || 0;
         const onl = onlineByStreet[s.id] || 0;
 
@@ -671,14 +658,11 @@ function renderHouseInside() {
   const imgName = getHouseSlug(h.type);
   const bgStyle = `background: url('/assets/houses/${imgName}.png') center/cover no-repeat;`;
 
-  // Расставляем игроков по горизонтали в нижней части сцены
   const players = hData.players || [];
   const playersHtml = players.map((p, i) => {
     const total = players.length;
-    // Равномерно от 20% до 80% ширины
     const pct = total === 1 ? 50 : 20 + (i * 60 / (total - 1));
-    // Небольшой разброс по высоте (чтобы не стояли в линии)
-    const bottomPct = 20 + ((p.user_id % 5) * 3); // 20% - 32% от низа
+    const bottomPct = 20 + ((p.user_id % 5) * 3);
     const nickColor = p.is_online ? '#2ecc71' : '#fff';
 
     return `

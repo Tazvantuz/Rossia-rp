@@ -14,7 +14,6 @@ from debug_log import notify_admin
 
 _map_migrated = False
 
-# Соглашение: -1 = "не в доме", 0..N = валидный house_id.
 NOT_INSIDE = -1
 
 
@@ -122,7 +121,7 @@ async def api_map_get(request):
 
     city_id = int(p.get("city_id") or 0)
     street_id = int(p.get("street_id") or 0)
-    inside_house_id = _inside(p)  # -1 если не в доме
+    inside_house_id = _inside(p)
     now = int(time.time())
 
     moving = None
@@ -138,6 +137,7 @@ async def api_map_get(request):
             "duration": duration,
         }
 
+    # Дома текущей улицы (для вида улицы)
     cur_house_ids = [h["id"] for h in HOUSES
                      if h["city_id"] == city_id and h["street_id"] == street_id]
     rentals = {}
@@ -165,6 +165,7 @@ async def api_map_get(request):
         h2["rented_by"] = rentals.get(h["id"])
         houses.append(h2)
 
+    # Игроки на этой улице (кроме меня) — для вида улицы
     now_ts = now
     prows = await db.fetchall(
         "SELECT p.user_id, p.nickname, p.level, p.role, p.last_seen, "
@@ -185,22 +186,21 @@ async def api_map_get(request):
         pr["is_online"] = (pr.get("last_seen") or 0) > now_ts - 120
         pr["outfit"] = get_outfit(pr)
 
-    city_prows = await db.fetchall(
-        "SELECT p.user_id, p.nickname, p.street_id, p.pos_x, p.pos_y, "
-        "p.head_id, p.body_id, p.legs_id, p.right_hand_id, p.left_hand_id, "
-        "p.hair_id, p.shoes_id, p.last_seen "
+    # ── ВСЕ активные игроки (все города) для подсчёта на чужих улицах ──
+    all_prows = await db.fetchall(
+        "SELECT p.user_id, p.nickname, p.city_id, p.street_id, "
+        "p.last_seen "
         "FROM players p "
-        "WHERE p.city_id=? AND p.user_id!=? "
+        "WHERE p.user_id != ? "
         "AND (p.is_bot=0 OR p.is_bot IS NULL) "
         "AND (p.inside_house_id IS NULL OR p.inside_house_id = -1) "
-        "AND p.last_seen > ? "
-        "ORDER BY p.last_seen DESC",
-        (city_id, uid, now_ts - PLAYER_ACTIVE_LAST_SEEN))
+        "AND p.last_seen > ?",
+        (uid, now_ts - PLAYER_ACTIVE_LAST_SEEN))
 
-    for pr in city_prows:
+    for pr in all_prows:
         pr["is_online"] = (pr.get("last_seen") or 0) > now_ts - 120
-        pr["outfit"] = get_outfit(pr)
 
+    # Данные о доме, внутри которого я нахожусь
     house_inside_data = None
     if inside_house_id >= 0:
         try:
@@ -228,17 +228,12 @@ async def api_map_get(request):
                     "is_open": is_open,
                     "players": house_players
                 }
-                await notify_admin(
-                    f"MAP_GET uid={uid} inside={inside_house_id} → OK ({h_info['name']}, {len(house_players)} чел)")
             else:
-                # Дом id не найден в HOUSES — сбрасываем
                 await db.execute(
                     "UPDATE players SET inside_house_id=? WHERE user_id=?",
                     (NOT_INSIDE, uid))
-                await notify_admin(
-                    f"MAP_GET uid={uid} inside={inside_house_id} → NOT FOUND, reset to -1")
         except Exception as e:
-            await notify_admin(f"MAP_GET uid={uid} inside={inside_house_id} → EXC: {e}")
+            print(f"⚠️ house_inside build error: {e}")
 
     my_house = await _get_my_active_house(uid, now)
 
@@ -247,7 +242,7 @@ async def api_map_get(request):
         "current": {
             "city_id": city_id,
             "street_id": street_id,
-            "inside_house_id": inside_house_id,  # -1 если не в доме
+            "inside_house_id": inside_house_id,
             "pos_x": float(p.get("pos_x") or 0),
             "pos_y": float(p.get("pos_y") or 0),
         },
@@ -260,7 +255,8 @@ async def api_map_get(request):
             "houses": houses,
             "players": prows,
         },
-        "city_players": city_prows,
+        "all_players": all_prows,       # ← все игроки со всех городов
+        "city_players": all_prows,      # ← оставлено для совместимости
         "now": now_ts,
         "active_window": PLAYER_ACTIVE_LAST_SEEN,
         "house_rent_hours": HOUSE_RENT_HOURS,
@@ -371,8 +367,6 @@ async def api_house_rent(request):
         "VALUES (?, ?, ?, ?, 0)",
         (house_id, uid, expires_at, now))
 
-    await notify_admin(f"RENT uid={uid} house_id={house_id} ok")
-
     p = await _player(uid)
     return web.json_response({
         "ok": True,
@@ -429,49 +423,29 @@ async def api_house_enter(request):
     house_id = int(body.get("house_id", 0))
     now = int(time.time())
 
-    await notify_admin(f"ENTER ▶ uid={uid} house_id={house_id}")
-
     house = get_house(house_id)
     if not house:
-        await notify_admin(f"ENTER ✖ house_id={house_id} NOT FOUND")
         return web.json_response({"error": "Дом не найден"}, status=400)
 
     p = await _player(uid)
     if not p:
-        await notify_admin(f"ENTER ✖ player uid={uid} NOT FOUND")
         return web.json_response({"error": "Нет игрока"}, status=400)
 
-    await notify_admin(
-        f"ENTER state uid={uid}: cur_city={p.get('city_id')} cur_street={p.get('street_id')} "
-        f"target_city={house['city_id']} target_street={house['street_id']} "
-        f"inside={p.get('inside_house_id')}"
-    )
-
     if int(p.get("city_id") or 0) != house["city_id"] or int(p.get("street_id") or 0) != house["street_id"]:
-        await notify_admin(f"ENTER ✖ uid={uid} not on street (need {house['city_id']}/{house['street_id']})")
         return web.json_response({"error": "Ты не на этой улице"}, status=400)
 
     rental = await db.fetchone(
         "SELECT user_id, is_open FROM house_rentals WHERE house_id=? AND expires_at>?",
         (house_id, now))
-    await notify_admin(f"ENTER rental={dict(rental) if rental else None}")
 
     if not rental:
         return web.json_response({"error": "Дом не арендован (пустует)"}, status=400)
 
     if rental["user_id"] != uid and not rental.get("is_open", 0):
-        await notify_admin(f"ENTER ✖ door closed, owner={rental['user_id']} uid={uid}")
         return web.json_response({"error": "Дверь закрыта. Вас не приглашали."}, status=403)
 
-    try:
-        await db.execute("UPDATE players SET inside_house_id=? WHERE user_id=?",
-                         (house_id, uid))
-    except Exception as e:
-        await notify_admin(f"ENTER ✖ DB update failed: {e}")
-        return web.json_response({"error": str(e)}, status=500)
-
-    p2 = await _player(uid)
-    await notify_admin(f"ENTER ✔ uid={uid} now inside_house_id={p2.get('inside_house_id')}")
+    await db.execute("UPDATE players SET inside_house_id=? WHERE user_id=?",
+                     (house_id, uid))
     return web.json_response({"ok": True})
 
 
