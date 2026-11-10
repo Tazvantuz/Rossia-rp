@@ -109,6 +109,7 @@ def setup_routes(app):
     R.add_post("/api/house/enter", api_map.api_house_enter)
     R.add_post("/api/house/exit", api_map.api_house_exit)
     R.add_post("/api/house/my", api_map.api_house_my)
+    R.add_post("/api/debug_log", api_map.api_debug_log)
 
     R.add_post("/api/player_view", api_social.api_player_view)
     R.add_post("/api/player_items", api_social.api_player_items)
