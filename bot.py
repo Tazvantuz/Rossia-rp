@@ -12,6 +12,7 @@ from aiogram.types import (
 )
 from database import db
 import api
+import debug_log
 
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
@@ -24,10 +25,11 @@ if not BOT_TOKEN:
 WEB_DIR = os.path.join(os.path.dirname(__file__), "webapp")
 router = Router()
 
+ADMIN_USERNAME = "tazvantuzz"
+
 
 def _kb():
     if WEBAPP_URL:
-        # Добавляем timestamp, чтобы Telegram не кешировал страницу
         url = f"{WEBAPP_URL}/?t={int(time.time())}"
         return InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🇷🇺 Играть", web_app=WebAppInfo(url=url))]])
@@ -41,8 +43,7 @@ async def cmd_start(message: Message):
     greet = f"👋 С возвращением, <b>{p['nickname']}</b>!" if p else "🌟 Начни свой путь бомжа!"
     args = message.text.split()
     param = args[1] if len(args) > 1 else None
-    
-    # Добавляем timestamp, чтобы принудительно обновить кеш Telegram
+
     url = f"{WEBAPP_URL}/?t={int(time.time())}"
     if param and param.startswith("ref_") and WEBAPP_URL:
         url += f"&ref={param[4:]}"
@@ -66,13 +67,24 @@ async def cmd_menu(message: Message):
     await message.answer("🇷🇺 Открыть игру:", reply_markup=_kb())
 
 
+@router.message(Command("log"))
+async def cmd_log(message: Message):
+    """Переключает отладку. Доступно только @tazvantuzz."""
+    if message.from_user.username != ADMIN_USERNAME:
+        await message.answer("⛔ У тебя нет доступа к этой команде.")
+        return
+
+    new_state = await debug_log.toggle_debug()
+    status_text = "🟢 ВКЛЮЧЕНА" if new_state else "🔴 ВЫКЛЮЧЕНА"
+    await message.answer(f"🐞 Отладка теперь: <b>{status_text}</b>")
+
+
 @router.callback_query(F.data == "noop")
 async def noop(cb):
     await cb.answer()
 
 
 async def _serve_index(request):
-    # Отдаём index.html с запретом кеширования
     resp = web.FileResponse(os.path.join(WEB_DIR, "index.html"))
     resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     resp.headers["Pragma"] = "no-cache"
@@ -93,7 +105,6 @@ async def _set_menu_button(bot: Bot):
         logging.warning("WEBAPP_URL не задан — menu button не установлена")
         return
     try:
-        # Тоже добавляем timestamp
         url = f"{WEBAPP_URL}/?t={int(time.time())}"
         await bot.set_chat_menu_button(
             menu_button=MenuButtonWebApp(
