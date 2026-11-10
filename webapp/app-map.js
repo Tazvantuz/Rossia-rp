@@ -82,6 +82,7 @@ async function loadMap() {
       mapState.streetId = d.current.street_id;
     }
 
+    // ── ДЕБАГ: логируем, что пришло про дом ──
     if (d.house_inside) {
       api("debug_log", {
         text: `CLIENT map/get: house_inside=YES name=${d.house_inside.house?.name} inside_id=${d.current.inside_house_id}`
@@ -158,7 +159,6 @@ async function mapToggleHouseOpen() {
 async function mapEnterHouse(houseId) {
   if (_enteringHouse) return;
   _enteringHouse = true;
-  // Закрываем модалку сразу, чтобы пользователь не мог нажать ещё раз
   closeModal();
   try {
     await api("debug_log", { text: `CLIENT enter start house_id=${houseId}` }).catch(() => {});
@@ -669,30 +669,40 @@ function renderHouseInside() {
   const isMine = mapState.data.my_house && mapState.data.my_house.id === h.id;
 
   const imgName = getHouseSlug(h.type);
-  const bgStyle = `background: url('/assets/houses/${imgName}.png') center/cover no-repeat, #1e1e2e;`;
+  const bgStyle = `background: url('/assets/houses/${imgName}.png') center/cover no-repeat;`;
 
-  const playersHtml = (hData.players || []).map(p => {
-    return `<div class="house-player-row" onclick="viewPlayer(${p.user_id})">
-      <div style="font-weight:800; color:${p.is_online ? '#2ecc71' : '#fff'}">${formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color, p.role)}</div>
-      <div style="font-size:12px; color:var(--hint);">Ур. ${p.level}</div>
-    </div>`;
+  // Расставляем игроков по горизонтали в нижней части сцены
+  const players = hData.players || [];
+  const playersHtml = players.map((p, i) => {
+    const total = players.length;
+    // Равномерно от 20% до 80% ширины
+    const pct = total === 1 ? 50 : 20 + (i * 60 / (total - 1));
+    // Небольшой разброс по высоте (чтобы не стояли в линии)
+    const bottomPct = 20 + ((p.user_id % 5) * 3); // 20% - 32% от низа
+    const nickColor = p.is_online ? '#2ecc71' : '#fff';
+
+    return `
+      <div class="house-player" style="left: ${pct}%; bottom: ${bottomPct}%;" onclick="viewPlayer(${p.user_id})">
+        <div class="house-player-nick" style="color: ${nickColor}">${formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color, p.role)}</div>
+        <div class="house-player-svg">
+          ${renderCharacterSVG(p.outfit, { height: 80 })}
+        </div>
+        <div class="house-player-lvl">Ур. ${p.level}</div>
+      </div>
+    `;
   }).join("");
 
   return `
     <div class="house-interior" style="${bgStyle}">
-      <div class="house-interior-overlay"></div>
       <div class="house-interior-header">
         <h2>${h.emoji} ${_mapEscape(h.name)}</h2>
-        <div style="font-size:12px; color:var(--hint); margin-top:4px;">
+        <div class="house-interior-sub">
           ${isMine ? 'Твой дом' : 'В гостях'} · ${hData.is_open ? '🚪 Открыт' : '🔒 Закрыт'}
         </div>
       </div>
 
-      <div class="house-interior-body">
-        <div class="house-interior-chat">
-          <h3 style="margin-bottom:12px; font-size:14px; text-transform:uppercase; color:var(--hint);">Люди в доме (${(hData.players || []).length})</h3>
-          ${playersHtml || '<div style="color:var(--hint); font-size:13px;">Тут пусто</div>'}
-        </div>
+      <div class="house-interior-scene">
+        ${playersHtml || '<div style="color:var(--hint); text-align:center; margin-top:60px;">Тут пусто</div>'}
       </div>
 
       <div class="house-interior-actions">
