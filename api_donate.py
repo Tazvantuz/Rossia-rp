@@ -15,26 +15,15 @@ async def api_donate_packages(request):
     return web.json_response({"packages": [{"id": k, **v} for k, v in DONATE_PACKAGES.items()]})
 
 async def api_donate_create_invoice(request):
-    ud = await _user(request)
-    uid = ud["id"]
+    await _user(request)
     body = await request.json()
     pack_id = body.get("pack_id")
-    
+
     if pack_id not in DONATE_PACKAGES:
         return web.json_response({"error": "Пакет не найден"}, status=400)
-    
-    pack = DONATE_PACKAGES[pack_id]
-    
-    # ⚠️ ЗАГЛУШКА: Здесь будет создание реального инвойса через выбранную платежную систему.
-    # Пока просто начисляем валюту для теста.
-    # В реальности здесь нужно вернуть ссылку на оплату (invoice_url) или счёт.
-    
-    await db.execute("UPDATE players SET balance = balance + ? WHERE user_id = ?", (pack["amount"], uid))
-    
-    print(f"🎁 [DONATE STUB] Игрок {uid} 'купил' пакет {pack_id} за {pack['price_rub']}₽ и получил {pack['amount']}₽")
-    
+
+    # ⚠️ Платёжная система пока не подключена.
+    # Никакие деньги НЕ начисляются. Просто возвращаем ошибку.
     return web.json_response({
-        "ok": True,
-        "message": f"Тестовое начисление {pack['name']} прошло успешно!",
-        "is_stub": True  # Флаг для фронтенда
-    })
+        "error": "Оплата временно недоступна. Платёжная система ещё не подключена."
+    }, status=503)
