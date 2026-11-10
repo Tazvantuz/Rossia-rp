@@ -4,7 +4,7 @@ if (tg) { tg.ready(); tg.expand(); tg.setHeaderColor?.('#17212b'); tg.setBackgro
 const initData = tg?.initData || "";
 
 let state = {
-  player: null, location: null, shopItems: [], invItems: [],
+  player: null, shopItems: [], invItems: [],
   shopFilter: "hair", appearanceMode: "shop", casinoGame: "coin",
   casinoLocked: false, casinoLockTime: 0, openPMs: [],
   chatWith: 'global', jobsCache: null, businessesCache: null, casesData: null,
@@ -16,7 +16,7 @@ const SUB_TAB_TITLES = {
   appearance: '👕 Шмот',
   work: '💼 Работа',
   business: '🏢 Бизнес',
-  people: '👥 Люди',
+  map: '🗺 Карта',
   friends: '🤝 Друзья',
   referral: '🎁 Рефералы',
   gang: '🚬 Банда',
@@ -67,9 +67,9 @@ function jsAttr(s) {
 }
 
 function fmtMoney(n) {
-  if (n >= 1e9) return (n/1e9).toFixed(2)+"B";
-  if (n >= 1e6) return (n/1e6).toFixed(2)+"M";
-  if (n >= 1e3) return (n/1e3).toFixed(1)+"K";
+  if (n >= 1e9) return (n / 1e9).toFixed(2) + "B";
+  if (n >= 1e6) return (n / 1e6).toFixed(2) + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + "K";
   return n.toLocaleString("ru-RU");
 }
 
@@ -107,23 +107,23 @@ async function api(method, body = {}, retry = true) {
   try {
     res = await fetch(`/api/${method}`, {
       method: "POST",
-      headers: {"Content-Type":"application/json", "X-Init-Data": initData},
+      headers: { "Content-Type": "application/json", "X-Init-Data": initData },
       body: JSON.stringify(body),
     });
-  } catch(e) { throw new Error("Нет связи"); }
+  } catch (e) { throw new Error("Нет связи"); }
   if (res.status === 511) throw new Error("Туннель требует пароль");
   if (!res.ok) {
-    const err = await res.json().catch(()=>({}));
+    const err = await res.json().catch(() => ({}));
     const errMsg = err.error || `HTTP ${res.status}`;
     if (retry && method === "register" && errMsg.toLowerCase().includes("already registered")) {
       try {
         await fetch(`/api/reset`, {
           method: "POST",
-          headers: {"Content-Type":"application/json", "X-Init-Data": initData},
+          headers: { "Content-Type": "application/json", "X-Init-Data": initData },
           body: JSON.stringify({}),
         });
         return await api(method, body, false);
-      } catch(e) { console.warn("Reset failed:", e); }
+      } catch (e) { console.warn("Reset failed:", e); }
     }
     throw new Error(errMsg);
   }
@@ -134,9 +134,9 @@ const $ = s => document.querySelector(s);
 const $$ = s => document.querySelectorAll(s);
 
 function show(id) {
-  $$(".screen").forEach(x=>x.classList.remove("active"));
+  $$(".screen").forEach(x => x.classList.remove("active"));
   $(`#${id}`).classList.add("active");
-  window.scrollTo(0,0);
+  window.scrollTo(0, 0);
 }
 
 function showTab(tab) {
@@ -145,12 +145,12 @@ function showTab(tab) {
   if (tab === "home" && state.player) {
     setTimeout(() => renderCharacterInto("#character-view"), 0);
   }
-  $$(".tab-content").forEach(c=>c.classList.remove("active"));
+  $$(".tab-content").forEach(c => c.classList.remove("active"));
   const section = $(`.tab-content[data-tab="${tab}"]`);
   if (section) section.classList.add("active");
 
   const navTab = isMain ? tab : 'more';
-  $$(".nav-btn").forEach(b=>b.classList.toggle("active", b.dataset.nav===navTab));
+  $$(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.nav === navTab));
 
   const subHeader = document.getElementById("subtab-header");
   const subTitle = document.getElementById("subtab-title");
@@ -164,35 +164,36 @@ function showTab(tab) {
   }
 
   if (typeof stopChatPolling === "function") stopChatPolling();
-  if (tab==="appearance" && typeof loadAppearance === 'function') loadAppearance();
-  if (tab==="work" && typeof loadWork === 'function') loadWork();
-  if (tab==="business" && typeof loadBusinesses === 'function') loadBusinesses();
-  if (tab==="casino" && typeof renderCasino === 'function') renderCasino();
-  if (tab==="people" && typeof loadPeople === 'function') loadPeople();
-  if (tab==="ghetto" && typeof renderGhetto === 'function') renderGhetto();
-  if (tab==="referral" && typeof renderReferral === 'function') renderReferral();
-  if (tab==="chat" && typeof startChatPolling === 'function') startChatPolling();
-  if (tab==="bosses" && typeof loadBosses === 'function') loadBosses();
-  if (tab==="more" && typeof updateMoreBadges === 'function') { updateMoreBadges(); checkAdminAccess?.(); }
-  if (tab==="cases" && typeof loadCases === 'function') loadCases();
-  if (tab==="gang" && typeof loadGang === 'function') loadGang();
-  if (tab==="friends" && typeof loadFriends === 'function') loadFriends();
-  if (tab==="trades" && typeof loadTrades === 'function') loadTrades();
-  if (tab==="donate" && typeof loadDonate === 'function') loadDonate();
-  if (tab==="home" && typeof loadNotifications === 'function') loadNotifications();
-  if (tab==="promo") {
+  if (typeof stopMovingTimer === "function") stopMovingTimer();
+  if (tab === "appearance" && typeof loadAppearance === 'function') loadAppearance();
+  if (tab === "work" && typeof loadWork === 'function') loadWork();
+  if (tab === "business" && typeof loadBusinesses === 'function') loadBusinesses();
+  if (tab === "casino" && typeof renderCasino === 'function') renderCasino();
+  if (tab === "map" && typeof loadMap === 'function') loadMap();
+  if (tab === "ghetto" && typeof renderGhetto === 'function') renderGhetto();
+  if (tab === "referral" && typeof renderReferral === 'function') renderReferral();
+  if (tab === "chat" && typeof startChatPolling === 'function') startChatPolling();
+  if (tab === "bosses" && typeof loadBosses === 'function') loadBosses();
+  if (tab === "more" && typeof updateMoreBadges === 'function') { updateMoreBadges(); checkAdminAccess?.(); }
+  if (tab === "cases" && typeof loadCases === 'function') loadCases();
+  if (tab === "gang" && typeof loadGang === 'function') loadGang();
+  if (tab === "friends" && typeof loadFriends === 'function') loadFriends();
+  if (tab === "trades" && typeof loadTrades === 'function') loadTrades();
+  if (tab === "donate" && typeof loadDonate === 'function') loadDonate();
+  if (tab === "home" && typeof loadNotifications === 'function') loadNotifications();
+  if (tab === "promo") {
     const resultBox = document.getElementById('promo-result-box');
     if (resultBox) resultBox.classList.add('hidden');
   }
-  window.scrollTo(0,0);
+  window.scrollTo(0, 0);
 }
 
-function toast(msg, type="") {
+function toast(msg, type = "") {
   const el = $("#toast");
   el.textContent = msg; el.className = `toast ${type}`;
   el.classList.remove("hidden");
   clearTimeout(el._t);
-  el._t = setTimeout(()=>el.classList.add("hidden"), 2500);
+  el._t = setTimeout(() => el.classList.add("hidden"), 2500);
 }
 
 function openModal(html) {
@@ -221,9 +222,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const mc = document.getElementById("modal-close");
   if (mc) mc.addEventListener("click", closeModal);
   const m = document.getElementById("modal");
-  if (m) m.addEventListener("click", e=>{ if(e.target.id==="modal") closeModal(); });
-  document.querySelectorAll(".nav-btn").forEach(btn=>{
-    btn.addEventListener("click", ()=>{ showTab(btn.dataset.nav); if (tg) tg.HapticFeedback?.selectionChanged(); });
+  if (m) m.addEventListener("click", e => { if (e.target.id === "modal") closeModal(); });
+  document.querySelectorAll(".nav-btn").forEach(btn => {
+    btn.addEventListener("click", () => { showTab(btn.dataset.nav); if (tg) tg.HapticFeedback?.selectionChanged(); });
   });
 
   document.addEventListener("visibilitychange", () => {
@@ -232,26 +233,26 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 const SLOT_FILTERS = [
-  {id:"hair", name:"Причёска", emoji:"💇"},
-  {id:"head", name:"Голова", emoji:"🧢"},
-  {id:"body", name:"Тело", emoji:"👕"},
-  {id:"legs", name:"Ноги", emoji:"👖"},
-  {id:"shoes", name:"Обувь", emoji:"👟"},
-  {id:"right_hand", name:"Пр.рука", emoji:"🤚"},
-  {id:"left_hand", name:"Лев.рука", emoji:"🖐"},
+  { id: "hair", name: "Причёска", emoji: "💇" },
+  { id: "head", name: "Голова", emoji: "🧢" },
+  { id: "body", name: "Тело", emoji: "👕" },
+  { id: "legs", name: "Ноги", emoji: "👖" },
+  { id: "shoes", name: "Обувь", emoji: "👟" },
+  { id: "right_hand", name: "Пр.рука", emoji: "🤚" },
+  { id: "left_hand", name: "Лев.рука", emoji: "🖐" },
 ];
 const SLOT_KEY = {
-  head:"head_id", body:"body_id", legs:"legs_id",
-  right_hand:"right_hand_id", left_hand:"left_hand_id",
-  hair:"hair_id", shoes:"shoes_id"
+  head: "head_id", body: "body_id", legs: "legs_id",
+  right_hand: "right_hand_id", left_hand: "left_hand_id",
+  hair: "hair_id", shoes: "shoes_id"
 };
 const SLOT_KEY_MAP = SLOT_KEY;
 
 function emptyOutfit() {
   return {
-    head_id:{item_id:null}, body_id:{item_id:null}, legs_id:{item_id:null},
-    right_hand_id:{item_id:null}, left_hand_id:{item_id:null},
-    hair_id:{item_id:null}, shoes_id:{item_id:null}
+    head_id: { item_id: null }, body_id: { item_id: null }, legs_id: { item_id: null },
+    right_hand_id: { item_id: null }, left_hand_id: { item_id: null },
+    hair_id: { item_id: null }, shoes_id: { item_id: null }
   };
 }
 
@@ -274,7 +275,7 @@ async function updateChatBadge() {
     } else {
       badge.style.display = "none";
     }
-  } catch(_) {}
+  } catch (_) { }
 }
 
 async function loadConversations() {
@@ -284,7 +285,7 @@ async function loadConversations() {
     if (!state.openPMs) state.openPMs = [];
 
     const serverUids = new Set(serverConvs.map(c => Number(c.user_id)));
-    
+
     state.openPMs = state.openPMs.filter(p => {
       if (serverUids.has(Number(p.uid))) return true;
       if (Number(p.uid) === Number(state.chatWith) && p._ts && Date.now() - p._ts < 15000) return true;
@@ -310,19 +311,13 @@ async function loadConversations() {
         existing._ts = Date.now();
       } else {
         state.openPMs.push({
-          uid: c.user_id,
-          name: c.nickname,
-          tag: c.gang_tag,
-          tag_color: c.gang_tag_color,
-          role: c.role,
-          unread: c.unread,
-          _ts: Date.now()
+          uid: c.user_id, name: c.nickname, tag: c.gang_tag,
+          tag_color: c.gang_tag_color, role: c.role, unread: c.unread, _ts: Date.now()
         });
       }
     }
-
     if (typeof renderChatTabs === 'function') renderChatTabs();
-  } catch(_) {}
+  } catch (_) { }
 }
 
 async function loadOnlineCount() {
@@ -332,7 +327,7 @@ async function loadOnlineCount() {
     if (el) el.textContent = d.count;
     const dot = document.querySelector(".online-badge .online-dot");
     if (dot) { dot.classList.remove("off"); dot.classList.add("on"); }
-  } catch(_) {
+  } catch (_) {
     const dot = document.querySelector(".online-badge .online-dot");
     if (dot) { dot.classList.remove("on"); dot.classList.add("off"); }
   }
@@ -360,7 +355,7 @@ function renderCharacterInto(selector) {
 function flashCharacter() {
   const el = $("#character-view");
   el.classList.add("equip-flash");
-  setTimeout(()=>el.classList.remove("equip-flash"), 600);
+  setTimeout(() => el.classList.remove("equip-flash"), 600);
 }
 
 function checkCreditPaid(d) {
@@ -370,13 +365,13 @@ function checkCreditPaid(d) {
 }
 
 function notifyAchievements(list) {
-  const names = list.map(id=>({
-    first_job:"Работяга",first_business:"Бизнесмен",millionaire:"Миллионер",
-    billionaire:"Миллиардер",gambler:"Азартный",big_winner:"Джекпот",
-    criminal:"Авторитет",in_debt:"Должник",fashion:"Модник",
-    level10:"Опытный",rich_king:"Император",trader:"Барыга"
-  }[id]||id));
-  toast("🏆 Достижение: "+names.join(", "), "success");
+  const names = list.map(id => ({
+    first_job: "Работяга", first_business: "Бизнесмен", millionaire: "Миллионер",
+    billionaire: "Миллиардер", gambler: "Азартный", big_winner: "Джекпот",
+    criminal: "Авторитет", in_debt: "Должник", fashion: "Модник",
+    level10: "Опытный", rich_king: "Император", trader: "Барыга"
+  }[id] || id));
+  toast("🏆 Достижение: " + names.join(", "), "success");
 }
 
 async function applyPromo() {
@@ -402,7 +397,7 @@ async function applyPromo() {
     inp.value = '';
     if (tg) tg.HapticFeedback?.notificationOccurred("success");
     checkCreditPaid(d);
-  } catch(e) {
+  } catch (e) {
     if (box) {
       box.className = 'promo-result error';
       box.textContent = e.message || "Ошибка";
@@ -414,21 +409,18 @@ async function applyPromo() {
   }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ONBOARDING
-// ══════════════════════════════════════════════════════════════
 let _onbStep = 0;
 const ONB_STEPS = [
   { emoji: '👋', title: 'Добро пожаловать!', text: 'Ты начинаешь с 1000₽ и старой майки. Цель — стать олигархом. Погнали!' },
   { emoji: '💼', title: 'Шаг 1: работа', text: 'Найди работу — курьер, грузчик, дальше больше. Каждый клик приносит деньги и опыт.' },
   { emoji: '🏢', title: 'Шаг 2: бизнесы', text: 'Накопи на первый бизнес — шаурмечная приносит доход даже когда ты оффлайн.' },
-  { emoji: '🎁', title: 'И это только начало', text: 'Казино, банды, войны за территории, кейсы с лимитками, PvP-гоп-стоп. Дальше — сам.' },
+  { emoji: '🎁', title: 'И это только начало', text: 'Карта, дома, казино, банды, войны за территории, кейсы, PvP. Дальше — сам.' },
 ];
 
 function showOnboarding() {
   if (!state.player) return;
   const key = 'onb_done_' + state.player.user_id;
-  try { if (localStorage.getItem(key)) return; } catch(_) {}
+  try { if (localStorage.getItem(key)) return; } catch (_) { }
   _onbStep = 0;
   renderOnboarding();
   const el = document.getElementById('onboarding');
@@ -451,67 +443,26 @@ function renderOnboarding() {
 }
 
 function onbNext() {
-  if (_onbStep < ONB_STEPS.length - 1) {
-    _onbStep++;
-    renderOnboarding();
-  } else {
-    onbSkip();
-  }
+  if (_onbStep < ONB_STEPS.length - 1) { _onbStep++; renderOnboarding(); }
+  else onbSkip();
 }
 
 function onbSkip() {
   if (state.player) {
-    try { localStorage.setItem('onb_done_' + state.player.user_id, '1'); } catch(_) {}
+    try { localStorage.setItem('onb_done_' + state.player.user_id, '1'); } catch (_) { }
   }
   const el = document.getElementById('onboarding');
   if (el) el.classList.add('hidden');
   updateNextStepBanner();
 }
 
-// ══════════════════════════════════════════════════════════════
-//  NEXT STEP BANNER
-// ══════════════════════════════════════════════════════════════
 const NEXT_STEPS = [
-  {
-    id: 'no_job',
-    test: p => !p.current_job,
-    icon: '💼',
-    title: 'Найди работу',
-    text: 'Курьер зарабатывает 100₽ за клик. Это первый шаг к богатству.',
-    action: 'work',
-  },
-  {
-    id: 'low_balance',
-    test: p => p.current_job && p.balance < 5000,
-    icon: '💰',
-    title: 'Накопи на бизнес',
-    text: `Нужно ещё ${5000 - (state.player?.balance || 0)}₽ до первой шаурмечной.`,
-    action: 'work',
-  },
-  {
-    id: 'no_first_biz',
-    test: p => p.balance >= 5000 && (!p.businesses || p.businesses.length === 0),
-    icon: '🏢',
-    title: 'Купи первый бизнес',
-    text: 'Шаурмечная Ашота приносит 100₽/ч даже в оффлайне.',
-    action: 'business',
-  },
-  {
-    id: 'no_gang_lv5',
-    test: p => p.level >= 5 && !p.gang_tag,
-    icon: '🚬',
-    title: 'Вступи в банду',
-    text: 'Вместе прибыльнее: войны за территории, клановый магазин, семечки.',
-    action: 'gang',
-  },
-  {
-    id: 'no_case_lv3',
-    test: p => p.level >= 3,
-    icon: '🎁',
-    title: 'Открой первый кейс',
-    text: 'В кейсах — эксклюзивные шмотки, которых нет в магазине.',
-    action: 'cases',
-  },
+  { id: 'no_job', test: p => !p.current_job, icon: '💼', title: 'Найди работу', text: 'Курьер зарабатывает 100₽ за клик. Это первый шаг к богатству.', action: 'work' },
+  { id: 'low_balance', test: p => p.current_job && p.balance < 5000, icon: '💰', title: 'Накопи на бизнес', text: `Нужно ещё ${5000 - (state.player?.balance || 0)}₽ до первой шаурмечной.`, action: 'work' },
+  { id: 'no_first_biz', test: p => p.balance >= 5000 && (!p.businesses || p.businesses.length === 0), icon: '🏢', title: 'Купи первый бизнес', text: 'Шаурмечная Ашота приносит 100₽/ч даже в оффлайне.', action: 'business' },
+  { id: 'no_gang_lv5', test: p => p.level >= 5 && !p.gang_tag, icon: '🚬', title: 'Вступи в банду', text: 'Вместе прибыльнее: войны за территории, клановый магазин, семечки.', action: 'gang' },
+  { id: 'no_case_lv3', test: p => p.level >= 3, icon: '🎁', title: 'Открой первый кейс', text: 'В кейсах — эксклюзивные шмотки, которых нет в магазине.', action: 'cases' },
+  { id: 'no_house', test: p => p.level >= 3, icon: '🏠', title: 'Арендуй дом', text: 'На «Карте» можно арендовать дом на 48 часов — свой угол.', action: 'map' },
 ];
 
 let _lastNextStepAction = null;
@@ -524,13 +475,10 @@ function updateNextStepBanner() {
 
   let step = null;
   for (const s of NEXT_STEPS) {
-    try { if (s.test(p)) { step = s; break; } } catch(_) {}
+    try { if (s.test(p)) { step = s; break; } } catch (_) { }
   }
 
-  if (!step) {
-    banner.classList.add('hidden');
-    return;
-  }
+  if (!step) { banner.classList.add('hidden'); return; }
 
   _lastNextStepAction = step.action;
   const iconEl = document.getElementById('nsb-icon');
@@ -546,9 +494,6 @@ function nextStepGo() {
   if (_lastNextStepAction) showTab(_lastNextStepAction);
 }
 
-// ══════════════════════════════════════════════════════════════
-//  PLAYER RENDER
-// ══════════════════════════════════════════════════════════════
 function renderPlayer() {
   const p = state.player; if (!p) return;
   $("#nick").innerHTML = formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color, p.role);
@@ -557,7 +502,7 @@ function renderPlayer() {
   $("#money").textContent = fmtMoney(p.balance);
   $("#char-name").innerHTML = formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color, p.role);
   $("#char-level").textContent = p.level;
-  (function(){
+  (function () {
     const cs = p.combat_stats || {};
     const parts = [];
     if (cs.hp) parts.push(`<span class="s-hp">\u2764\ufe0f ${cs.hp} HP</span>`);
@@ -565,8 +510,8 @@ function renderPlayer() {
     const csEl = document.getElementById("char-stats");
     if (csEl) csEl.innerHTML = parts.join(" \u00b7 ");
   })();
-  const pct = p.xp_next > 0 ? Math.min(100, p.xp/p.xp_next*100) : 0;
-  $("#xp-fill").style.width = pct+"%";
+  const pct = p.xp_next > 0 ? Math.min(100, p.xp / p.xp_next * 100) : 0;
+  $("#xp-fill").style.width = pct + "%";
   $("#xp-text").textContent = `${p.xp}/${p.xp_next} XP`;
   $("#avatar").textContent = p.outfit.head_id.item_id ? p.outfit.head_id.emoji : "👤";
   startTimers();
@@ -606,7 +551,7 @@ function updateTimers() {
   const dailyBtn = $("#daily-btn");
   const dailyTimer = $("#daily-timer");
   if (dailyBtn && dailyTimer) {
-    const now = Math.floor(Date.now()/1000);
+    const now = Math.floor(Date.now() / 1000);
     const cd = p.last_daily ? (p.last_daily + 86400) - now : 0;
     if (cd <= 0) {
       dailyBtn.style.opacity = "1";
@@ -621,7 +566,7 @@ function updateTimers() {
   }
   const rouletteTimer = $("#roulette-timer");
   if (rouletteTimer && p.last_roulette !== undefined) {
-    const nowR = Math.floor(Date.now()/1000);
+    const nowR = Math.floor(Date.now() / 1000);
     const cdR = p.last_roulette ? (p.last_roulette + 21600) - nowR : 0;
     if (cdR <= 0) {
       rouletteTimer.textContent = "✅";
@@ -641,7 +586,7 @@ function renderCreditBanner() {
   const debt = p.credit_amount || 0;
   if (debt <= 0) { banner.classList.add("hidden"); return; }
   banner.classList.remove("hidden");
-  const now = Math.floor(Date.now()/1000);
+  const now = Math.floor(Date.now() / 1000);
   const due = p.credit_due || 0;
   const left = due - now;
   $("#cb-amount").textContent = fmtMoney(debt) + "₽";
@@ -665,7 +610,7 @@ async function refreshPlayer() {
       if (typeof loadBusinesses === 'function') loadBusinesses();
       if (d.credit_paid) checkCreditPaid(d);
     }
-  } catch(e) { console.error("refreshPlayer error:", e); }
+  } catch (e) { console.error("refreshPlayer error:", e); }
 }
 
 let registerSetup = false;
@@ -720,7 +665,7 @@ async function boot() {
       if (d.credit_paid) setTimeout(() => toast(`💸 Банк списал ${fmtMoney(d.credit_paid)}₽`, "error"), 800);
       showOnboarding();
     }
-  } catch(e) {
+  } catch (e) {
     console.error("boot error:", e);
     toast("Ошибка загрузки: " + e.message, "error");
     show("register"); renderRegister();

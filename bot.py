@@ -15,13 +15,15 @@ import api
 
 load_dotenv()
 BOT_TOKEN = os.getenv("BOT_TOKEN")
-WEBAPP_URL = os.getenv("WEBAPP_URL","").rstrip("/")
-PORT = int(os.getenv("PORT","8080"))
+WEBAPP_URL = os.getenv("WEBAPP_URL", "").rstrip("/")
+PORT = int(os.getenv("PORT", "8080"))
 
-if not BOT_TOKEN: raise RuntimeError("BOT_TOKEN в .env")
+if not BOT_TOKEN:
+    raise RuntimeError("BOT_TOKEN в .env")
 
 WEB_DIR = os.path.join(os.path.dirname(__file__), "webapp")
 router = Router()
+
 
 def _kb():
     if WEBAPP_URL:
@@ -29,6 +31,7 @@ def _kb():
             [InlineKeyboardButton(text="🇷🇺 Играть", web_app=WebAppInfo(url=f"{WEBAPP_URL}/"))]])
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⚠️ URL не задан", callback_data="noop")]])
+
 
 @router.message(CommandStart())
 async def cmd_start(message: Message):
@@ -53,22 +56,28 @@ async def cmd_start(message: Message):
             [InlineKeyboardButton(text="⚠️ URL не задан", callback_data="noop")]])
     await message.answer(text, reply_markup=kb)
 
+
 @router.message(Command("menu"))
 async def cmd_menu(message: Message):
     await message.answer("🇷🇺 Открыть игру:", reply_markup=_kb())
 
+
 @router.callback_query(F.data == "noop")
-async def noop(cb): await cb.answer()
+async def noop(cb):
+    await cb.answer()
+
 
 async def _serve_index(request):
     return web.FileResponse(os.path.join(WEB_DIR, "index.html"))
 
+
 def make_app():
-    app = web.Application(client_max_size=1*1024*1024)
+    app = web.Application(client_max_size=1 * 1024 * 1024)
     api.setup_routes(app)
     app.router.add_get("/", _serve_index)
     app.router.add_static("/", WEB_DIR, show_index=False)
     return app
+
 
 async def _set_menu_button(bot: Bot):
     if not WEBAPP_URL:
@@ -85,6 +94,7 @@ async def _set_menu_button(bot: Bot):
     except Exception as e:
         logging.warning(f"Menu Button error: {e}")
 
+
 async def _capture_processor():
     while True:
         await asyncio.sleep(60)
@@ -92,6 +102,21 @@ async def _capture_processor():
             await api._process_territories()
         except Exception as e:
             logging.warning(f"capture processor: {e}")
+
+
+async def _map_processor():
+    """Завершает перемещения и чистит истёкшие аренды домов."""
+    while True:
+        await asyncio.sleep(3)
+        try:
+            await api.process_moving()
+        except Exception as e:
+            logging.warning(f"map moving: {e}")
+        try:
+            await api.process_house_rentals()
+        except Exception as e:
+            logging.warning(f"house rentals: {e}")
+
 
 async def main():
     logging.basicConfig(level=logging.INFO)
@@ -106,19 +131,27 @@ async def main():
     await runner.setup()
     await web.TCPSite(runner, "0.0.0.0", PORT).start()
     logging.info(f"🌐 Web: http://0.0.0.0:{PORT}")
+
     bot = Bot(token=BOT_TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     api.set_bot(bot)
-    dp = Dispatcher(); dp.include_router(router)
+    dp = Dispatcher()
+    dp.include_router(router)
     me = await bot.me()
     logging.info(f"🤖 @{me.username}")
     logging.info(f"🎮 WebApp: {WEBAPP_URL}")
     await _set_menu_button(bot)
+
     asyncio.create_task(_capture_processor())
     logging.info("⚔️ Background capture processor запущен")
-    # ═══ БОТ-СИМУЛЯТОР И СИД БОТОВ УДАЛЕНЫ ═══
+    asyncio.create_task(_map_processor())
+    logging.info("🗺 Background map processor запущен")
+
     try:
         await dp.start_polling(bot)
     finally:
-        await runner.cleanup(); await db.close()
+        await runner.cleanup()
+        await db.close()
 
-if __name__ == "__main__": asyncio.run(main())
+
+if __name__ == "__main__":
+    asyncio.run(main())

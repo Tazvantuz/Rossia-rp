@@ -10,18 +10,32 @@ import api_pvp
 import api_admin
 import api_boss
 import api_donate
+import api_map
+
 
 def set_token(t):
     api_core.set_token(t)
 
+
 def set_bot(b):
     api_core.set_bot(b)
+
 
 async def migrate_crypto_v1():
     await api_economy.migrate_crypto_v1()
 
+
 async def _process_territories():
     await api_gang._process_territories()
+
+
+async def process_moving():
+    await api_map._process_moving()
+
+
+async def process_house_rentals():
+    await api_map._process_house_rentals()
+
 
 def setup_routes(app):
     R = app.router
@@ -85,8 +99,15 @@ def setup_routes(app):
 
     R.add_post("/api/casino/wheel/play", api_economy.api_wheel_play)
 
-    R.add_post("/api/location", api_social.api_location)
-    R.add_post("/api/move", api_social.api_move)
+    # ═══ КАРТА ═══
+    R.add_post("/api/map/get", api_map.api_map_get)
+    R.add_post("/api/map/status", api_map.api_map_status)
+    R.add_post("/api/map/move", api_map.api_map_move)
+    R.add_post("/api/house/rent", api_map.api_house_rent)
+    R.add_post("/api/house/cancel", api_map.api_house_cancel)
+    R.add_post("/api/house/my", api_map.api_house_my)
+    R.add_post("/api/house/info", api_map.api_house_info)
+
     R.add_post("/api/player_view", api_social.api_player_view)
     R.add_post("/api/player_items", api_social.api_player_items)
     R.add_post("/api/trade/send", api_social.api_trade_send)
@@ -143,6 +164,5 @@ def setup_routes(app):
     R.add_post("/api/boss/get", api_boss.api_boss_get)
     R.add_post("/api/boss/attack", api_boss.api_boss_attack)
 
-    # ═══ ДОНАТ ═══
     R.add_post("/api/donate/packages", api_donate.api_donate_packages)
     R.add_post("/api/donate/create_invoice", api_donate.api_donate_create_invoice)

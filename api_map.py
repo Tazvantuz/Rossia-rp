@@ -1,0 +1,399 @@
+# api_map.py
+"""Карта: города/улицы/дома, аренда домов (макс 1 на игрока), перемещение с задержкой."""
+import random
+import time
+from aiohttp import web
+from database import db
+from game import (
+    CITIES, HOUSES, MOVE_DURATION_BETWEEN_CITIES, MOVE_DURATION_BETWEEN_STREETS,
+    HOUSE_RENT_HOURS, PLAYER_ACTIVE_LAST_SEEN, get_city, get_street, get_house,
+    get_outfit,
+)
+from api_core import _user, _player, _player_json
+
+_map_migrated = False
+
+
+async def _ensure_map_columns():
+    global _map_migrated
+    if _map_migrated:
+        return
+    for col_def in [
+        "city_id INTEGER DEFAULT 0",
+        "street_id INTEGER DEFAULT 0",
+        "pos_x REAL DEFAULT 0",
+        "pos_y REAL DEFAULT 0",
+        "moving_until INTEGER DEFAULT 0",
+        "moving_to_city INTEGER DEFAULT 0",
+        "moving_to_street INTEGER DEFAULT 0",
+    ]:
+        try:
+            await db.execute(f"ALTER TABLE players ADD COLUMN {col_def}")
+        except Exception:
+            pass
+    try:
+        await db.execute(
+            "CREATE TABLE IF NOT EXISTS house_rentals ("
+            " house_id INTEGER PRIMARY KEY,"
+            " user_id INTEGER NOT NULL,"
+            " expires_at INTEGER NOT NULL,"
+            " started_at INTEGER NOT NULL DEFAULT 0)"
+        )
+    except Exception:
+        pass
+    _map_migrated = True
+
+
+def _random_pos():
+    x = round(random.uniform(60, 540), 1)
+    y = round(random.uniform(270, 370), 1)
+    return x, y
+
+
+async def _process_moving(uid=None):
+    """Завершает перемещение у игроков, у которых истёк moving_until."""
+    now = int(time.time())
+    if uid is not None:
+        rows = await db.fetchall(
+            "SELECT user_id, moving_to_city, moving_to_street FROM players "
+            "WHERE user_id=? AND moving_until>0 AND moving_until<=?", (uid, now))
+    else:
+        rows = await db.fetchall(
+            "SELECT user_id, moving_to_city, moving_to_street FROM players "
+            "WHERE moving_until>0 AND moving_until<=?", (now,))
+    for r in rows:
+        x, y = _random_pos()
+        await db.execute(
+            "UPDATE players SET city_id=?, street_id=?, pos_x=?, pos_y=?, "
+            "moving_until=0, moving_to_city=0, moving_to_street=0 WHERE user_id=?",
+            (r["moving_to_city"], r["moving_to_street"], x, y, r["user_id"]))
+
+
+async def _process_house_rentals():
+    """Удаляет истёкшие аренды (дом снова свободен)."""
+    now = int(time.time())
+    try:
+        await db.execute("DELETE FROM house_rentals WHERE expires_at<=?", (now,))
+    except Exception as e:
+        print(f"⚠️ _process_house_rentals: {e}")
+
+
+async def _get_my_active_house(uid, now):
+    """Возвращает dict {house, expires_at, seconds_left} или None."""
+    row = await db.fetchone(
+        "SELECT house_id, expires_at, started_at FROM house_rentals "
+        "WHERE user_id=? AND expires_at>?", (uid, now))
+    if not row:
+        return None
+    h = get_house(row["house_id"])
+    if not h:
+        return None
+    out = dict(h)
+    out["expires_at"] = row["expires_at"]
+    out["started_at"] = row["started_at"]
+    out["seconds_left"] = max(0, row["expires_at"] - now)
+    return out
+
+
+# ═══════════ КАРТА ═══════════
+async def api_map_get(request):
+    await _ensure_map_columns()
+    ud = await _user(request)
+    uid = ud["id"]
+    await _process_moving(uid)
+    await _process_house_rentals()
+    p = await _player(uid)
+
+    city_id = int(p.get("city_id") or 0)
+    street_id = int(p.get("street_id") or 0)
+    now = int(time.time())
+
+    moving = None
+    mu = int(p.get("moving_until") or 0)
+    if mu > now:
+        to_city = int(p.get("moving_to_city") or 0)
+        duration = MOVE_DURATION_BETWEEN_CITIES if to_city != city_id else MOVE_DURATION_BETWEEN_STREETS
+        moving = {
+            "until": mu,
+            "to_city": to_city,
+            "to_street": int(p.get("moving_to_street") or 0),
+            "seconds_left": mu - now,
+            "duration": duration,
+        }
+
+    # Дома текущей улицы
+    cur_house_ids = [h["id"] for h in HOUSES
+                     if h["city_id"] == city_id and h["street_id"] == street_id]
+    rentals = {}
+    if cur_house_ids:
+        ph = ",".join("?" * len(cur_house_ids))
+        rows = await db.fetchall(
+            f"SELECT hr.house_id, hr.user_id, hr.expires_at, p.nickname "
+            f"FROM house_rentals hr JOIN players p ON p.user_id = hr.user_id "
+            f"WHERE hr.house_id IN ({ph}) AND hr.expires_at > ?",
+            (*cur_house_ids, now))
+        for r in rows:
+            rentals[r["house_id"]] = {
+                "user_id": r["user_id"],
+                "nickname": r["nickname"],
+                "expires_at": r["expires_at"],
+                "seconds_left": max(0, r["expires_at"] - now),
+            }
+
+    houses = []
+    for h in HOUSES:
+        if h["city_id"] != city_id or h["street_id"] != street_id:
+            continue
+        h2 = dict(h)
+        h2["rented_by"] = rentals.get(h["id"])
+        houses.append(h2)
+
+    # Игроки на этой улице (кроме меня), активные < 24ч
+    now_ts = now
+    prows = await db.fetchall(
+        "SELECT p.user_id, p.nickname, p.level, p.role, p.last_seen, "
+        "p.pos_x, p.pos_y, p.head_id, p.body_id, p.legs_id, "
+        "p.right_hand_id, p.left_hand_id, p.hair_id, p.shoes_id, "
+        "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
+        "FROM players p "
+        "LEFT JOIN gang_members gm ON gm.user_id = p.user_id "
+        "LEFT JOIN gangs g ON g.gang_id = gm.gang_id "
+        "WHERE p.city_id=? AND p.street_id=? AND p.user_id!=? "
+        "AND (p.is_bot=0 OR p.is_bot IS NULL) "
+        "AND p.last_seen > ? "
+        "ORDER BY p.last_seen DESC",
+        (city_id, street_id, uid, now_ts - PLAYER_ACTIVE_LAST_SEEN))
+
+    for pr in prows:
+        pr["is_online"] = (pr.get("last_seen") or 0) > now_ts - 120
+        pr["outfit"] = get_outfit(pr)
+
+    # Игроки на других улицах этого города
+    city_prows = await db.fetchall(
+        "SELECT p.user_id, p.nickname, p.street_id, p.pos_x, p.pos_y, "
+        "p.head_id, p.body_id, p.legs_id, p.right_hand_id, p.left_hand_id, "
+        "p.hair_id, p.shoes_id, p.last_seen "
+        "FROM players p "
+        "WHERE p.city_id=? AND p.user_id!=? "
+        "AND (p.is_bot=0 OR p.is_bot IS NULL) "
+        "AND p.last_seen > ? "
+        "ORDER BY p.last_seen DESC",
+        (city_id, uid, now_ts - PLAYER_ACTIVE_LAST_SEEN))
+
+    for pr in city_prows:
+        pr["is_online"] = (pr.get("last_seen") or 0) > now_ts - 120
+        pr["outfit"] = get_outfit(pr)
+
+    my_house = await _get_my_active_house(uid, now)
+
+    return web.json_response({
+        "cities": CITIES,
+        "current": {
+            "city_id": city_id,
+            "street_id": street_id,
+            "pos_x": float(p.get("pos_x") or 0),
+            "pos_y": float(p.get("pos_y") or 0),
+        },
+        "moving": moving,
+        "my_house": my_house,
+        "street": {
+            "city_id": city_id,
+            "street_id": street_id,
+            "houses": houses,
+            "players": prows,
+        },
+        "city_players": city_prows,
+        "now": now_ts,
+        "active_window": PLAYER_ACTIVE_LAST_SEEN,
+        "house_rent_hours": HOUSE_RENT_HOURS,
+    })
+
+
+async def api_map_status(request):
+    await _ensure_map_columns()
+    ud = await _user(request)
+    uid = ud["id"]
+    await _process_moving(uid)
+    p = await _player(uid)
+    now = int(time.time())
+    mu = int(p.get("moving_until") or 0)
+    return web.json_response({
+        "city_id": int(p.get("city_id") or 0),
+        "street_id": int(p.get("street_id") or 0),
+        "pos_x": float(p.get("pos_x") or 0),
+        "pos_y": float(p.get("pos_y") or 0),
+        "moving_until": mu,
+        "moving_to_city": int(p.get("moving_to_city") or 0),
+        "moving_to_street": int(p.get("moving_to_street") or 0),
+        "seconds_left": max(0, mu - now) if mu > now else 0,
+        "now": now,
+    })
+
+
+async def api_map_move(request):
+    await _ensure_map_columns()
+    ud = await _user(request)
+    uid = ud["id"]
+    body = await request.json()
+    try:
+        to_city = int(body.get("to_city", -1))
+        to_street = int(body.get("to_street", -1))
+    except Exception:
+        return web.json_response({"error": "Некорректные параметры"}, status=400)
+
+    city = get_city(to_city)
+    if not city:
+        return web.json_response({"error": "Город не найден"}, status=400)
+    street = get_street(to_city, to_street)
+    if not street:
+        return web.json_response({"error": "Улица не найдена"}, status=400)
+
+    await _process_moving(uid)
+    p = await _player(uid)
+    now = int(time.time())
+
+    if int(p.get("moving_until") or 0) > now:
+        return web.json_response({
+            "error": "Ты уже в пути",
+            "seconds_left": int(p["moving_until"]) - now,
+        }, status=400)
+
+    cur_city = int(p.get("city_id") or 0)
+    cur_street = int(p.get("street_id") or 0)
+
+    if cur_city == to_city and cur_street == to_street:
+        return web.json_response({"error": "Ты уже здесь"}, status=400)
+
+    if cur_city != to_city:
+        duration = MOVE_DURATION_BETWEEN_CITIES
+    else:
+        duration = MOVE_DURATION_BETWEEN_STREETS
+
+    arriving_at = now + duration
+    await db.execute(
+        "UPDATE players SET moving_until=?, moving_to_city=?, moving_to_street=? WHERE user_id=?",
+        (arriving_at, to_city, to_street, uid))
+
+    return web.json_response({
+        "ok": True,
+        "arriving_at": arriving_at,
+        "duration": duration,
+        "to_city": to_city,
+        "to_street": to_street,
+    })
+
+
+# ═══════════ ДОМА ═══════════
+async def api_house_rent(request):
+    await _ensure_map_columns()
+    ud = await _user(request)
+    uid = ud["id"]
+    body = await request.json()
+    try:
+        house_id = int(body.get("house_id", -1))
+    except Exception:
+        return web.json_response({"error": "Некорректный house_id"}, status=400)
+
+    house = get_house(house_id)
+    if not house:
+        return web.json_response({"error": "Дом не найден"}, status=400)
+
+    await _process_moving(uid)
+    await _process_house_rentals()
+    p = await _player(uid)
+    now = int(time.time())
+
+    if int(p.get("moving_until") or 0) > now:
+        return web.json_response({"error": "Ты в пути, не можешь арендовать"}, status=400)
+
+    if int(p.get("city_id") or 0) != house["city_id"] or int(p.get("street_id") or 0) != house["street_id"]:
+        return web.json_response({"error": "Ты не на этой улице"}, status=400)
+
+    # ── Максимум 1 дом на игрока ──
+    my_active = await _get_my_active_house(uid, now)
+    if my_active:
+        return web.json_response({
+            "error": f"У тебя уже есть дом: {my_active['name']}. Сначала отмени аренду.",
+            "my_house_id": my_active["id"],
+        }, status=400)
+
+    busy = await db.fetchone(
+        "SELECT user_id FROM house_rentals WHERE house_id=? AND expires_at>?",
+        (house_id, now))
+    if busy:
+        return web.json_response({"error": "Дом уже арендован"}, status=400)
+
+    if int(p["balance"]) < house["price"]:
+        return web.json_response({"error": f"Нужно {house['price']}₽"}, status=400)
+
+    await db.execute("UPDATE players SET balance=balance-? WHERE user_id=?",
+                     (house["price"], uid))
+    expires_at = now + HOUSE_RENT_HOURS * 3600
+    await db.execute(
+        "INSERT OR REPLACE INTO house_rentals (house_id, user_id, expires_at, started_at) "
+        "VALUES (?, ?, ?, ?)",
+        (house_id, uid, expires_at, now))
+
+    p = await _player(uid)
+    return web.json_response({
+        "ok": True,
+        "player": _player_json(p),
+        "house_id": house_id,
+        "house_name": house["name"],
+        "expires_at": expires_at,
+        "duration_hours": HOUSE_RENT_HOURS,
+    })
+
+
+async def api_house_cancel(request):
+    """Отменить свою аренду — дом становится ничейным, можно купить другой."""
+    await _ensure_map_columns()
+    await _process_house_rentals()
+    ud = await _user(request)
+    uid = ud["id"]
+    now = int(time.time())
+
+    my = await _get_my_active_house(uid, now)
+    if not my:
+        return web.json_response({"error": "У тебя нет активной аренды"}, status=400)
+
+    await db.execute("DELETE FROM house_rentals WHERE user_id=? AND expires_at>?", (uid, now))
+    return web.json_response({
+        "ok": True,
+        "cancelled_house_id": my["id"],
+        "cancelled_house_name": my["name"],
+    })
+
+
+async def api_house_my(request):
+    await _ensure_map_columns()
+    await _process_house_rentals()
+    ud = await _user(request)
+    uid = ud["id"]
+    now = int(time.time())
+    house = await _get_my_active_house(uid, now)
+    return web.json_response({"house": house})
+
+
+async def api_house_info(request):
+    await _ensure_map_columns()
+    await _user(request)
+    body = await request.json()
+    try:
+        house_id = int(body.get("house_id", -1))
+    except Exception:
+        return web.json_response({"error": "Некорректный house_id"}, status=400)
+    house = get_house(house_id)
+    if not house:
+        return web.json_response({"error": "Дом не найден"}, status=400)
+
+    now = int(time.time())
+    rental = await db.fetchone(
+        "SELECT hr.user_id, hr.expires_at, p.nickname "
+        "FROM house_rentals hr JOIN players p ON p.user_id = hr.user_id "
+        "WHERE hr.house_id=? AND hr.expires_at>?", (house_id, now))
+    return web.json_response({
+        "house": house,
+        "rented_by": rental,
+        "now": now,
+    })

@@ -1,5 +1,6 @@
 # database.py
 import os
+import random
 import aiosqlite
 
 if os.path.isdir("/data") and os.access("/data", os.W_OK):
@@ -171,8 +172,6 @@ CREATE TABLE IF NOT EXISTS promo_used (
     used_at TEXT DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(code, user_id)
 );
-
--- ═══════════ НОВЫЕ ТАБЛИЦЫ ДЛЯ БОССА ═══════════
 CREATE TABLE IF NOT EXISTS boss_state (
     boss_id TEXT PRIMARY KEY,
     current_hp INTEGER NOT NULL,
@@ -194,31 +193,49 @@ CREATE TABLE IF NOT EXISTS boss_rewards (
     PRIMARY KEY (boss_id, user_id, reward_type)
 );
 
+-- ═══════════ АРЕНДА ДОМОВ ═══════════
+CREATE TABLE IF NOT EXISTS house_rentals (
+    house_id INTEGER PRIMARY KEY,
+    user_id INTEGER NOT NULL,
+    expires_at INTEGER NOT NULL,
+    started_at INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS idx_house_rentals_user ON house_rentals(user_id);
+CREATE INDEX IF NOT EXISTS idx_house_rentals_expires ON house_rentals(expires_at);
+
 CREATE INDEX IF NOT EXISTS idx_activity_day ON player_daily_activity(day);
 CREATE INDEX IF NOT EXISTS idx_activity_user ON player_daily_activity(user_id);
 CREATE INDEX IF NOT EXISTS idx_promo_used_user ON promo_used(user_id);
+CREATE INDEX IF NOT EXISTS idx_players_city_street ON players(city_id, street_id);
 """
 
 KNOWN_BOT_IDS = (9900000001, 9900000002, 9900000003, 9900000004, 9900000005)
 KNOWN_BOT_NICKS = ('Ксюха', 'Денчик', 'Толик', 'Света', 'Санёк')
 
+
 class Database:
     def __init__(self, path=DB_PATH):
-        self.path = path; self.conn = None
+        self.path = path
+        self.conn = None
+
     async def init(self):
         self.conn = await aiosqlite.connect(self.path)
         self.conn.row_factory = aiosqlite.Row
-        await self.conn.executescript(SCHEMA); await self.conn.commit()
+
+        # Базовая схема сначала без city_id в players (миграции добавят)
+        await self.conn.executescript(SCHEMA)
+        await self.conn.commit()
+
         migrations = [
-            "last_work INTEGER DEFAULT 0","last_daily INTEGER DEFAULT 0",
-            "daily_streak INTEGER DEFAULT 0","last_roulette INTEGER DEFAULT 0",
-            "last_crime INTEGER DEFAULT 0","credit_amount INTEGER DEFAULT 0",
-            "crypto_amount REAL DEFAULT 0","businesses TEXT DEFAULT '[]'",
-            "achievements TEXT DEFAULT '[]'","casino_plays INTEGER DEFAULT 0",
-            "crimes_won INTEGER DEFAULT 0","trades_done INTEGER DEFAULT 0",
+            "last_work INTEGER DEFAULT 0", "last_daily INTEGER DEFAULT 0",
+            "daily_streak INTEGER DEFAULT 0", "last_roulette INTEGER DEFAULT 0",
+            "last_crime INTEGER DEFAULT 0", "credit_amount INTEGER DEFAULT 0",
+            "crypto_amount REAL DEFAULT 0", "businesses TEXT DEFAULT '[]'",
+            "achievements TEXT DEFAULT '[]'", "casino_plays INTEGER DEFAULT 0",
+            "crimes_won INTEGER DEFAULT 0", "trades_done INTEGER DEFAULT 0",
             "owned_items_count INTEGER DEFAULT 0",
             "last_seen INTEGER DEFAULT 0",
-            "credit_due INTEGER DEFAULT 0","last_casino INTEGER DEFAULT 0",
+            "credit_due INTEGER DEFAULT 0", "last_casino INTEGER DEFAULT 0",
             "tg_username TEXT DEFAULT NULL",
             "crypto_hold_since INTEGER DEFAULT 0",
             "crypto_bought_today INTEGER DEFAULT 0",
@@ -232,87 +249,100 @@ class Database:
             "role TEXT DEFAULT 'player'",
             "muted_until INTEGER DEFAULT 0",
             "mute_reason TEXT DEFAULT NULL",
+            # ═══ карта ═══
+            "city_id INTEGER DEFAULT 0",
+            "street_id INTEGER DEFAULT 0",
+            "pos_x REAL DEFAULT 0",
+            "pos_y REAL DEFAULT 0",
+            "moving_until INTEGER DEFAULT 0",
+            "moving_to_city INTEGER DEFAULT 0",
+            "moving_to_street INTEGER DEFAULT 0",
         ]
         for m in migrations:
             try:
                 await self.conn.execute(f"ALTER TABLE players ADD COLUMN {m}")
                 await self.conn.commit()
-            except: pass
+            except Exception:
+                pass
+
         for _gc in ["tag TEXT DEFAULT NULL", "tag_color TEXT DEFAULT NULL"]:
             try:
                 await self.conn.execute(f"ALTER TABLE gangs ADD COLUMN {_gc}")
                 await self.conn.commit()
-            except: pass
+            except Exception:
+                pass
+
         try:
             await self.conn.execute("UPDATE pvp_battles SET status='expired' WHERE status='pending' AND (strftime('%s','now') - strftime('%s', created_at)) > 30")
             await self.conn.execute("UPDATE pvp_battles SET status='expired' WHERE status='active' AND (turn_started_at IS NULL OR turn_started_at = 0 OR (strftime('%s','now') - turn_started_at) > 300)")
             await self.conn.commit()
-        except: pass
-        try: await self.conn.execute("ALTER TABLE notifications ADD COLUMN data TEXT DEFAULT NULL"); await self.conn.commit()
-        except: pass
-        for _col in [
-            "turn_started_at INTEGER DEFAULT 0",
-            "pending_attack_part TEXT",
-        ]:
+        except Exception:
+            pass
+
+        try:
+            await self.conn.execute("ALTER TABLE notifications ADD COLUMN data TEXT DEFAULT NULL")
+            await self.conn.commit()
+        except Exception:
+            pass
+
+        for _col in ["turn_started_at INTEGER DEFAULT 0", "pending_attack_part TEXT"]:
             try:
                 await self.conn.execute(f"ALTER TABLE pvp_battles ADD COLUMN {_col}")
                 await self.conn.commit()
-            except: pass
+            except Exception:
+                pass
 
+        # Таблица аренды домов (idempotent)
         try:
             await self.conn.execute(
-                "CREATE TABLE IF NOT EXISTS system_stats (key TEXT PRIMARY KEY, value INTEGER DEFAULT 0)"
-            )
-            await self.conn.commit()
-            print("✅ Таблица system_stats готова")
-        except Exception as e:
-            print(f"⚠️ system_stats: {e}")
-
-        try:
-            await self.conn.execute(
-                "CREATE TABLE IF NOT EXISTS blackjack_games ("
-                " user_id INTEGER PRIMARY KEY,"
-                " bet INTEGER NOT NULL,"
-                " deck TEXT NOT NULL,"
-                " player_cards TEXT NOT NULL DEFAULT '[]',"
-                " dealer_cards TEXT NOT NULL DEFAULT '[]',"
-                " status TEXT DEFAULT 'player',"
-                " result TEXT DEFAULT NULL,"
-                " payout INTEGER DEFAULT 0,"
-                " doubled INTEGER DEFAULT 0,"
-                " created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
-            )
-            await self.conn.commit()
-            print("✅ Таблица blackjack_games готова")
-        except Exception as e:
-            print(f"⚠️ blackjack_games: {e}")
-
-        try:
-            await self.conn.execute(
-                "CREATE TABLE IF NOT EXISTS promo_codes ("
-                " code TEXT PRIMARY KEY,"
-                " bonus INTEGER NOT NULL,"
-                " uses_left INTEGER NOT NULL,"
-                " uses_total INTEGER NOT NULL,"
-                " created_at TEXT DEFAULT CURRENT_TIMESTAMP)"
-            )
-            await self.conn.execute(
-                "CREATE TABLE IF NOT EXISTS promo_used ("
-                " id INTEGER PRIMARY KEY AUTOINCREMENT,"
-                " code TEXT NOT NULL,"
+                "CREATE TABLE IF NOT EXISTS house_rentals ("
+                " house_id INTEGER PRIMARY KEY,"
                 " user_id INTEGER NOT NULL,"
-                " used_at TEXT DEFAULT CURRENT_TIMESTAMP,"
-                " UNIQUE(code, user_id))"
+                " expires_at INTEGER NOT NULL,"
+                " started_at INTEGER NOT NULL DEFAULT 0)"
+            )
+            await self.conn.execute("CREATE INDEX IF NOT EXISTS idx_house_rentals_user ON house_rentals(user_id)")
+            await self.conn.execute("CREATE INDEX IF NOT EXISTS idx_house_rentals_expires ON house_rentals(expires_at)")
+            await self.conn.execute("CREATE INDEX IF NOT EXISTS idx_players_city_street ON players(city_id, street_id)")
+            await self.conn.commit()
+            print("✅ Таблица house_rentals готова")
+        except Exception as e:
+            print(f"⚠️ house_rentals: {e}")
+
+        # Миграция location_id → city_id/street_id
+        try:
+            await self.conn.execute(
+                "UPDATE players SET city_id = location_id WHERE city_id = 0 AND location_id > 0"
             )
             await self.conn.commit()
-            print("✅ Таблицы promo_codes/promo_used готовы")
+            print("✅ Миграция location_id → city_id выполнена")
         except Exception as e:
-            print(f"⚠️ promo tables: {e}")
+            print(f"⚠️ city_id migration: {e}")
 
+        # Случайные позиции для игроков, у которых они нулевые
+        try:
+            cur = await self.conn.execute(
+                "SELECT user_id FROM players WHERE (pos_x IS NULL OR pos_x = 0) AND (pos_y IS NULL OR pos_y = 0)"
+            )
+            rows = await cur.fetchall()
+            for row in rows:
+                uid = row[0]
+                x = round(random.uniform(60, 540), 1)
+                y = round(random.uniform(270, 370), 1)
+                await self.conn.execute(
+                    "UPDATE players SET pos_x=?, pos_y=? WHERE user_id=?", (x, y, uid))
+            await self.conn.commit()
+            if rows:
+                print(f"✅ Назначены стартовые позиции игрокам: {len(rows)}")
+        except Exception as e:
+            print(f"⚠️ pos migration: {e}")
+
+        # Legacy cleanup
         try:
             await self.conn.execute(
                 "DELETE FROM blackjack_games "
-                "WHERE strftime('%s','now') - strftime('%s', created_at) > 3600")
+                "WHERE strftime('%s','now') - strftime('%s', created_at) > 3600"
+            )
             await self.conn.commit()
         except Exception as e:
             print(f"⚠️ blackjack cleanup: {e}")
@@ -349,9 +379,12 @@ class Database:
         try:
             row = await self.fetchone("SELECT * FROM boss_state WHERE boss_id='pocyk'")
             if not row:
-                import time
-                now = int(time.time())
-                await self.execute("INSERT INTO boss_state (boss_id, current_hp, max_hp, ends_at, status) VALUES ('pocyk', 10000000, 10000000, ?, 'active')", (now + 7*86400,))
+                import time as _t
+                now = int(_t.time())
+                await self.execute(
+                    "INSERT INTO boss_state (boss_id, current_hp, max_hp, ends_at, status) "
+                    "VALUES ('pocyk', 10000000, 10000000, ?, 'active')",
+                    (now + 7 * 86400,))
                 print("✅ Босс Опасный Поцык инициализирован")
         except Exception as e:
             print(f"⚠️ boss init: {e}")
@@ -360,16 +393,23 @@ class Database:
         async with self.conn.execute(q, p) as cur:
             r = await cur.fetchone()
             return dict(r) if r else None
+
     async def fetchall(self, q, p=()):
         async with self.conn.execute(q, p) as cur:
             return [dict(r) for r in await cur.fetchall()]
+
     async def execute(self, q, p=()):
         async with self.conn.execute(q, p) as cur:
-            await self.conn.commit(); return cur.lastrowid
+            await self.conn.commit()
+            return cur.lastrowid
+
     async def close(self):
-        if self.conn: await self.conn.close()
+        if self.conn:
+            await self.conn.close()
+
 
 db = Database()
+
 
 async def migrate_referrals():
     try:

@@ -1,5 +1,6 @@
 // app-social.js
-// Люди, локации, трейды, профиль игрока, быстрые действия
+// Социалка: профиль игрока, трейды, ежедневки, модерация-мут.
+// Карта теперь в app-map.js
 
 async function claimDaily() {
   try {
@@ -8,8 +9,7 @@ async function claimDaily() {
     renderPlayer();
     toast(`🎁 +${fmtMoney(d.reward)}₽`, "success");
     checkCreditPaid(d);
-  }
-  catch(e) { toast(e.message, "error"); }
+  } catch (e) { toast(e.message, "error"); }
 }
 
 async function claimRoulette() {
@@ -19,7 +19,7 @@ async function claimRoulette() {
     renderPlayer();
     toast(`🎡 ${fmtMoney(d.prize)}₽!`, "success");
     checkCreditPaid(d);
-  } catch(e) { toast(e.message, "error"); }
+  } catch (e) { toast(e.message, "error"); }
 }
 
 const TG_BONUS_CHANNEL_URL = "https://t.me/russiarpbot1";
@@ -27,10 +27,7 @@ const TG_BONUS_CHANNEL_URL = "https://t.me/russiarpbot1";
 function claimTgBonus() {
   const p = state.player;
   if (!p) return;
-  if (p.tg_bonus_claimed) {
-    toast("Бонус уже получен", "error");
-    return;
-  }
+  if (p.tg_bonus_claimed) { toast("Бонус уже получен", "error"); return; }
   openModal(`
     <h2 style="text-align:center;margin-bottom:8px;">📢 Бонус за подписку</h2>
     <div style="text-align:center;padding:16px 0;">
@@ -62,93 +59,46 @@ async function claimTgBonusConfirm() {
     toast(`🎉 +${fmtMoney(d.bonus)}₽ за подписку!`, "success");
     checkCreditPaid(d);
     if (tg) tg.HapticFeedback?.notificationOccurred("success");
-  } catch(e) {
+  } catch (e) {
     toast(e.message, "error");
     if (tg) tg.HapticFeedback?.notificationOccurred("error");
   }
 }
 
 async function doCrime() {
-  try { const d = await api("crime"); state.player = d.player; renderPlayer(); toast(d.result, d.success?"success":"error"); }
-  catch(e) { toast(e.message, "error"); }
-}
-
-async function loadPeople() {
   try {
-    const loc = await api("location");
-    state.location = loc;
-    renderLocationTabs(loc); renderLocationInfo(loc);
-    renderPlayersList(loc.players);
-  } catch(e) { toast(e.message, "error"); }
-}
-
-function renderLocationTabs(loc) {
-  const locations = [
-    {id:0, name:"Мухосранск", emoji:"🏚"},
-    {id:1, name:"Черёмушки", emoji:"🏢"},
-    {id:2, name:"Барвиха", emoji:"🏰"},
-  ];
-  $("#location-tabs").innerHTML = locations.map(l=>`
-    <div class="loc-tab ${state.player.location_id===l.id?'active':''}" onclick="moveTo(${l.id})">
-      <div class="loc-emoji">${l.emoji}</div>
-      <div class="loc-name">${l.name}</div>
-    </div>`).join("");
-}
-
-function renderLocationInfo(loc) {
-  const l = loc.location;
-  const here = state.player.location_id === l.id;
-  $("#location-info").innerHTML = `<div class="loc-info-emoji">${l.emoji}</div>
-    <div class="loc-info-name">${l.name}</div>
-    <div class="loc-info-desc">${l.desc}</div>
-    <div style="margin-top:8px;font-size:12px;color:${here?'var(--success)':'var(--hint)'}">${here ? "📍 Ты здесь" : "🚶 Не здесь"}</div>`;
-}
-
-function renderPlayersList(players) {
-  if (players.length === 0) { $("#players-list").innerHTML = '<p style="color:var(--hint);text-align:center;padding:20px">Никого нет</p>'; return; }
-  players = [...players].sort((a, b) => {
-    if (a.is_online !== b.is_online) return b.is_online ? 1 : -1;
-    return (b.last_seen || 0) - (a.last_seen || 0);
-  });
-  $("#players-list").innerHTML = players.map(p=>`
-    <div class="player-card" onclick="viewPlayer(${p.user_id})">
-      <div class="player-avatar">👤</div>
-      <div class="player-info">
-        <div class="player-name">${formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color, p.role)}</div>
-        <div class="player-meta">Ур. ${p.level} · ${_onlineHtml(p.is_online)}${!p.is_online ? ` · <span class="last-seen">${formatLastSeen(p.last_seen)}</span>` : ''}</div>
-      </div>
-      <div class="player-money">${fmtMoney(p.balance)}₽</div>
-    </div>`).join("");
-}
-
-async function moveTo(locId) {
-  try { await api("move", {location_id: locId}); state.player.location_id = locId; loadPeople(); toast("📍 Перемещён"); }
-  catch(e) { toast(e.message, "error"); }
+    const d = await api("crime");
+    state.player = d.player;
+    renderPlayer();
+    toast(d.result, d.success ? "success" : "error");
+  } catch (e) { toast(e.message, "error"); }
 }
 
 const ACH_MAP = {
-  first_job:{name:"Работяга",emoji:"💼"}, first_business:{name:"Бизнесмен",emoji:"💼"},
-  millionaire:{name:"Миллионер",emoji:"💰"}, billionaire:{name:"Миллиардер",emoji:"💎"},
-  gambler:{name:"Азартный",emoji:"🎲"}, big_winner:{name:"Джекпот",emoji:"🎰"},
-  criminal:{name:"Авторитет",emoji:"🕶"}, in_debt:{name:"Должник",emoji:"💸"},
-  fashion:{name:"Модник",emoji:"👔"}, level10:{name:"Опытный",emoji:"⭐"},
-  rich_king:{name:"Император",emoji:"👑"}, trader:{name:"Барыга",emoji:"🤝"},
+  first_job: { name: "Работяга", emoji: "💼" }, first_business: { name: "Бизнесмен", emoji: "💼" },
+  millionaire: { name: "Миллионер", emoji: "💰" }, billionaire: { name: "Миллиардер", emoji: "💎" },
+  gambler: { name: "Азартный", emoji: "🎲" }, big_winner: { name: "Джекпот", emoji: "🎰" },
+  criminal: { name: "Авторитет", emoji: "🕶" }, in_debt: { name: "Должник", emoji: "💸" },
+  fashion: { name: "Модник", emoji: "👔" }, level10: { name: "Опытный", emoji: "⭐" },
+  rich_king: { name: "Император", emoji: "👑" }, trader: { name: "Барыга", emoji: "🤝" },
 };
 
 async function viewPlayer(uid) {
   try {
-    const d = await api("player_view", {user_id: uid});
-    const ach = d.achievements.length > 0 ? d.achievements.map(id=>ACH_MAP[id]?.emoji||"🏆").join(" ") : "нет";
+    const d = await api("player_view", { user_id: uid });
+    const ach = d.achievements.length > 0 ? d.achievements.map(id => ACH_MAP[id]?.emoji || "🏆").join(" ") : "нет";
     const isMe = uid === state.player.user_id;
-    const stats = d.combat_stats || {hp: 100, damage: 5};
+    const stats = d.combat_stats || { hp: 100, damage: 5 };
     const onlineInfo = d.is_online
       ? _onlineHtml(true)
       : `${_onlineHtml(false)} · <span class="last-seen">🕐 Был(а) в сети: ${formatLastSeen(d.last_seen)}</span>`;
     const nickJs = jsAttr(d.nickname);
-    const tagJs  = jsAttr(d.gang_tag || '');
-    const colJs  = jsAttr(d.gang_tag_color || '');
+    const tagJs = jsAttr(d.gang_tag || '');
+    const colJs = jsAttr(d.gang_tag_color || '');
+    const sameStreet = (Number(d.city_id) === Number(state.player.city_id))
+                    && (Number(d.street_id) === Number(state.player.street_id));
     openModal(`
-      <div class="shop-preview">${renderCharacterSVG(d.outfit, {width: 170, height: 340})}</div>
+      <div class="shop-preview">${renderCharacterSVG(d.outfit, { width: 170, height: 340 })}</div>
       <h2 style="text-align:center;margin-bottom:4px">${formatNickWithTag(d.nickname, d.gang_tag, d.gang_tag_color, d.role)}</h2>
       <div style="text-align:center;margin-bottom:8px;">${onlineInfo}</div>
       <div style="text-align:center;margin:12px 0">
@@ -160,27 +110,26 @@ async function viewPlayer(uid) {
         </div>
         <div style="font-size:20px;margin-top:8px">${ach}</div>
       </div>
-      ${(!isMe && ['admin','moderator'].includes(state.player.role) && !['admin','moderator'].includes(d.role)) ? `<button class="btn btn-secondary" style="background:rgba(231,76,60,.15);color:var(--danger);border:1px solid rgba(231,76,60,.3);margin-bottom:8px" onclick='showMuteModal(${uid}, ${nickJs})'>🔇 Замутить</button>` : ''}
-      ${!isMe ? `<button class="btn btn-primary" style="background:linear-gradient(135deg,#c0392b,#e74c3c);margin-bottom:8px" onclick='challengePvP(${uid}, ${nickJs})'>⚔️ Гоп-стоп</button>` : ''}
+      ${(!isMe && ['admin', 'moderator'].includes(state.player.role) && !['admin', 'moderator'].includes(d.role)) ? `<button class="btn btn-secondary" style="background:rgba(231,76,60,.15);color:var(--danger);border:1px solid rgba(231,76,60,.3);margin-bottom:8px" onclick='showMuteModal(${uid}, ${nickJs})'>🔇 Замутить</button>` : ''}
+      ${!isMe && sameStreet ? `<button class="btn btn-primary" style="background:linear-gradient(135deg,#c0392b,#e74c3c);margin-bottom:8px" onclick='challengePvP(${uid}, ${nickJs})'>⚔️ Гоп-стоп</button>` : ''}
+      ${!isMe && !sameStreet ? `<div style="text-align:center;font-size:12px;color:var(--hint);margin-bottom:8px">Гоп-стоп доступен только на одной улице</div>` : ''}
       ${!isMe ? `<button class="btn btn-primary" onclick='showTradeOffer(${uid}, ${nickJs})'>🤝 Трейд</button>` : ''}
       ${(!isMe && !d.is_friend && !d.friend_pending) ? `<button class="btn btn-secondary" onclick="sendFriendRequest(${uid})">➕ В друзья</button>` : ''}
       ${(!isMe && d.friend_pending) ? `<button class="btn btn-secondary" disabled>⏳ Заявка отправлена</button>` : ''}
       ${(!isMe) ? `<button class="btn btn-secondary" onclick='openPM(${uid}, ${nickJs}, ${tagJs}, ${colJs})'>✉️ Написать ЛС</button>` : ''}
       ${(!isMe && d.is_friend) ? `<button class="btn btn-secondary" style="background:rgba(231,76,60,.15);color:var(--danger);border:1px solid rgba(231,76,60,.3);" onclick='removeFriend(${uid}, ${nickJs})'>❌ Удалить из друзей</button>` : ''}
-      ${(!isMe && d.my_role && ['leader','deputy'].includes(d.my_role) && !d.target_in_gang) ? `<button class="btn btn-secondary" onclick='inviteToGang(${uid}, ${nickJs})'>📨 Пригласить в банду</button>` : ''}
+      ${(!isMe && d.my_role && ['leader', 'deputy'].includes(d.my_role) && !d.target_in_gang) ? `<button class="btn btn-secondary" onclick='inviteToGang(${uid}, ${nickJs})'>📨 Пригласить в банду</button>` : ''}
       ${(!isMe && d.tg_username) ? `<a href="https://t.me/${escapeHtml(d.tg_username)}" target="_blank" rel="noopener" class="btn btn-secondary" style="text-decoration:none;text-align:center;display:block;background:linear-gradient(135deg,#0088cc,#005f8f);border:none;color:#fff;font-weight:700;margin-top:8px;">✈️ Telegram @${escapeHtml(d.tg_username)}</a>` : ''}
     `);
-  } catch(e) { toast(e.message, "error"); }
+  } catch (e) { toast(e.message, "error"); }
 }
 
-// ══════════════════════════════════════════════════════════════
-//  ТРЕЙДЫ (отдельный раздел)
-// ══════════════════════════════════════════════════════════════
+// ═══ ТРЕЙДЫ ═══
 async function loadTrades() {
   try {
     const d = await api("trade/list");
     renderTrades(d);
-  } catch(e) { toast(e.message, "error"); }
+  } catch (e) { toast(e.message, "error"); }
 }
 
 function _tradeItemsSummary(t) {
@@ -200,7 +149,6 @@ function renderTrades(trades) {
   const outEl = document.getElementById("trades-outgoing");
   if (!incEl || !outEl) return;
 
-  // ── ВХОДЯЩИЕ ──
   if (!trades.incoming || trades.incoming.length === 0) {
     incEl.innerHTML = '<div style="color:var(--hint);text-align:center;padding:20px;background:var(--bg-2);border-radius:12px;font-size:13px;">Входящих трейдов нет</div>';
   } else {
@@ -215,7 +163,6 @@ function renderTrades(trades) {
     `).join("");
   }
 
-  // ── ИСХОДЯЩИЕ ──
   if (!trades.outgoing || trades.outgoing.length === 0) {
     outEl.innerHTML = '<div style="color:var(--hint);text-align:center;padding:20px;background:var(--bg-2);border-radius:12px;font-size:13px;">Ты ещё не отправлял трейды</div>';
   } else {
@@ -234,7 +181,7 @@ function renderTrades(trades) {
 
 async function showTradeDetailsModal(tid) {
   try {
-    const d = await api("trade/details", {trade_id: tid});
+    const d = await api("trade/details", { trade_id: tid });
     const giveItemsHtml = d.give_items.map(it => `
       <div class="trade-item selected" style="border-color:${it.rarity_color};cursor:default;">
         <div class="trade-item-emoji">${it.emoji}</div>
@@ -269,64 +216,47 @@ async function showTradeDetailsModal(tid) {
 
     openModal(`
       <h2 style="text-align:center;margin-bottom:16px;font-size:16px;">${headerLabel}</h2>
-
       <div style="background:var(--bg-3);padding:12px;border-radius:10px;margin-bottom:12px;">
         <p style="font-weight:700;margin-bottom:6px;color:var(--success);">${giveLabel}</p>
         ${d.give_money > 0 ? `<div style="font-size:16px;font-weight:900;color:var(--money);margin-bottom:8px;">💰 ${fmtMoney(d.give_money)}₽</div>` : ''}
         <div class="trade-inventory" style="margin-bottom:0;">${giveItemsHtml || '<span style="color:var(--hint);text-align:center;width:100%;font-size:12px;">Пусто</span>'}</div>
       </div>
-
       <div style="background:var(--bg-3);padding:12px;border-radius:10px;margin-bottom:16px;">
         <p style="font-weight:700;margin-bottom:6px;color:var(--danger);">${wantLabel}</p>
         ${d.want_money > 0 ? `<div style="font-size:16px;font-weight:900;color:var(--money);margin-bottom:8px;">💰 ${fmtMoney(d.want_money)}₽</div>` : ''}
         <div class="trade-inventory" style="margin-bottom:0;">${wantItemsHtml || '<span style="color:var(--hint);text-align:center;width:100%;font-size:12px;">Пусто</span>'}</div>
       </div>
-
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        ${buttonsHtml}
-      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">${buttonsHtml}</div>
     `);
-  } catch(e) { toast(e.message, "error"); }
+  } catch (e) { toast(e.message, "error"); }
 }
 
 async function acceptTrade(tid) {
   try {
-    const d = await api("trade/accept", {trade_id: tid});
+    const d = await api("trade/accept", { trade_id: tid });
     state.player = d.player;
     renderPlayer();
     toast("✅ Трейд принят", "success");
     closeModal();
-
     const tradesTab = document.querySelector('.tab-content[data-tab="trades"]');
     if (tradesTab && tradesTab.classList.contains("active")) loadTrades();
-
-    const peopleTab = document.querySelector('.tab-content[data-tab="people"]');
-    if (peopleTab && peopleTab.classList.contains("active")) loadPeople();
-
     if (typeof showNotificationsSilent === 'function') showNotificationsSilent();
     const modal = document.getElementById("modal");
     if (modal && !modal.classList.contains("hidden")) showNotifications();
-  }
-  catch(e) { toast(e.message, "error"); }
+  } catch (e) { toast(e.message, "error"); }
 }
 
 async function declineTrade(tid) {
   try {
-    await api("trade/decline", {trade_id: tid});
+    await api("trade/decline", { trade_id: tid });
     toast("❌ Трейд отменён/отклонён");
     closeModal();
-
     const tradesTab = document.querySelector('.tab-content[data-tab="trades"]');
     if (tradesTab && tradesTab.classList.contains("active")) loadTrades();
-
-    const peopleTab = document.querySelector('.tab-content[data-tab="people"]');
-    if (peopleTab && peopleTab.classList.contains("active")) loadPeople();
-
     if (typeof showNotificationsSilent === 'function') showNotificationsSilent();
     const modal = document.getElementById("modal");
     if (modal && !modal.classList.contains("hidden")) showNotifications();
-  }
-  catch(e) { toast(e.message, "error"); }
+  } catch (e) { toast(e.message, "error"); }
 }
 
 let tradeGiveItems = new Set();
@@ -334,7 +264,7 @@ let tradeWantItems = new Set();
 
 async function showTradeOffer(uid, name) {
   try {
-    const [myInv, theirInv] = await Promise.all([api("inventory"), api("player_items", {user_id: uid})]);
+    const [myInv, theirInv] = await Promise.all([api("inventory"), api("player_items", { user_id: uid })]);
     tradeGiveItems = new Set();
     tradeWantItems = new Set();
     const myItemsHtml = myInv.items.map(i => `
@@ -358,7 +288,7 @@ async function showTradeOffer(uid, name) {
       <div class="trade-summary" id="trade-summary">Выбери предметы</div>
       <button class="btn btn-primary" style="margin-top:12px" onclick="sendTradeOffer(${uid})">🤝 Отправить предложение</button>
     `);
-  } catch(e) { toast(e.message, "error"); }
+  } catch (e) { toast(e.message, "error"); }
 }
 
 function toggleTradeItem(el, kind) {
@@ -374,8 +304,8 @@ function toggleTradeItem(el, kind) {
   const giveMoney = parseInt($("#give-money")?.value) || 0;
   const wantMoney = parseInt($("#want-money")?.value) || 0;
   $("#trade-summary").innerHTML = `
-    <b>Ты даёшь:</b> ${giveMoney > 0 ? fmtMoney(giveMoney)+"₽ " : ""}${tradeGiveItems.size > 0 ? tradeGiveItems.size+" предмет(ов)" : "ничего"}<br>
-    <b>Ты хочешь:</b> ${wantMoney > 0 ? fmtMoney(wantMoney)+"₽ " : ""}${tradeWantItems.size > 0 ? tradeWantItems.size+" предмет(ов)" : "ничего"}
+    <b>Ты даёшь:</b> ${giveMoney > 0 ? fmtMoney(giveMoney) + "₽ " : ""}${tradeGiveItems.size > 0 ? tradeGiveItems.size + " предмет(ов)" : "ничего"}<br>
+    <b>Ты хочешь:</b> ${wantMoney > 0 ? fmtMoney(wantMoney) + "₽ " : ""}${tradeWantItems.size > 0 ? tradeWantItems.size + " предмет(ов)" : "ничего"}
   `;
 }
 
@@ -394,10 +324,9 @@ async function sendTradeOffer(uid) {
     });
     closeModal();
     toast("✅ Предложение отправлено", "success");
-  } catch(e) { toast(e.message, "error"); }
+  } catch (e) { toast(e.message, "error"); }
 }
 
-// ═══ МОДЕРАЦИЯ ═══
 function showMuteModal(uid, name) {
   openModal(`
     <h2 style="text-align:center;margin-bottom:8px;">🔇 Замутить игрока</h2>
@@ -423,7 +352,5 @@ async function submitMute(uid) {
     await api("player/mute", { target_id: uid, duration_minutes: parseInt(duration), reason: reason });
     toast("✅ Игрок заглушен", "success");
     closeModal();
-  } catch(e) {
-    toast(e.message, "error");
-  }
+  } catch (e) { toast(e.message, "error"); }
 }
