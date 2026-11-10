@@ -206,7 +206,6 @@ CREATE INDEX IF NOT EXISTS idx_house_rentals_expires ON house_rentals(expires_at
 CREATE INDEX IF NOT EXISTS idx_activity_day ON player_daily_activity(day);
 CREATE INDEX IF NOT EXISTS idx_activity_user ON player_daily_activity(user_id);
 CREATE INDEX IF NOT EXISTS idx_promo_used_user ON promo_used(user_id);
-CREATE INDEX IF NOT EXISTS idx_players_city_street ON players(city_id, street_id);
 """
 
 KNOWN_BOT_IDS = (9900000001, 9900000002, 9900000003, 9900000004, 9900000005)
@@ -222,10 +221,11 @@ class Database:
         self.conn = await aiosqlite.connect(self.path)
         self.conn.row_factory = aiosqlite.Row
 
-        # Базовая схема сначала без city_id в players (миграции добавят)
+        # 1) Базовая схема (без индексов по city_id/street_id — их ещё нет)
         await self.conn.executescript(SCHEMA)
         await self.conn.commit()
 
+        # 2) Миграции колонок
         migrations = [
             "last_work INTEGER DEFAULT 0", "last_daily INTEGER DEFAULT 0",
             "daily_streak INTEGER DEFAULT 0", "last_roulette INTEGER DEFAULT 0",
@@ -292,7 +292,7 @@ class Database:
             except Exception:
                 pass
 
-        # Таблица аренды домов (idempotent)
+        # 3) Таблица аренды домов + индексы (уже после миграций city_id/street_id)
         try:
             await self.conn.execute(
                 "CREATE TABLE IF NOT EXISTS house_rentals ("
@@ -309,7 +309,7 @@ class Database:
         except Exception as e:
             print(f"⚠️ house_rentals: {e}")
 
-        # Миграция location_id → city_id/street_id
+        # 4) Миграция location_id → city_id/street_id
         try:
             await self.conn.execute(
                 "UPDATE players SET city_id = location_id WHERE city_id = 0 AND location_id > 0"
@@ -319,7 +319,7 @@ class Database:
         except Exception as e:
             print(f"⚠️ city_id migration: {e}")
 
-        # Случайные позиции для игроков, у которых они нулевые
+        # 5) Стартовые случайные позиции для игроков с нулевыми pos_x/pos_y
         try:
             cur = await self.conn.execute(
                 "SELECT user_id FROM players WHERE (pos_x IS NULL OR pos_x = 0) AND (pos_y IS NULL OR pos_y = 0)"
@@ -337,7 +337,7 @@ class Database:
         except Exception as e:
             print(f"⚠️ pos migration: {e}")
 
-        # Legacy cleanup
+        # 6) Legacy cleanup
         try:
             await self.conn.execute(
                 "DELETE FROM blackjack_games "
@@ -375,7 +375,7 @@ class Database:
         except Exception as e:
             print(f"⚠️ admin role set: {e}")
 
-        # Инициализация босса
+        # 7) Инициализация босса
         try:
             row = await self.fetchone("SELECT * FROM boss_state WHERE boss_id='pocyk'")
             if not row:
