@@ -101,12 +101,13 @@ def setup_routes(app):
 
     # ═══ КАРТА ═══
     R.add_post("/api/map/get", api_map.api_map_get)
-    R.add_post("/api/map/status", api_map.api_map_status)
     R.add_post("/api/map/move", api_map.api_map_move)
     R.add_post("/api/house/rent", api_map.api_house_rent)
     R.add_post("/api/house/cancel", api_map.api_house_cancel)
+    R.add_post("/api/house/toggle_open", api_map.api_house_toggle_open)
+    R.add_post("/api/house/enter", api_map.api_house_enter)
+    R.add_post("/api/house/exit", api_map.api_house_exit)
     R.add_post("/api/house/my", api_map.api_house_my)
-    R.add_post("/api/house/info", api_map.api_house_info)
 
     R.add_post("/api/player_view", api_social.api_player_view)
     R.add_post("/api/player_items", api_social.api_player_items)

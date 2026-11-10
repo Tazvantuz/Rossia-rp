@@ -198,7 +198,8 @@ CREATE TABLE IF NOT EXISTS house_rentals (
     house_id INTEGER PRIMARY KEY,
     user_id INTEGER NOT NULL,
     expires_at INTEGER NOT NULL,
-    started_at INTEGER NOT NULL DEFAULT 0
+    started_at INTEGER NOT NULL DEFAULT 0,
+    is_open INTEGER DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_house_rentals_user ON house_rentals(user_id);
 CREATE INDEX IF NOT EXISTS idx_house_rentals_expires ON house_rentals(expires_at);
@@ -221,11 +222,9 @@ class Database:
         self.conn = await aiosqlite.connect(self.path)
         self.conn.row_factory = aiosqlite.Row
 
-        # 1) Базовая схема (без индексов по city_id/street_id — их ещё нет)
         await self.conn.executescript(SCHEMA)
         await self.conn.commit()
 
-        # 2) Миграции колонок
         migrations = [
             "last_work INTEGER DEFAULT 0", "last_daily INTEGER DEFAULT 0",
             "daily_streak INTEGER DEFAULT 0", "last_roulette INTEGER DEFAULT 0",
@@ -257,6 +256,7 @@ class Database:
             "moving_until INTEGER DEFAULT 0",
             "moving_to_city INTEGER DEFAULT 0",
             "moving_to_street INTEGER DEFAULT 0",
+            "inside_house_id INTEGER DEFAULT 0",
         ]
         for m in migrations:
             try:
@@ -292,24 +292,30 @@ class Database:
             except Exception:
                 pass
 
-        # 3) Таблица аренды домов + индексы (уже после миграций city_id/street_id)
+        # ═══ Миграция house_rentals (is_open) ═══
         try:
             await self.conn.execute(
                 "CREATE TABLE IF NOT EXISTS house_rentals ("
                 " house_id INTEGER PRIMARY KEY,"
                 " user_id INTEGER NOT NULL,"
                 " expires_at INTEGER NOT NULL,"
-                " started_at INTEGER NOT NULL DEFAULT 0)"
+                " started_at INTEGER NOT NULL DEFAULT 0,"
+                " is_open INTEGER DEFAULT 0)"
             )
+            await self.conn.execute("ALTER TABLE house_rentals ADD COLUMN is_open INTEGER DEFAULT 0")
+            await self.conn.commit()
+        except Exception:
+            pass
+
+        try:
             await self.conn.execute("CREATE INDEX IF NOT EXISTS idx_house_rentals_user ON house_rentals(user_id)")
             await self.conn.execute("CREATE INDEX IF NOT EXISTS idx_house_rentals_expires ON house_rentals(expires_at)")
             await self.conn.execute("CREATE INDEX IF NOT EXISTS idx_players_city_street ON players(city_id, street_id)")
             await self.conn.commit()
             print("✅ Таблица house_rentals готова")
         except Exception as e:
-            print(f"⚠️ house_rentals: {e}")
+            print(f"⚠️ house_rentals indexes: {e}")
 
-        # 4) Миграция location_id → city_id/street_id
         try:
             await self.conn.execute(
                 "UPDATE players SET city_id = location_id WHERE city_id = 0 AND location_id > 0"
@@ -319,7 +325,6 @@ class Database:
         except Exception as e:
             print(f"⚠️ city_id migration: {e}")
 
-        # 5) Стартовые случайные позиции для игроков с нулевыми pos_x/pos_y
         try:
             cur = await self.conn.execute(
                 "SELECT user_id FROM players WHERE (pos_x IS NULL OR pos_x = 0) AND (pos_y IS NULL OR pos_y = 0)"
@@ -337,7 +342,6 @@ class Database:
         except Exception as e:
             print(f"⚠️ pos migration: {e}")
 
-        # 6) Legacy cleanup
         try:
             await self.conn.execute(
                 "DELETE FROM blackjack_games "
@@ -375,7 +379,6 @@ class Database:
         except Exception as e:
             print(f"⚠️ admin role set: {e}")
 
-        # 7) Инициализация босса
         try:
             row = await self.fetchone("SELECT * FROM boss_state WHERE boss_id='pocyk'")
             if not row:
