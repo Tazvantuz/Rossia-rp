@@ -159,6 +159,17 @@ def _nick_tag(p):
     return f"[{tag}] {name}" if tag else name
 
 
+def _inside_house_id(p):
+    """Возвращает int, где -1 = не в доме, 0..N = валидный house_id."""
+    val = p.get("inside_house_id") if p else None
+    if val is None:
+        return -1
+    try:
+        return int(val)
+    except Exception:
+        return -1
+
+
 def _player_json(p):
     return {
         "user_id": p["user_id"],
@@ -181,6 +192,7 @@ def _player_json(p):
         "moving_until": int(p.get("moving_until") or 0),
         "moving_to_city": int(p.get("moving_to_city") or 0),
         "moving_to_street": int(p.get("moving_to_street") or 0),
+        "inside_house_id": _inside_house_id(p),
         "outfit": get_outfit(p),
         "combat_stats": get_combat_stats(p),
         "current_job": p.get("current_job"),
@@ -356,12 +368,13 @@ async def api_register(request):
     pos_x = round(random.uniform(60, 540), 1)
     pos_y = round(random.uniform(270, 370), 1)
 
+    # inside_house_id = -1 — не в доме
     await db.execute(
         """INSERT INTO players
-        (user_id,nickname,balance,level,xp,location_id,city_id,street_id,pos_x,pos_y,referrer_id,tg_username)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+        (user_id,nickname,balance,level,xp,location_id,city_id,street_id,pos_x,pos_y,referrer_id,tg_username,inside_house_id)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""",
         (uid, nick, START_BALANCE, 1, 0, START_LOCATION, START_CITY, START_STREET,
-         pos_x, pos_y, referrer_id, tg_username))
+         pos_x, pos_y, referrer_id, tg_username, -1))
     if referrer_id:
         await db.execute("UPDATE players SET balance=balance+5000 WHERE user_id=?", (referrer_id,))
     for iid in ["h_cig", "b_alco", "l_family"]:

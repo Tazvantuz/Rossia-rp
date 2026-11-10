@@ -256,7 +256,8 @@ class Database:
             "moving_until INTEGER DEFAULT 0",
             "moving_to_city INTEGER DEFAULT 0",
             "moving_to_street INTEGER DEFAULT 0",
-            "inside_house_id INTEGER DEFAULT 0",
+            # ВАЖНО: -1 = "не в доме", 0..N = валидный house_id
+            "inside_house_id INTEGER DEFAULT -1",
         ]
         for m in migrations:
             try:
@@ -292,7 +293,27 @@ class Database:
             except Exception:
                 pass
 
-        # ═══ Миграция house_rentals (is_open) ═══
+        # ═══ МИГРАЦИЯ inside_house_id: 0 → -1 ═══
+        # Раньше default был 0 ("не в доме"), но 0 = валидный house_id.
+        # Меняем на -1. Существующие нули обнуляем в -1.
+        try:
+            await self.conn.execute(
+                "UPDATE players SET inside_house_id=-1 WHERE inside_house_id=0 OR inside_house_id IS NULL"
+            )
+            await self.conn.commit()
+            print("✅ Миграция inside_house_id: 0 → -1")
+        except Exception as e:
+            print(f"⚠️ inside_house_id migration: {e}")
+
+        # На случай, если default у старой колонки всё ещё 0, принудительно ставим -1
+        # в строках, где значение NULL.
+        try:
+            await self.conn.execute("UPDATE players SET inside_house_id=-1 WHERE inside_house_id IS NULL")
+            await self.conn.commit()
+        except Exception:
+            pass
+
+        # ═══ house_rentals ═══
         try:
             await self.conn.execute(
                 "CREATE TABLE IF NOT EXISTS house_rentals ("
@@ -302,19 +323,17 @@ class Database:
                 " started_at INTEGER NOT NULL DEFAULT 0,"
                 " is_open INTEGER DEFAULT 0)"
             )
-            await self.conn.execute("ALTER TABLE house_rentals ADD COLUMN is_open INTEGER DEFAULT 0")
-            await self.conn.commit()
-        except Exception:
-            pass
-
-        try:
+            try:
+                await self.conn.execute("ALTER TABLE house_rentals ADD COLUMN is_open INTEGER DEFAULT 0")
+            except Exception:
+                pass
             await self.conn.execute("CREATE INDEX IF NOT EXISTS idx_house_rentals_user ON house_rentals(user_id)")
             await self.conn.execute("CREATE INDEX IF NOT EXISTS idx_house_rentals_expires ON house_rentals(expires_at)")
             await self.conn.execute("CREATE INDEX IF NOT EXISTS idx_players_city_street ON players(city_id, street_id)")
             await self.conn.commit()
             print("✅ Таблица house_rentals готова")
         except Exception as e:
-            print(f"⚠️ house_rentals indexes: {e}")
+            print(f"⚠️ house_rentals: {e}")
 
         try:
             await self.conn.execute(

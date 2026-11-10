@@ -1,5 +1,6 @@
 // app-map.js
 // Интерактивная карта: города / улицы / дома / игроки / перемещение с задержкой.
+// Соглашение: inside_house_id === -1 значит "на улице"; >= 0 значит "внутри дома".
 
 let mapState = {
   loaded: false,
@@ -15,6 +16,14 @@ let mapState = {
 // Кэш позиций игроков на текущей улице (чтобы не «прыгали» при каждом рендере)
 let _streetPlayerPositions = {};
 let _streetPlayerPositionsKey = '';
+
+// Guard от многократного нажатия «Войти»
+let _enteringHouse = false;
+
+// Вспомогательная функция: считаем игрока "на улице"
+function _isOnStreet(insideId) {
+  return typeof insideId === 'number' && insideId < 0;
+}
 
 // ─── утилиты ───
 function _mapEscape(s) {
@@ -52,13 +61,11 @@ function _housesOnStreet(cid, sid) {
   return [];
 }
 
-// ─── Вход на вкладку ───
 async function openMapTab() {
   mapState.forceStreet = true;
   await loadMap();
 }
 
-// ─── API ───
 async function loadMap() {
   try {
     const d = await api("map/get");
@@ -75,12 +82,11 @@ async function loadMap() {
       mapState.streetId = d.current.street_id;
     }
 
-    // ── ДЕБАГ: логируем, что пришло про дом ──
     if (d.house_inside) {
       api("debug_log", {
         text: `CLIENT map/get: house_inside=YES name=${d.house_inside.house?.name} inside_id=${d.current.inside_house_id}`
       }).catch(() => {});
-    } else if (d.current.inside_house_id > 0) {
+    } else if (typeof d.current.inside_house_id === 'number' && d.current.inside_house_id >= 0) {
       api("debug_log", {
         text: `CLIENT map/get: inside_id=${d.current.inside_house_id} BUT house_inside=null`
       }).catch(() => {});
@@ -106,7 +112,6 @@ async function mapMoveTo(toCity, toStreet) {
   try {
     const res = await api("map/move", { to_city: toCity, to_street: toStreet });
     toast(`🚶 В путь! ${res.duration} сек`, "success");
-    // Сбрасываем кэш позиций (переход на новую улицу)
     _streetPlayerPositions = {};
     _streetPlayerPositionsKey = '';
 
@@ -123,7 +128,6 @@ async function mapRentHouse(houseId) {
     if (d.player) { state.player = d.player; renderPlayer(); }
     toast(`🏠 Арендовано: ${d.house_name} на 48ч!`, "success");
 
-    // Сразу автоматически заходим внутрь
     await api("house/enter", { house_id: houseId });
     closeModal();
     await loadMap();
@@ -152,15 +156,20 @@ async function mapToggleHouseOpen() {
 }
 
 async function mapEnterHouse(houseId) {
+  if (_enteringHouse) return;
+  _enteringHouse = true;
+  // Закрываем модалку сразу, чтобы пользователь не мог нажать ещё раз
+  closeModal();
   try {
     await api("debug_log", { text: `CLIENT enter start house_id=${houseId}` }).catch(() => {});
     const resp = await api("house/enter", { house_id: houseId });
     await api("debug_log", { text: `CLIENT enter ok resp=${JSON.stringify(resp)}` }).catch(() => {});
-    closeModal();
     await loadMap();
   } catch (e) {
     await api("debug_log", { text: `CLIENT enter error: ${e.message}` }).catch(() => {});
     toast(e.message, "error");
+  } finally {
+    _enteringHouse = false;
   }
 }
 
@@ -171,7 +180,6 @@ async function mapExitHouse() {
   } catch (e) { toast(e.message, "error"); }
 }
 
-// ─── ОНЛАЙН ИГРОКИ ───
 async function showOnlinePlayers(cityId = null) {
   try {
     const d = await api("map/online_players", { city_id: cityId });
@@ -203,7 +211,6 @@ async function showOnlinePlayers(cityId = null) {
   }
 }
 
-// ─── экран перемещения ───
 function startMovingScreen(moving) {
   mapState.movingData = moving;
   renderMapScreen();
@@ -230,7 +237,6 @@ function stopMovingTimer() {
   }
 }
 
-// ─── рендер ───
 function renderMapScreen() {
   const el = document.getElementById("map-content");
   if (!el) return;
@@ -271,7 +277,7 @@ function renderCityHeader() {
   let onlineCount = 0;
   if (d.street && d.street.players) {
     onlineCount = d.street.players.filter(p => p.is_online).length;
-    onlineCount += 1;
+    if (_isOnStreet(cur.inside_house_id)) onlineCount += 1;
   }
 
   const cityName = city ? `${city.emoji} ${_mapEscape(city.name)}` : "?";
@@ -326,7 +332,6 @@ function mapSelectCity(cid) {
   renderMapScreen();
 }
 
-// ─── город (улицы) ───
 function renderCityView() {
   const city = _cityById(mapState.selectedCity);
   if (!city) return '';
@@ -345,7 +350,7 @@ function renderCityView() {
     }
   });
 
-  if (isHere && !cur.inside_house_id) {
+  if (isHere && _isOnStreet(cur.inside_house_id)) {
     playersByStreet[cur.street_id] = (playersByStreet[cur.street_id] || 0) + 1;
     onlineByStreet[cur.street_id] = (onlineByStreet[cur.street_id] || 0) + 1;
   }
@@ -399,13 +404,11 @@ function mapOpenStreet(cid, sid) {
   mapState.selectedCity = cid;
   mapState.view = 'street';
   mapState.streetId = sid;
-  // Сбрасываем кэш позиций при переходе на другую улицу
   _streetPlayerPositions = {};
   _streetPlayerPositionsKey = '';
   renderMapScreen();
 }
 
-// ─── улица ───
 function renderStreetView() {
   const cid = mapState.selectedCity;
   const sid = mapState.streetId;
@@ -421,7 +424,6 @@ function renderStreetView() {
 
   players.sort((a, b) => (a.pos_y || 0) - (b.pos_y || 0));
 
-  // Кэш позиций: стабильные координаты между рендерами
   const cacheKey = `${cid}-${sid}`;
   if (_streetPlayerPositionsKey !== cacheKey) {
     _streetPlayerPositions = {};
@@ -530,7 +532,7 @@ function renderStreetView() {
       <div class="map-street-hero-head">
         <div>
           <div class="map-street-hero-title">${street.emoji} ${_mapEscape(street.name)}</div>
-          <div class="map-street-hero-sub">${city.emoji} ${_mapEscape(city.name)} · ${houses.length} домов · ${players.length + (isCur?1:0)} игроков</div>
+          <div class="map-street-hero-sub">${city.emoji} ${_mapEscape(city.name)} · ${houses.length} домов · ${players.length + (isCur && _isOnStreet(cur.inside_house_id) ?1:0)} игроков</div>
         </div>
       </div>
       <div class="map-street-scene">
@@ -603,7 +605,6 @@ function mapBackToCity() {
   renderMapScreen();
 }
 
-// ─── SVG-фон города ───
 function _renderCitySkySVG(city) {
   const W = 600, H = 140;
   return `
@@ -634,7 +635,6 @@ function _renderCitySkySVG(city) {
   `;
 }
 
-// ─── экран перемещения ───
 function renderMovingScreen() {
   const m = mapState.movingData;
   if (!m) return '';
@@ -658,7 +658,6 @@ function renderMovingScreen() {
   `;
 }
 
-// ─── интерьер дома ───
 function renderHouseInside() {
   const hData = mapState.data.house_inside;
   if (!hData || !hData.house) {
@@ -704,7 +703,6 @@ function renderHouseInside() {
   `;
 }
 
-// ─── модалка дома ───
 function mapHouseClick(houseId) {
   const houses = _housesOnStreet(mapState.selectedCity, mapState.streetId);
   const h = houses.find(x => x.id === houseId);
