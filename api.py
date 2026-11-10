@@ -9,6 +9,7 @@ import api_gang
 import api_pvp
 import api_admin
 import api_boss
+import api_donate
 
 def set_token(t):
     api_core.set_token(t)
@@ -141,3 +142,7 @@ def setup_routes(app):
 
     R.add_post("/api/boss/get", api_boss.api_boss_get)
     R.add_post("/api/boss/attack", api_boss.api_boss_attack)
+
+    # ═══ ДОНАТ ═══
+    R.add_post("/api/donate/packages", api_donate.api_donate_packages)
+    R.add_post("/api/donate/create_invoice", api_donate.api_donate_create_invoice)

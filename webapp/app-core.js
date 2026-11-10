@@ -11,7 +11,7 @@ let state = {
   bossView: 'list',
 };
 
-const MAIN_TABS = ['home', 'casino', 'cases', 'bosses', 'chat', 'more'];
+const MAIN_TABS = ['home', 'casino', 'cases', 'bosses', 'chat', 'donate', 'more'];
 const SUB_TAB_TITLES = {
   appearance: '👕 Шмот',
   work: '💼 Работа',
@@ -24,6 +24,7 @@ const SUB_TAB_TITLES = {
   promo: '🎁 Промокоды',
   bosses: '💀 Боссы',
   trades: '📬 Трейды',
+  donate: '💎 Донат',
 };
 
 function getStaffBadge(role) {
@@ -177,6 +178,7 @@ function showTab(tab) {
   if (tab==="gang" && typeof loadGang === 'function') loadGang();
   if (tab==="friends" && typeof loadFriends === 'function') loadFriends();
   if (tab==="trades" && typeof loadTrades === 'function') loadTrades();
+  if (tab==="donate" && typeof loadDonate === 'function') loadDonate();
   if (tab==="home" && typeof loadNotifications === 'function') loadNotifications();
   if (tab==="promo") {
     const resultBox = document.getElementById('promo-result-box');
