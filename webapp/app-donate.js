@@ -22,12 +22,12 @@ async function loadDonate() {
         <div class="donate-hero-sub">Выбери пакет и получи игровую валюту на баланс.</div>
       </div>
 
-      <div class="donate-stub-banner" style="background:rgba(46,204,113,0.12);border-color:rgba(46,204,113,0.4);">
-        <p style="color:#2ecc71; margin-bottom: 8px;"><b>✅ Как это работает:</b></p>
+      <div class="donate-stub-banner" style="background:rgba(231,76,60,0.12);border-color:rgba(231,76,60,0.4);">
+        <p style="color:#e74c3c; margin-bottom: 8px;"><b>⚠️ Важно:</b></p>
         <ol style="text-align: left; font-size: 12px; color: var(--hint); padding-left: 20px; line-height: 1.5; margin-bottom: 12px;">
           <li>Нажми на нужный пакет ниже.</li>
-          <li>На странице оплаты <b>сумма уже будет введена</b>.</li>
-          <li>Если поле «Сообщение» пустое — вставь туда свой ID.</li>
+          <li>На странице оплаты введи сумму вручную (если она не подставилась).</li>
+          <li><b>ОБЯЗАТЕЛЬНО</b> вставь свой ID в поле «Сообщение стримеру».</li>
           <li>Оплати и подожди 1–2 минуты.</li>
         </ol>
         
@@ -98,25 +98,8 @@ async function buyDonatePack(packId, price) {
     return;
   }
 
-  const myId = state.player ? state.player.user_id : "";
-  
-  // Формируем ссылку с автозаполнением
-  try {
-    const url = new URL(_donateUrl);
-    url.searchParams.set('sum', price);
-    
-    if (myId) {
-      // Передаем ID в разных вариантах, чтобы DonatePay точно его подхватил
-      url.searchParams.set('comment', myId);
-      url.searchParams.set('message', myId);
-      url.searchParams.set('name', myId);
-    }
-    
-    openDonateLink(url.toString());
-  } catch (e) {
-    openDonateLink(_donateUrl);
-  }
-
+  // Открываем страницу донатов как есть (без параметров, чтобы не было таймаутов)
+  openDonateLink(_donateUrl);
   toast("Открываю страницу оплаты...");
 
   const oldBalance = state.player?.balance || 0;
