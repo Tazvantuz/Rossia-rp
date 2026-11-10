@@ -19,16 +19,15 @@ async function loadDonate() {
     let html = `
       <div class="donate-hero">
         <div class="donate-hero-title">💎 Пополнение</div>
-        <div class="donate-hero-sub">Выбери сумму и перейди на страницу оплаты.</div>
+        <div class="donate-hero-sub">Выбери пакет и получи игровую валюту на баланс.</div>
       </div>
 
       <div class="donate-stub-banner" style="background:rgba(46,204,113,0.12);border-color:rgba(46,204,113,0.4);">
         <p style="color:#2ecc71; margin-bottom: 8px;"><b>✅ Как это работает:</b></p>
         <ol style="text-align: left; font-size: 12px; color: var(--hint); padding-left: 20px; line-height: 1.5; margin-bottom: 12px;">
-          <li>Скопируй свой ID (ниже).</li>
-          <li>Выбери пакет и нажми на него.</li>
-          <li>На странице оплаты вставь ID в поле <b>«Сообщение стримеру»</b>.</li>
-          <li>Оплати и подожди 1–2 минуты.</li>
+          <li>Нажми на нужный пакет ниже.</li>
+          <li>На странице оплаты <b>сумма и твой ID уже будут введены</b>.</li>
+          <li>Просто оплати и подожди 1–2 минуты.</li>
         </ol>
         
         <div style="background: var(--bg-3); border-radius: 10px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
@@ -43,7 +42,7 @@ async function loadDonate() {
 
     packs.forEach(p => {
       html += `
-        <div class="donate-card" onclick="buyDonatePack('${p.id}')">
+        <div class="donate-card" onclick="buyDonatePack('${p.id}', ${p.price_rub})">
           <div class="donate-card-icon">${p.emoji}</div>
           <div class="donate-card-info">
             <div class="donate-card-name">${p.name}</div>
@@ -92,17 +91,31 @@ function fallbackCopy(text) {
   document.body.removeChild(textArea);
 }
 
-async function buyDonatePack(packId) {
+async function buyDonatePack(packId, price) {
   if (!_donateUrl) {
     toast("Ошибка: страница донатов не настроена", "error");
     return;
   }
 
+  const myId = state.player ? state.player.user_id : "";
+  
+  // Формируем ссылку с автозаполнением суммы (sum) и сообщения (comment)
+  try {
+    const url = new URL(_donateUrl);
+    url.searchParams.set('sum', price);
+    if (myId) {
+      url.searchParams.set('comment', myId);
+    }
+    
+    openDonateLink(url.toString());
+  } catch (e) {
+    // Если URL некорректный, открываем как есть
+    openDonateLink(_donateUrl);
+  }
+
+  toast("Открываю страницу оплаты...");
+
   const oldBalance = state.player?.balance || 0;
-
-  openDonateLink(_donateUrl);
-  toast("Открываю страницу оплаты... Не забудь вставить ID в «Сообщение стримеру»!");
-
   let polls = 0;
   if (window._donatePollInterval) clearInterval(window._donatePollInterval);
   window._donatePollInterval = setInterval(async () => {
