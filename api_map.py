@@ -41,6 +41,10 @@ async def _ensure_map_columns():
             " started_at INTEGER NOT NULL DEFAULT 0,"
             " is_open INTEGER DEFAULT 0)"
         )
+        try:
+            await db.execute("ALTER TABLE house_rentals ADD COLUMN is_open INTEGER DEFAULT 0")
+        except Exception:
+            pass
     except Exception:
         pass
     _map_migrated = True
@@ -170,7 +174,7 @@ async def api_map_get(request):
         pr["is_online"] = (pr.get("last_seen") or 0) > now_ts - 120
         pr["outfit"] = get_outfit(pr)
 
-    # Игроки на других улицах этого города (для отображения точек на карте города)
+    # Игроки на других улицах этого города
     city_prows = await db.fetchall(
         "SELECT p.user_id, p.nickname, p.street_id, p.pos_x, p.pos_y, "
         "p.head_id, p.body_id, p.legs_id, p.right_hand_id, p.left_hand_id, "
@@ -190,24 +194,33 @@ async def api_map_get(request):
     # Данные о доме, внутри которого я нахожусь
     house_inside_data = None
     if inside_house_id > 0:
-        h_info = get_house(inside_house_id)
-        h_rental = await db.fetchone("SELECT is_open FROM house_rentals WHERE house_id=?", (inside_house_id,))
-        house_players = await db.fetchall(
-            "SELECT p.user_id, p.nickname, p.level, p.role, p.last_seen, p.head_id, p.body_id, p.legs_id, p.right_hand_id, p.left_hand_id, p.hair_id, p.shoes_id, "
-            "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
-            "FROM players p "
-            "LEFT JOIN gang_members gm ON gm.user_id = p.user_id "
-            "LEFT JOIN gangs g ON g.gang_id = gm.gang_id "
-            "WHERE p.inside_house_id=?", (inside_house_id,))
-        for hp in house_players:
-            hp["is_online"] = (hp.get("last_seen") or 0) > now_ts - 120
-            hp["outfit"] = get_outfit(hp)
-        
-        house_inside_data = {
-            "house": h_info,
-            "is_open": bool(h_rental["is_open"]) if h_rental else False,
-            "players": house_players
-        }
+        try:
+            h_info = get_house(inside_house_id)
+            if h_info:
+                h_rental = await db.fetchone("SELECT is_open FROM house_rentals WHERE house_id=?", (inside_house_id,))
+                house_players = await db.fetchall(
+                    "SELECT p.user_id, p.nickname, p.level, p.role, p.last_seen, p.head_id, p.body_id, p.legs_id, p.right_hand_id, p.left_hand_id, p.hair_id, p.shoes_id, "
+                    "g.tag AS gang_tag, g.tag_color AS gang_tag_color "
+                    "FROM players p "
+                    "LEFT JOIN gang_members gm ON gm.user_id = p.user_id "
+                    "LEFT JOIN gangs g ON g.gang_id = gm.gang_id "
+                    "WHERE p.inside_house_id=?", (inside_house_id,))
+                for hp in house_players:
+                    hp["is_online"] = (hp.get("last_seen") or 0) > now_ts - 120
+                    hp["outfit"] = get_outfit(hp)
+                
+                house_inside_data = {
+                    "house": h_info,
+                    "is_open": bool(h_rental["is_open"]) if h_rental else False,
+                    "players": house_players
+                }
+            else:
+                inside_house_id = 0
+                await db.execute("UPDATE players SET inside_house_id=0 WHERE user_id=?", (uid,))
+        except Exception as e:
+            print(f"⚠️ house_inside build error: {e}")
+            inside_house_id = 0
+            await db.execute("UPDATE players SET inside_house_id=0 WHERE user_id=?", (uid,))
 
     my_house = await _get_my_active_house(uid, now)
 
@@ -399,6 +412,11 @@ async def api_house_enter(request):
         return web.json_response({"error": "Дом не найден"}, status=400)
 
     p = await _player(uid)
+    
+    # Если уже внутри этого дома — просто ок
+    if p.get("inside_house_id") == house_id:
+        return web.json_response({"ok": True})
+
     if int(p.get("city_id") or 0) != house["city_id"] or int(p.get("street_id") or 0) != house["street_id"]:
         return web.json_response({"error": "Ты не на этой улице"}, status=400)
 

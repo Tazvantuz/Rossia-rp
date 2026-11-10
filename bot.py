@@ -1,5 +1,5 @@
 # bot.py
-import asyncio, logging, os
+import asyncio, logging, os, time
 from aiohttp import web
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher, Router, F
@@ -27,8 +27,10 @@ router = Router()
 
 def _kb():
     if WEBAPP_URL:
+        # Добавляем timestamp, чтобы Telegram не кешировал страницу
+        url = f"{WEBAPP_URL}/?t={int(time.time())}"
         return InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="🇷🇺 Играть", web_app=WebAppInfo(url=f"{WEBAPP_URL}/"))]])
+            [InlineKeyboardButton(text="🇷🇺 Играть", web_app=WebAppInfo(url=url))]])
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="⚠️ URL не задан", callback_data="noop")]])
 
@@ -39,9 +41,11 @@ async def cmd_start(message: Message):
     greet = f"👋 С возвращением, <b>{p['nickname']}</b>!" if p else "🌟 Начни свой путь бомжа!"
     args = message.text.split()
     param = args[1] if len(args) > 1 else None
-    url = f"{WEBAPP_URL}/"
+    
+    # Добавляем timestamp, чтобы принудительно обновить кеш Telegram
+    url = f"{WEBAPP_URL}/?t={int(time.time())}"
     if param and param.startswith("ref_") and WEBAPP_URL:
-        url += f"?ref={param[4:]}"
+        url += f"&ref={param[4:]}"
         if not p:
             greet = "🎁 <b>Ты пришёл по приглашению!</b>\n" + greet
     text = (f"🇷🇺 <b>РП Россия</b>\n\n"
@@ -68,7 +72,12 @@ async def noop(cb):
 
 
 async def _serve_index(request):
-    return web.FileResponse(os.path.join(WEB_DIR, "index.html"))
+    # Отдаём index.html с запретом кеширования
+    resp = web.FileResponse(os.path.join(WEB_DIR, "index.html"))
+    resp.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    resp.headers["Pragma"] = "no-cache"
+    resp.headers["Expires"] = "0"
+    return resp
 
 
 def make_app():
@@ -84,10 +93,12 @@ async def _set_menu_button(bot: Bot):
         logging.warning("WEBAPP_URL не задан — menu button не установлена")
         return
     try:
+        # Тоже добавляем timestamp
+        url = f"{WEBAPP_URL}/?t={int(time.time())}"
         await bot.set_chat_menu_button(
             menu_button=MenuButtonWebApp(
                 text="🇷🇺 Играть",
-                web_app=WebAppInfo(url=f"{WEBAPP_URL}/"),
+                web_app=WebAppInfo(url=url),
             )
         )
         logging.info("🔘 Menu Button установлена (кнопка слева внизу)")
@@ -105,7 +116,6 @@ async def _capture_processor():
 
 
 async def _map_processor():
-    """Завершает перемещения и чистит истёкшие аренды домов."""
     while True:
         await asyncio.sleep(3)
         try:

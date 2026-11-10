@@ -87,8 +87,12 @@ async function mapRentHouse(houseId) {
     const d = await api("house/rent", { house_id: houseId });
     if (d.player) { state.player = d.player; renderPlayer(); }
     toast(`🏠 Арендовано: ${d.house_name} на 48ч!`, "success");
+    
+    // Сразу автоматически заходим внутрь
+    await api("house/enter", { house_id: houseId });
     closeModal();
-    loadMap();
+    await loadMap();
+    
     if (tg) tg.HapticFeedback?.notificationOccurred("success");
   } catch (e) { toast(e.message, "error"); }
 }
@@ -99,7 +103,7 @@ async function mapCancelRent(houseId) {
     const d = await api("house/cancel", {});
     toast(`🏚 Аренда отменена (${d.cancelled_house_name})`, "success");
     closeModal();
-    loadMap();
+    await loadMap();
   } catch (e) { toast(e.message, "error"); }
 }
 
@@ -108,7 +112,7 @@ async function mapToggleHouseOpen() {
     const d = await api("house/toggle_open");
     toast(d.is_open ? "🚪 Дверь открыта. Вас могут навестить." : "🚪 Дверь закрыта.", "success");
     closeModal();
-    loadMap();
+    await loadMap();
   } catch (e) { toast(e.message, "error"); }
 }
 
@@ -116,14 +120,14 @@ async function mapEnterHouse(houseId) {
   try {
     await api("house/enter", { house_id: houseId });
     closeModal();
-    loadMap();
+    await loadMap();
   } catch (e) { toast(e.message, "error"); }
 }
 
 async function mapExitHouse() {
   try {
     await api("house/exit");
-    loadMap();
+    await loadMap();
   } catch (e) { toast(e.message, "error"); }
 }
 
@@ -166,10 +170,19 @@ function renderMapScreen() {
     el.innerHTML = renderMovingScreen();
     return;
   }
+  
+  // Если внутри дома — рендерим интерьер
   if (mapState.data.house_inside) {
-    el.innerHTML = renderHouseInside();
-    return;
+    try {
+      el.innerHTML = renderHouseInside();
+      return;
+    } catch(e) {
+      console.error("renderHouseInside error:", e);
+      mapState.data.house_inside = null;
+      toast("Ошибка отрисовки дома", "error");
+    }
   }
+
   el.innerHTML = renderCityHeader() + renderMyHouseBadge() +
                  renderCityTabs() +
                  (mapState.view === 'street' ? renderStreetView() : renderCityView());
@@ -385,6 +398,7 @@ function renderStreetView() {
   // ─── Рендер игроков ───
   const playersSvg = players.map(p => {
     const outfit = p.outfit || {};
+    // Высота 72, ширина автоматическая (чтобы тяночки не плющило)
     const miniSvg = renderCharacterSVG(outfit, { height: 72 });
     const nick = _mapEscape(p.nickname);
     const tag = p.gang_tag ? `[${_mapEscape(p.gang_tag)}] ` : '';
@@ -553,13 +567,18 @@ function renderMovingScreen() {
 // ─── интерьер дома ───
 function renderHouseInside() {
   const hData = mapState.data.house_inside;
+  if (!hData || !hData.house) {
+    mapExitHouse();
+    return "";
+  }
+  
   const h = hData.house;
   const isMine = mapState.data.my_house && mapState.data.my_house.id === h.id;
-
+  
   const imgName = getHouseSlug(h.type);
   const bgStyle = `background: url('/assets/houses/${imgName}.png') center/cover no-repeat, #1e1e2e;`;
 
-  const playersHtml = hData.players.map(p => {
+  const playersHtml = (hData.players || []).map(p => {
     return `<div class="house-player-row" onclick="viewPlayer(${p.user_id})">
       <div style="font-weight:800; color:${p.is_online ? '#2ecc71' : '#fff'}">${formatNickWithTag(p.nickname, p.gang_tag, p.gang_tag_color, p.role)}</div>
       <div style="font-size:12px; color:var(--hint);">Ур. ${p.level}</div>
@@ -578,7 +597,7 @@ function renderHouseInside() {
 
       <div class="house-interior-body">
         <div class="house-interior-chat">
-          <h3 style="margin-bottom:12px; font-size:14px; text-transform:uppercase; color:var(--hint);">Люди в доме (${hData.players.length})</h3>
+          <h3 style="margin-bottom:12px; font-size:14px; text-transform:uppercase; color:var(--hint);">Люди в доме (${(hData.players || []).length})</h3>
           ${playersHtml || '<div style="color:var(--hint); font-size:13px;">Тут пусто</div>'}
         </div>
       </div>
