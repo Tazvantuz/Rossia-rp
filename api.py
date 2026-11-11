@@ -164,6 +164,8 @@ def setup_routes(app):
     R.add_post("/api/pvp/action", api_pvp.api_pvp_action)
     R.add_post("/api/pvp/force_cancel", api_pvp.api_pvp_force_cancel)
 
+    # ═══ БОССЫ ═══
+    R.add_post("/api/boss/list", api_boss.api_boss_list)
     R.add_post("/api/boss/get", api_boss.api_boss_get)
     R.add_post("/api/boss/attack", api_boss.api_boss_attack)
 
