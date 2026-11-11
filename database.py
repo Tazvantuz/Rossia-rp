@@ -203,6 +203,14 @@ CREATE TABLE IF NOT EXISTS house_rentals (
 CREATE INDEX IF NOT EXISTS idx_house_rentals_user ON house_rentals(user_id);
 CREATE INDEX IF NOT EXISTS idx_house_rentals_expires ON house_rentals(expires_at);
 
+-- ═══ Счётчик покупок кейсов на игрока ═══
+CREATE TABLE IF NOT EXISTS player_case_purchases (
+    user_id INTEGER NOT NULL,
+    case_id TEXT NOT NULL,
+    count INTEGER DEFAULT 0,
+    PRIMARY KEY (user_id, case_id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_activity_day ON player_daily_activity(day);
 CREATE INDEX IF NOT EXISTS idx_activity_user ON player_daily_activity(user_id);
 CREATE INDEX IF NOT EXISTS idx_promo_used_user ON promo_used(user_id);
@@ -247,7 +255,6 @@ class Database:
             "role TEXT DEFAULT 'player'",
             "muted_until INTEGER DEFAULT 0",
             "mute_reason TEXT DEFAULT NULL",
-            # ═══ карта ═══
             "city_id INTEGER DEFAULT 0",
             "street_id INTEGER DEFAULT 0",
             "pos_x REAL DEFAULT 0",
@@ -255,9 +262,7 @@ class Database:
             "moving_until INTEGER DEFAULT 0",
             "moving_to_city INTEGER DEFAULT 0",
             "moving_to_street INTEGER DEFAULT 0",
-            # -1 = "не в доме", 0..N = валидный house_id
             "inside_house_id INTEGER DEFAULT -1",
-            # ═══ TG-уведомления ═══
             "tg_notify_enabled INTEGER DEFAULT 1",
         ]
         for m in migrations:
@@ -294,7 +299,6 @@ class Database:
             except Exception:
                 pass
 
-        # ═══ МИГРАЦИЯ inside_house_id: 0 → -1 ═══
         try:
             await self.conn.execute(
                 "UPDATE players SET inside_house_id=-1 WHERE inside_house_id=0 OR inside_house_id IS NULL"
@@ -304,7 +308,6 @@ class Database:
         except Exception as e:
             print(f"⚠️ inside_house_id migration: {e}")
 
-        # ═══ house_rentals ═══
         try:
             await self.conn.execute(
                 "CREATE TABLE IF NOT EXISTS house_rentals ("
@@ -325,6 +328,20 @@ class Database:
             print("✅ Таблица house_rentals готова")
         except Exception as e:
             print(f"⚠️ house_rentals: {e}")
+
+        # ═══ Счётчик покупок кейсов ═══
+        try:
+            await self.conn.execute(
+                "CREATE TABLE IF NOT EXISTS player_case_purchases ("
+                " user_id INTEGER NOT NULL,"
+                " case_id TEXT NOT NULL,"
+                " count INTEGER DEFAULT 0,"
+                " PRIMARY KEY (user_id, case_id))"
+            )
+            await self.conn.commit()
+            print("✅ Таблица player_case_purchases готова")
+        except Exception as e:
+            print(f"⚠️ player_case_purchases: {e}")
 
         try:
             await self.conn.execute(
@@ -389,7 +406,6 @@ class Database:
         except Exception as e:
             print(f"⚠️ admin role set: {e}")
 
-        # ═══ ИНИЦИАЛИЗАЦИЯ БОССОВ ═══
         try:
             for boss_id, max_hp in [('pocyk', 10_000_000), ('zelya', 30_000_000)]:
                 row = await self.fetchone("SELECT * FROM boss_state WHERE boss_id=?", (boss_id,))

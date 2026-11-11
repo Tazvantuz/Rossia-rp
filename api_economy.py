@@ -9,7 +9,7 @@ from game import (
     CREDIT_MAX, CREDIT_TERMS, item_json, item_sell_price, roulette_color,
     crypto_price, crypto_history_24h, crypto_price_old_at_hour,
     START_BALANCE, xp_to_next,
-    is_case_item,
+    is_case_item, get_effective_case_price,
 )
 from api_core import (
     _user, _player, _add_inv, _remove_inv, _has_inv, _player_json,
@@ -18,7 +18,6 @@ from api_core import (
     _ref_migrated, _ensure_ref_columns, get_bot,
 )
 
-# ═══════════ КЕЙСЫ: ЛИМИТЫ ═══════════
 # ═══════════ КЕЙСЫ: ЛИМИТЫ ═══════════
 CASE_LIMITS = {
     "loh":         50,
@@ -104,6 +103,41 @@ async def _try_inc_case_opened(cid, limit):
     except Exception as e:
         print(f"⚠️ _try_inc_case_opened({cid}): {e}")
         return None
+
+# ═══════════ ХЕЛПЕР: СЧЁТЧИК ПОКУПОК КЕЙСА ИГРОКОМ ═══════════
+async def _ensure_pcp_table():
+    try:
+        await db.execute(
+            "CREATE TABLE IF NOT EXISTS player_case_purchases ("
+            " user_id INTEGER NOT NULL,"
+            " case_id TEXT NOT NULL,"
+            " count INTEGER DEFAULT 0,"
+            " PRIMARY KEY (user_id, case_id))"
+        )
+    except Exception as e:
+        print(f"⚠️ ensure player_case_purchases: {e}")
+
+async def _get_user_case_count(uid, cid):
+    await _ensure_pcp_table()
+    try:
+        row = await db.fetchone(
+            "SELECT count FROM player_case_purchases WHERE user_id=? AND case_id=?",
+            (uid, cid))
+        return int(row["count"]) if row else 0
+    except Exception:
+        return 0
+
+async def _inc_user_case_count(uid, cid):
+    await _ensure_pcp_table()
+    try:
+        await db.execute(
+            "INSERT INTO player_case_purchases (user_id, case_id, count) VALUES (?, ?, 1) "
+            "ON CONFLICT(user_id, case_id) DO UPDATE SET count = count + 1",
+            (uid, cid))
+        return True
+    except Exception as e:
+        print(f"⚠️ _inc_user_case_count({uid},{cid}): {e}")
+        return False
 
 # ═══════════ МАГАЗИН / ИНВЕНТАРЬ ═══════════
 async def api_shop(request):
@@ -1005,15 +1039,28 @@ async def api_cases_list(request):
             if ij:
                 ij["chance"] = it["chance"]
                 items.append(ij)
+
         limit = CASE_LIMITS.get(cid)
         opened = 0
         if limit:
             opened = await _get_case_opened(cid)
+
+        my_count = await _get_user_case_count(uid, cid)
+        base_price = c["price"]
+        effective_price = get_effective_case_price(base_price, my_count)
+
         case_data = {
-            "case_id": cid, "name": c["name"], "emoji": c["emoji"],
-            "price": c["price"], "items": items,
-            "is_limited": bool(limit), "limit": limit or 0, "opened": opened,
-            "left": max(0, (limit or 0) - opened) if limit else 0
+            "case_id": cid,
+            "name": c["name"],
+            "emoji": c["emoji"],
+            "price": effective_price,        # ← актуальная цена для игрока
+            "base_price": base_price,        # ← базовая цена
+            "times_bought": my_count,        # ← сколько раз этот игрок уже покупал
+            "items": items,
+            "is_limited": bool(limit),
+            "limit": limit or 0,
+            "opened": opened,
+            "left": max(0, (limit or 0) - opened) if limit else 0,
         }
         result.append(case_data)
     return web.json_response({"cases": result, "balance": p["balance"]})
@@ -1026,8 +1073,13 @@ async def api_cases_open(request):
     if not c: return web.json_response({"error":"Кейс не найден"}, status=400)
 
     p = await _player(uid)
-    if p["balance"] < c["price"]:
-        return web.json_response({"error":"Не хватает денег"}, status=400)
+
+    # Цена = базовая * 1.2^(сколько раз уже покупал)
+    my_count = await _get_user_case_count(uid, cid)
+    effective_price = get_effective_case_price(c["price"], my_count)
+
+    if p["balance"] < effective_price:
+        return web.json_response({"error": f"Не хватает денег. Цена: {effective_price}₽"}, status=400)
 
     limit = CASE_LIMITS.get(cid)
     new_opened = None
@@ -1036,7 +1088,10 @@ async def api_cases_open(request):
         if new_opened is None:
             return web.json_response({"error": "Лимит открытий этого кейса исчерпан!"}, status=400)
 
-    await db.execute("UPDATE players SET balance=balance-? WHERE user_id=?", (c["price"], uid))
+    # списываем актуальную цену
+    await db.execute("UPDATE players SET balance=balance-? WHERE user_id=?", (effective_price, uid))
+    # инкрементим счётчик покупок игрока
+    await _inc_user_case_count(uid, cid)
 
     total = sum(it["chance"] for it in c["items"])
     roll = random.uniform(0, total)
@@ -1049,13 +1104,22 @@ async def api_cases_open(request):
     await _add_inv(uid, won, 1)
     p = await _player(uid)
 
-    resp = {"player":_player_json(p), "won":item_json(won)}
+    # новая цена после покупки
+    new_count = my_count + 1
+    next_price = get_effective_case_price(c["price"], new_count)
+
+    resp = {
+        "player": _player_json(p),
+        "won": item_json(won),
+        "paid_price": effective_price,
+        "next_price": next_price,
+        "times_bought": new_count,
+    }
     if limit:
         resp["is_limited"] = True
         resp["limit"] = limit
         resp["opened"] = new_opened
         resp["left"] = max(0, limit - new_opened)
-        print(f"🎁 Кейс {cid}: opened={new_opened}/{limit}, left={resp['left']}")
 
     return web.json_response(resp)
 
@@ -1098,12 +1162,6 @@ async def api_referral_claim(request):
     return web.json_response({"ok": True, "reward": reward, "credit_paid": credit_paid, "player": _player_json(p)})
 
 # ═══════════ БОНУС ЗА TG-КАНАЛ ═══════════
-# Публичный канал: https://t.me/russiarpbot1 (username: @russiarpbot1)
-# Бот @newerarpgbot должен быть в админах этого канала с правом «Читать сообщения».
-#
-# Приоритеты:
-#   1. Если в Railway Variables задана TG_CHANNEL_ID — используем её (можно переопределить без пуша).
-#   2. Иначе — fallback на захардкоженный username канала.
 _TG_CHANNEL_ID_RAW = os.getenv("TG_CHANNEL_ID", "").strip()
 _TG_CHANNEL_USERNAME_FALLBACK = "@russiarpbot1"
 TG_CHANNEL_ID = _TG_CHANNEL_ID_RAW or _TG_CHANNEL_USERNAME_FALLBACK
@@ -1114,8 +1172,6 @@ else:
     print(f"✅ TG_CHANNEL_ID (fallback из кода): {_TG_CHANNEL_USERNAME_FALLBACK!r} (проверка подписки включена)")
 
 async def api_tg_bonus_claim(request):
-    """Бонус за подписку на Telegram-канал (10 000₽, один раз).
-    Проверяет подписку через getChatMember. Работает с @username и -100..."""
     ud = await _user(request); uid = ud["id"]
     p = await _player(uid)
     if p.get("tg_bonus_claimed"):
@@ -1134,7 +1190,6 @@ async def api_tg_bonus_claim(request):
             "error": "Не удалось проверить подписку. Убедись, что ты подписан на канал, или напиши админу"
         }, status=500)
 
-    # ─── Извлекаем статус из aiogram-объекта (в разных версиях по-разному) ───
     status_val = ""
     is_member_flag = False
     try:
@@ -1151,7 +1206,6 @@ async def api_tg_bonus_claim(request):
 
     print(f"🔍 getChatMember для {uid}: status={status_val!r}, is_member={is_member_flag}")
 
-    # «Подписан» = creator / administrator / member ИЛИ restricted с is_member=True
     subscribed = (
         status_val in ("creator", "administrator", "member")
         or (status_val == "restricted" and is_member_flag)

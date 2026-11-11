@@ -8,6 +8,17 @@ START_CITY = 0
 START_STREET = 0
 START_BALANCE = 1000
 
+# ═══ Кейсы: множитель цены ═══
+CASE_PRICE_MULTIPLIER = 1.2
+
+def get_effective_case_price(base_price, times_bought):
+    """Цена кейса для игрока = base_price * (1.2 ^ times_bought)."""
+    try:
+        n = max(0, int(times_bought or 0))
+        return int(round(base_price * (CASE_PRICE_MULTIPLIER ** n)))
+    except Exception:
+        return int(base_price)
+
 CITIES = [
     {
         "id": 0,
@@ -542,30 +553,25 @@ for iid, data in LEGACY_CASE_ITEMS.items():
     if iid not in ITEMS:
         ITEMS[iid] = data
 
-# ═══════════ НОВЫЕ КЕЙСОВЫЕ ПРЕДМЕТЫ ═══════════
 NEW_CASE_ITEMS = {
-    # ─── Case 1: Кейс Лоха (5 000₽) ───
     "h_case_loh_kepka":     {"name": "Кепка 'Алкаш'",            "emoji": "🧢", "slot": "head",       "price": 500,   "rarity": "common",    "desc": "С рынка, но своя", "hp": 70},
     "b_case_loh_kofta":     {"name": "Кофта от мамы",            "emoji": "🧶", "slot": "body",       "price": 800,   "rarity": "uncommon",  "desc": "Тёплая и колючая", "hp": 110},
     "l_case_loh_treniki":   {"name": "Треники на резинке",       "emoji": "👖", "slot": "legs",       "price": 1200,  "rarity": "rare",      "desc": "Спортивные, но не очень", "hp": 175},
     "rh_case_loh_shaurma":  {"name": "Шаурма-исполин",           "emoji": "🌯", "slot": "right_hand", "price": 2000,  "rarity": "epic",      "desc": "Со свининой и курицей", "damage": 120},
     "lh_case_loh_kolbasa":  {"name": "Палка колбасы",            "emoji": "🥓", "slot": "left_hand",  "price": 3000,  "rarity": "legendary", "desc": "Докторская, варёная", "hp": 400, "damage": 100},
 
-    # ─── Case 2: Кейс Двора (50 000₽) ───
     "h_case_dvor_bandana":  {"name": "Бандана 'Свой'",           "emoji": "🧣", "slot": "head",       "price": 5000,  "rarity": "common",    "desc": "Знак принадлежности", "hp": 200},
     "b_case_dvor_olimp":    {"name": "Олимпийка '3 полоски'",    "emoji": "🏃", "slot": "body",       "price": 8000,  "rarity": "uncommon",  "desc": "С рынка, но выглядит норм", "hp": 300},
     "l_case_dvor_semyorki": {"name": "Семёрки с рынка",          "emoji": "👖", "slot": "legs",       "price": 12000, "rarity": "rare",      "desc": "Классика дворов", "hp": 500},
     "rh_case_dvor_balalaika":{"name":"Балалайка дворовая",       "emoji": "🪕", "slot": "right_hand", "price": 20000, "rarity": "epic",      "desc": "Три струны, всё по кайфу", "damage": 250},
     "lh_case_dvor_avoska":  {"name": "Авоська с баблом",         "emoji": "🥡", "slot": "left_hand",  "price": 30000, "rarity": "legendary", "desc": "Сетка, а внутри капуста", "hp": 1200, "damage": 250},
 
-    # ─── Case 3: Кейс Бригадира (500 000₽) ───
     "h_case_brig_kepka":    {"name": "Кепка Бригадира",          "emoji": "🧢", "slot": "head",       "price": 50000,  "rarity": "common",    "desc": "Восьмиклинка", "hp": 500},
     "b_case_brig_kosuha":   {"name": "Косуха Бригадира",         "emoji": "🧥", "slot": "body",       "price": 80000,  "rarity": "uncommon",  "desc": "Кожа, заклёпки", "hp": 800},
     "l_case_brig_klesh":    {"name": "Клёш Бригадира",           "emoji": "👖", "slot": "legs",       "price": 120000, "rarity": "rare",      "desc": "Широкие, с 90-х", "hp": 1300},
     "rh_case_brig_osa":     {"name": "Пистолет 'Оса'",           "emoji": "🔫", "slot": "right_hand", "price": 200000, "rarity": "epic",      "desc": "Травматика", "damage": 600},
     "lh_case_brig_chemodan":{"name": "Чемодан с баблом",         "emoji": "💼", "slot": "left_hand",  "price": 300000, "rarity": "legendary", "desc": "Дипломат, полный денег", "hp": 3000, "damage": 600},
 
-    # ─── Case 4: Кейс Смотрящего (1 500 000₽) ───
     "h_case_smot_shapka":   {"name": "Шапка Смотрящего",         "emoji": "👑", "slot": "head",       "price": 200000,  "rarity": "common",    "desc": "Царская", "hp": 1200},
     "b_case_smot_shuba":    {"name": "Шуба Смотрящего",          "emoji": "🧥", "slot": "body",       "price": 300000,  "rarity": "uncommon",  "desc": "Соболиная", "hp": 1900},
     "l_case_smot_shtany":   {"name": "Золотые штаны",            "emoji": "👖", "slot": "legs",       "price": 500000,  "rarity": "rare",      "desc": "Как у Пети", "hp": 3100},
@@ -582,7 +588,6 @@ TYANKA_ITEMS = {
 }
 ITEMS.update(TYANKA_ITEMS)
 
-# ═══════════ НОВЫЕ ТЯНКИ (Вайфу-кейс) ═══════════
 NEW_TYANKA_ITEMS = {
     "lh_babijon": {"name": "Бабиджон", "emoji": "👩", "slot": "left_hand", "price": 0, "rarity": "common", "desc": "Обычная баба-тянка", "hp": 200, "damage": 100, "is_case_only": True},
     "rh_esdes":   {"name": "Эсдес",    "emoji": "👩‍🎤", "slot": "right_hand", "price": 0, "rarity": "uncommon", "desc": "Боевая ассасинка", "hp": 500, "damage": 200, "is_case_only": True},
@@ -591,7 +596,6 @@ NEW_TYANKA_ITEMS = {
 }
 ITEMS.update(NEW_TYANKA_ITEMS)
 
-# ═══════════ 5 НОВЫХ КЕЙСОВ ═══════════
 CASES = {
     "loh": {"name": "Кейс Лоха", "emoji": "🧢", "price": 5000,
         "items": [

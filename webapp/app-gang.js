@@ -20,6 +20,7 @@ async function loadCases() {
         const openedCount = c.opened || 0;
         const leftCount = (c.left !== undefined) ? c.left : Math.max(0, totalLimit - openedCount);
         const soldOut = isLimited && leftCount <= 0;
+        const timesBought = c.times_bought || 0;
 
         let limitBadge = "";
         if (isLimited) {
@@ -35,11 +36,17 @@ async function loadCases() {
             `;
         }
 
+        let boughtBadge = "";
+        if (timesBought > 0) {
+            boughtBadge = `<div style="margin-top:6px;font-size:11px;font-weight:800;color:#f39c12;">📦 Куплено: ${timesBought} раз${timesBought >= 2 ? 'а' : ''}</div>`;
+        }
+
         return `<div class="case-preview-card" onclick="showCaseDetail('${c.case_id}')" style="${soldOut ? 'opacity:0.5;filter:grayscale(1);' : ''}">
           <div class="case-preview-emoji">${c.emoji}</div>
           <div class="case-preview-info">
             <div class="case-preview-name">${c.name}</div>
             <div class="case-preview-sub">${c.items.length} уникальных предметов</div>
+            ${boughtBadge}
             ${limitBadge}
           </div>
           <div class="case-preview-price">${fmtMoney(c.price)}₽</div>
@@ -60,6 +67,10 @@ function showCaseDetail(cid) {
   const openedCount = c.opened || 0;
   const leftCount = (c.left !== undefined) ? c.left : Math.max(0, totalLimit - openedCount);
   const isSoldOut = isLimited && leftCount <= 0;
+  const timesBought = c.times_bought || 0;
+  const basePrice = c.base_price || c.price;
+  const curPrice = c.price;
+  const nextPrice = Math.round(curPrice * 1.2);
 
   const itemsHtml = c.items.map(it => {
     const preview = {...emptyOutfit()};
@@ -93,16 +104,36 @@ function showCaseDetail(cid) {
       `;
   }
 
+  // ═══ Блок про рост цены ═══
+  let priceGrowHtml = "";
+  if (timesBought > 0) {
+      priceGrowHtml = `
+        <div style="margin: 12px 0; padding: 12px; background: rgba(243,156,18,0.10); border: 1px solid rgba(243,156,18,0.5); border-radius: 10px;">
+          <div style="font-size:12px;color:#f39c12;font-weight:800;text-align:center;">
+            📈 Цена растёт с каждой покупкой (×1.2)
+          </div>
+          <div style="font-size:11px;color:var(--hint);text-align:center;margin-top:6px;">
+            Базовая цена: <b>${fmtMoney(basePrice)}₽</b> · Куплено тобой: <b style="color:#f39c12;">${timesBought}</b> раз
+          </div>
+          <div style="font-size:12px;color:#fff;text-align:center;margin-top:8px;">
+            Следующая покупка: <b style="color:#e74c3c;">${fmtMoney(nextPrice)}₽</b>
+          </div>
+        </div>
+      `;
+  }
+
   openModal(`
     <div style="text-align:center;margin-bottom:16px">
       <div style="font-size:56px">${c.emoji}</div>
       <h2>${c.name}</h2>
-      <div style="font-size:20px;font-weight:900;color:var(--money);margin-top:4px">${fmtMoney(c.price)}₽</div>
+      <div style="font-size:20px;font-weight:900;color:var(--money);margin-top:4px">${fmtMoney(curPrice)}₽</div>
+      ${timesBought > 0 ? `<div style="font-size:11px;color:#f39c12;font-weight:700;margin-top:2px;">(базовая ${fmtMoney(basePrice)}₽ · твоя ${timesBought > 1 ? timesBought + ' покупок' : '1 покупка'})</div>` : ''}
     </div>
     <div class="case-modal-items">${itemsHtml}</div>
     ${limitHtml}
-    <button class="btn btn-primary" onclick="openCase('${cid}')" ${bal < c.price || isSoldOut ? 'disabled' : ''}>
-      ${isSoldOut ? '❌ ЛИМИТ ИСЧЕРПАН' : (bal < c.price ? '❌ Не хватает денег' : `🎁 Открыть за ${fmtMoney(c.price)}₽`)}
+    ${priceGrowHtml}
+    <button class="btn btn-primary" onclick="openCase('${cid}')" ${bal < curPrice || isSoldOut ? 'disabled' : ''}>
+      ${isSoldOut ? '❌ ЛИМИТ ИСЧЕРПАН' : (bal < curPrice ? `❌ Не хватает (нужно ${fmtMoney(curPrice)}₽)` : `🎁 Открыть за ${fmtMoney(curPrice)}₽`)}
     </button>
   `);
 }
@@ -121,6 +152,11 @@ async function openCase(cid) {
         c.left = d.left;
         c.is_limited = true;
         c.limit = d.limit;
+    }
+    // обновляем цену на следующую покупку
+    if (d.next_price !== undefined) {
+        c.price = d.next_price;
+        c.times_bought = d.times_bought || 0;
     }
 
     const wonItem = d.won;
@@ -190,6 +226,9 @@ async function openCase(cid) {
                 <div style="color:${wonItem.rarity_color};font-size:13px;font-weight:800;margin-top:4px">${wonItem.rarity_name}</div>
                 <p style="color:var(--hint);margin-top:12px">${wonItem.desc || ''}</p>
                 ${_itemStatsHtml(wonItem, 'block')}
+                <div style="margin-top:12px;padding:10px;background:rgba(243,156,18,0.1);border:1px solid rgba(243,156,18,0.4);border-radius:10px;font-size:12px;color:#f39c12;">
+                  📈 Следующая покупка этого кейса: <b>${fmtMoney(c.price)}₽</b>
+                </div>
                 <button class="btn btn-primary" onclick="closeModal();loadCases()" style="margin-top:16px">Забрать</button>
               </div>`);
         }, 5200);
@@ -441,7 +480,6 @@ async function loadGang() {
     const d = await api("gang/get");
     const el = $("#gang-content");
     if (!d.in_gang) {
-      // Свободное вступление закрыто — показываем только список банд без кнопки "Вступить"
       let listHtml = d.gangs.length > 0 ? d.gangs.map(g => {
         const tagHtml = g.tag ? ` <span class="gang-tag" style="color:${g.tag_color || '#f39c12'};border-color:${g.tag_color || '#f39c12'}">[${escapeHtml(g.tag)}]</span>` : '';
         return `
@@ -493,7 +531,6 @@ async function loadGang() {
     }).join("");
 
     const myRole = d.my_role;
-    // ═══ ИСПРАВЛЕНО: кликабельные ники в списке участников ═══
     const membersHtml = d.members.map(m => {
       const roleClass = `role-${m.role}`;
       const roleName = {leader:"Лидер",deputy:"Зам",member:"Боец"}[m.role];
