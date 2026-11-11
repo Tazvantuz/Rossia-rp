@@ -52,7 +52,8 @@ async def cmd_start(message: Message):
     text = (f"🇷🇺 <b>РП Россия</b>\n\n"
             f"Мир гопников, олигархов и шаурмы.\n\n"
             f"{greet}\n\n"
-            f"💡 <i>Кнопка «🇷🇺 Играть» слева внизу — открывает игру в один тап.</i>")
+            f"💡 <i>Кнопка «🇷🇺 Играть» слева внизу — открывает игру в один тап.</i>\n"
+            f"🔔 Уведомления: /notify")
     if WEBAPP_URL:
         kb = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="🇷🇺 Играть", web_app=WebAppInfo(url=url))]])
@@ -69,14 +70,40 @@ async def cmd_menu(message: Message):
 
 @router.message(Command("log"))
 async def cmd_log(message: Message):
-    """Переключает отладку. Доступно только @tazvantuzz."""
     if message.from_user.username != ADMIN_USERNAME:
         await message.answer("⛔ У тебя нет доступа к этой команде.")
         return
-
     new_state = await debug_log.toggle_debug()
     status_text = "🟢 ВКЛЮЧЕНА" if new_state else "🔴 ВЫКЛЮЧЕНА"
     await message.answer(f"🐞 Отладка теперь: <b>{status_text}</b>")
+
+
+@router.message(Command("notify"))
+async def cmd_notify(message: Message):
+    """Вкл/выкл уведомления от бота о трейдах, ЛС, друзьях, банде, захватах."""
+    uid = message.from_user.id
+    p = await db.fetchone("SELECT tg_notify_enabled FROM players WHERE user_id=?", (uid,))
+    if not p:
+        await message.answer("⚠️ Сначала зарегистрируйся в игре.")
+        return
+    current = p.get("tg_notify_enabled", 1)
+    new_state = 0 if current else 1
+    await db.execute("UPDATE players SET tg_notify_enabled=? WHERE user_id=?", (new_state, uid))
+    if new_state:
+        await message.answer(
+            "🔔 <b>Уведомления включены</b>\n\n"
+            "Буду присылать сюда о:\n"
+            "• 🤝 трейдах\n"
+            "• ✉️ личных сообщениях (если ты offline > 1 мин)\n"
+            "• 👥 запросах в друзья\n"
+            "• 🚬 приглашениях в банду\n"
+            "• ⚔️ атаках на территории твоей банды"
+        )
+    else:
+        await message.answer(
+            "🔕 <b>Уведомления выключены</b>\n\n"
+            "Больше не буду слать сюда. Включить снова: /notify"
+        )
 
 
 @router.callback_query(F.data == "noop")

@@ -11,7 +11,7 @@ function startChatPolling() {
   };
   tick();
   chatInterval = setInterval(tick, 2000);
-  
+
   if (window._convPoll) clearInterval(window._convPoll);
   if (state.player) loadConversations();
   window._convPoll = setInterval(() => {
@@ -51,6 +51,7 @@ async function loadChat() {
       }).join("");
     }
     if (atBottom) el.scrollTop = el.scrollHeight;
+    updateChatBadge();
   } catch(e) {}
 }
 
@@ -63,6 +64,7 @@ function switchChat(mode) {
     loadPM();
   }
   renderChatTabs();
+  updateChatBadge(); // сразу обновляем бейдж при переключении
 }
 
 function openPM(uid, name, tag, color) {
@@ -79,12 +81,13 @@ function openPM(uid, name, tag, color) {
   state.chatWith = uid;
   const existing = state.openPMs.find(x => Number(x.uid) === uid);
   if (existing) existing.unread = 0;
-  
+
   renderChatTabs();
   closeModal();
   showTab("chat");
   loadPM();
   loadConversations();
+  updateChatBadge(); // сразу обновляем бейдж
 }
 
 function renderChatTabs() {
@@ -92,7 +95,7 @@ function renderChatTabs() {
   if (!tabs) return;
   const isGlobal = !state.chatWith || state.chatWith === 'global';
   let html = `<button class="chat-tab ${isGlobal ? 'active' : ''}" data-chat="global" onclick="switchChat('global')">🌐 Общий</button>`;
-  
+
   let activePm = null;
 
   if (Array.isArray(state.openPMs)) {
@@ -170,6 +173,11 @@ async function loadPM() {
       }).join("");
     }
     if (atBottom) el.scrollTop = el.scrollHeight;
+
+    // После загрузки ЛС бэкенд помечает их прочитанными.
+    // Обновляем бейдж на нижней панели и вкладки диалогов.
+    updateChatBadge();
+    loadConversations();
   } catch(e) {}
 }
 

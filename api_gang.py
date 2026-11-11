@@ -9,6 +9,7 @@ from game import (
 )
 from api_core import _user, _player, _nick_tag
 
+
 async def _trim_territory_log(gid):
     try:
         rows = await db.fetchall(
@@ -35,6 +36,7 @@ async def _trim_territory_log(gid):
     except Exception as e:
         print(f"⚠️ _trim_territory_log: {e}")
 
+
 async def _log_territory_event(tid, tname, event_type,
                                 g_a_id=None, g_a_name=None, g_a_dmg=None,
                                 g_b_id=None, g_b_name=None, g_b_dmg=None,
@@ -55,6 +57,7 @@ async def _log_territory_event(tid, tname, event_type,
             await _trim_territory_log(g_b_id)
     except Exception as e:
         print(f"⚠️ _log_territory_event: {e}")
+
 
 async def api_gang_create(request):
     ud = await _user(request); uid = ud["id"]
@@ -79,12 +82,13 @@ async def api_gang_create(request):
         (gid, uid))
     return web.json_response({"ok":True,"gang_id":gid})
 
+
 async def api_gang_join(request):
-    """Свободное вступление закрыто — только по приглашению лидера/зама."""
     await _user(request)
     return web.json_response(
         {"error": "Вступить в банду можно только по приглашению от лидера или зама"},
         status=403)
+
 
 async def api_gang_leave(request):
     ud = await _user(request); uid = ud["id"]
@@ -95,8 +99,8 @@ async def api_gang_leave(request):
     await db.execute("DELETE FROM gang_members WHERE user_id=?", (uid,))
     return web.json_response({"ok":True})
 
+
 async def api_gang_kick(request):
-    """Кик участника лидером или замом. Лидера кикнуть нельзя, зам не может кикнуть зама."""
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
     try:
@@ -126,8 +130,8 @@ async def api_gang_kick(request):
                      (target_id, my["gang_id"]))
     return web.json_response({"ok": True, "kicked": target_id})
 
+
 async def api_gang_disband(request):
-    """Удаление банды лидером: территории → нейтральные, участники → выгнать."""
     ud = await _user(request); uid = ud["id"]
     my = await db.fetchone("SELECT gang_id, role FROM gang_members WHERE user_id=?", (uid,))
     if not my:
@@ -180,6 +184,7 @@ async def api_gang_disband(request):
 
     return web.json_response({"ok": True, "disbanded": gid, "name": gang_name})
 
+
 async def api_gang_set_tag(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
@@ -200,6 +205,7 @@ async def api_gang_set_tag(request):
                          (tag, member["gang_id"]))
     return web.json_response({"ok": True, "tag": tag, "tag_color": color or None})
 
+
 async def api_gang_set_deputy(request):
     ud = await _user(request); uid = ud["id"]
     member = await db.fetchone("SELECT * FROM gang_members WHERE user_id=?", (uid,))
@@ -216,6 +222,7 @@ async def api_gang_set_deputy(request):
     await db.execute("UPDATE gang_members SET role=? WHERE user_id=?", (new_role, target_id))
     return web.json_response({"ok": True})
 
+
 async def api_gang_deposit(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
@@ -230,6 +237,7 @@ async def api_gang_deposit(request):
     await db.execute("UPDATE gangs SET treasury=treasury+? WHERE gang_id=?", (amount, member["gang_id"]))
     return web.json_response({"ok":True})
 
+
 async def api_gang_withdraw(request):
     ud = await _user(request); uid = ud["id"]
     body = await request.json()
@@ -243,6 +251,7 @@ async def api_gang_withdraw(request):
     await db.execute("UPDATE gangs SET treasury=treasury-? WHERE gang_id=?", (amount, gang["gang_id"]))
     await db.execute("UPDATE players SET balance=balance+? WHERE user_id=?", (amount, uid))
     return web.json_response({"ok":True})
+
 
 async def api_gang_invite(request):
     ud = await _user(request); uid = ud["id"]
@@ -259,7 +268,7 @@ async def api_gang_invite(request):
     cnt = await db.fetchone("SELECT COUNT(*) as c FROM gang_members WHERE gang_id=?", (my["gang_id"],))
     if cnt["c"] >= GANG_MAX_MEMBERS:
         return web.json_response({"error": "Банда заполнена"}, status=400)
-    # Не дублировать приглашение
+
     existing = await db.fetchall(
         "SELECT id, data FROM notifications WHERE user_id=? AND type='gang_invite'",
         (target_id,))
@@ -270,13 +279,22 @@ async def api_gang_invite(request):
                 return web.json_response({"ok": True, "already": True})
         except Exception:
             pass
+
     gang = await db.fetchone("SELECT name, emoji FROM gangs WHERE gang_id=?", (my["gang_id"],))
     me = await _player(uid)
     await db.execute(
         "INSERT INTO notifications (user_id, type, text, data) VALUES (?, 'gang_invite', ?, ?)",
         (target_id, f"Приглашение в банду {gang['emoji']} {gang['name']} от {_nick_tag(me)}",
          json.dumps({"gang_id": my["gang_id"]})))
+
+    try:
+        from bot_notify import notify_gang_invite
+        await notify_gang_invite(target_id, gang["name"], gang["emoji"], me["nickname"])
+    except Exception as e:
+        print(f"⚠️ notify_gang_invite: {e}")
+
     return web.json_response({"ok": True})
+
 
 async def api_gang_invite_accept(request):
     ud = await _user(request); uid = ud["id"]
@@ -288,7 +306,6 @@ async def api_gang_invite_accept(request):
     if not notif:
         return web.json_response({"error": "Приглашение не найдено или уже обработано"}, status=404)
 
-    # Уже в банде — приглашение неактуально, удаляем и говорим об этом
     if await db.fetchone("SELECT 1 FROM gang_members WHERE user_id=?", (uid,)):
         await db.execute("DELETE FROM notifications WHERE id=?", (notif_id,))
         return web.json_response({"error": "Ты уже состоишь в банде"}, status=400)
@@ -299,19 +316,16 @@ async def api_gang_invite_accept(request):
         gid = 0
 
     if gid <= 0:
-        # Битое приглашение — удаляем
         await db.execute("DELETE FROM notifications WHERE id=?", (notif_id,))
         return web.json_response({"error": "Повреждённое приглашение"}, status=400)
 
     gang = await db.fetchone("SELECT * FROM gangs WHERE gang_id=?", (gid,))
     if not gang:
-        # Банда распущена — удаляем
         await db.execute("DELETE FROM notifications WHERE id=?", (notif_id,))
         return web.json_response({"error": "Банда была распущена"}, status=404)
 
     cnt = await db.fetchone("SELECT COUNT(*) as c FROM gang_members WHERE gang_id=?", (gid,))
     if cnt["c"] >= GANG_MAX_MEMBERS:
-        # Банда переполнена — удаляем приглашение
         await db.execute("DELETE FROM notifications WHERE id=?", (notif_id,))
         return web.json_response({"error": "Банда уже заполнена"}, status=400)
 
@@ -319,11 +333,11 @@ async def api_gang_invite_accept(request):
         "INSERT INTO gang_members (gang_id, user_id, role) VALUES (?, ?, 'member')",
         (gid, uid))
 
-    # Удалить ВСЕ приглашения этого игрока (и в эту банду, и от других — они больше неактуальны)
     await db.execute(
         "DELETE FROM notifications WHERE user_id=? AND type='gang_invite'", (uid,))
 
     return web.json_response({"ok": True, "gang_id": gid})
+
 
 async def api_gang_invite_decline(request):
     ud = await _user(request); uid = ud["id"]
@@ -332,6 +346,7 @@ async def api_gang_invite_decline(request):
     await db.execute("DELETE FROM notifications WHERE id=? AND user_id=? AND type='gang_invite'",
                      (notif_id, uid))
     return web.json_response({"ok": True})
+
 
 async def api_gang_get(request):
     try: await _process_territories()
@@ -399,6 +414,7 @@ async def api_gang_get(request):
         "notifications": [],
     })
 
+
 async def api_gang_info(request):
     ud = await _user(request); uid = ud["id"]
     row = await db.fetchone("SELECT gang_id, role FROM gang_members WHERE user_id=?", (uid,))
@@ -410,6 +426,7 @@ async def api_gang_info(request):
         "JOIN players p ON p.user_id=gm.user_id WHERE gm.gang_id=?", (gid,))
     return web.json_response({"in_gang": True, "gang": dict(gang), "role": role,
                               "members": [dict(m) for m in members]})
+
 
 async def api_gang_territories(request):
     await _user(request)
@@ -426,6 +443,7 @@ async def api_gang_territories(request):
         })
     return web.json_response({"territories": territories})
 
+
 async def _gang_total_damage(gid):
     members = await db.fetchall("SELECT user_id FROM gang_members WHERE gang_id=?", (gid,))
     total = 0
@@ -435,6 +453,7 @@ async def _gang_total_damage(gid):
             stats = get_combat_stats(p)
             total += stats.get("damage", 5)
     return total
+
 
 async def _process_territories():
     now = int(time.time())
@@ -491,9 +510,11 @@ async def _process_territories():
     except Exception as e:
         print(f"⚠️ _process_territories gang income batch: {e}")
 
+
 async def _ensure_gang_columns():
     try: await db.execute("ALTER TABLE gangs ADD COLUMN last_income_at INTEGER DEFAULT 0")
     except: pass
+
 
 async def _process_gang_income(gid):
     await _ensure_gang_columns()
@@ -524,6 +545,7 @@ async def _process_gang_income(gid):
                 continue
             await db.execute("UPDATE players SET seeds=seeds+? WHERE user_id=?",
                              (seeds_per_member, m["user_id"]))
+
 
 async def api_gang_capture(request):
     ud = await _user(request); uid = ud["id"]
@@ -580,6 +602,19 @@ async def api_gang_capture(request):
         g_a_id=my_gid, g_a_name=my_gname, g_a_dmg=total_dmg,
         g_b_id=opp_gid, g_b_name=opp_gname)
     rival = active_on_terr[0] if active_on_terr else None
+
+    # ═══ Уведомления в бота ═══
+    try:
+        from bot_notify import notify_gang_attack, notify_gang_contested
+        # 1. Владелец территории (если не мы) — его атакуют
+        if current_owner and current_owner["gang_id"] != my_gid:
+            await notify_gang_attack(current_owner["gang_id"], my_gname, territory["name"])
+        # 2. Если был активный захватчик и это не мы — присоединились к его захвату
+        if rival and rival["gang_id"] != my_gid:
+            await notify_gang_contested(rival["gang_id"], my_gname, territory["name"])
+    except Exception as e:
+        print(f"⚠️ gang capture notify: {e}")
+
     return web.json_response({
         "ok": True, "capture_id": cap_id,
         "ends_at": now + CAPTURE_HOURS * 3600,
@@ -590,8 +625,10 @@ async def api_gang_capture(request):
         "is_defense": is_defense,
     })
 
+
 async def api_territory_capture_start(request):
     return await api_gang_capture(request)
+
 
 async def api_gang_captures(request):
     try: await _process_territories()
@@ -624,6 +661,7 @@ async def api_gang_captures(request):
     for v in by_terr.values():
         v["is_contested"] = len(v["captures"]) >= 2
     return web.json_response({"captures": rows, "by_territory": list(by_terr.values())})
+
 
 async def api_territory_capture_resolve(request):
     await _user(request)

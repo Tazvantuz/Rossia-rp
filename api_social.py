@@ -143,6 +143,13 @@ async def api_trade_send(request):
     await db.execute(
         "INSERT INTO notifications (user_id, type, text, data) VALUES (?, 'trade', ?, ?)",
         (to_user, f"Трейд от {_nick_tag(p)}", json.dumps({"trade_id": tid})))
+
+    try:
+        from bot_notify import notify_trade
+        await notify_trade(to_user, p["nickname"], tid)
+    except Exception as e:
+        print(f"⚠️ notify_trade: {e}")
+
     return web.json_response({"ok": True, "trade_id": tid})
 
 
@@ -508,6 +515,13 @@ async def api_friend_request(request):
     await db.execute(
         "INSERT INTO notifications (user_id, type, text, data) VALUES (?, 'friend', ?, ?)",
         (target_id, f"Запрос в друзья от {_nick_tag(p)}", json.dumps({"user_id": uid})))
+
+    try:
+        from bot_notify import notify_friend
+        await notify_friend(target_id, p["nickname"])
+    except Exception as e:
+        print(f"⚠️ notify_friend: {e}")
+
     return web.json_response({"ok": True})
 
 
@@ -620,6 +634,13 @@ async def api_chat_pm_send(request):
         msg = msg[:500]
     await db.execute("INSERT INTO private_messages (from_id, to_id, message) VALUES (?,?,?)",
                      (uid, to_id, msg))
+
+    try:
+        from bot_notify import notify_pm
+        await notify_pm(to_id, uid, p["nickname"], msg)
+    except Exception as e:
+        print(f"⚠️ notify_pm: {e}")
+
     return web.json_response({"ok": True})
 
 

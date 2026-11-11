@@ -193,7 +193,6 @@ CREATE TABLE IF NOT EXISTS boss_rewards (
     PRIMARY KEY (boss_id, user_id, reward_type)
 );
 
--- ═══════════ АРЕНДА ДОМОВ ═══════════
 CREATE TABLE IF NOT EXISTS house_rentals (
     house_id INTEGER PRIMARY KEY,
     user_id INTEGER NOT NULL,
@@ -248,7 +247,6 @@ class Database:
             "role TEXT DEFAULT 'player'",
             "muted_until INTEGER DEFAULT 0",
             "mute_reason TEXT DEFAULT NULL",
-            # ═══ карта ═══
             "city_id INTEGER DEFAULT 0",
             "street_id INTEGER DEFAULT 0",
             "pos_x REAL DEFAULT 0",
@@ -256,8 +254,8 @@ class Database:
             "moving_until INTEGER DEFAULT 0",
             "moving_to_city INTEGER DEFAULT 0",
             "moving_to_street INTEGER DEFAULT 0",
-            # ВАЖНО: -1 = "не в доме", 0..N = валидный house_id
             "inside_house_id INTEGER DEFAULT -1",
+            "tg_notify_enabled INTEGER DEFAULT 1",
         ]
         for m in migrations:
             try:
@@ -293,9 +291,6 @@ class Database:
             except Exception:
                 pass
 
-        # ═══ МИГРАЦИЯ inside_house_id: 0 → -1 ═══
-        # Раньше default был 0 ("не в доме"), но 0 = валидный house_id.
-        # Меняем на -1. Существующие нули обнуляем в -1.
         try:
             await self.conn.execute(
                 "UPDATE players SET inside_house_id=-1 WHERE inside_house_id=0 OR inside_house_id IS NULL"
@@ -305,15 +300,6 @@ class Database:
         except Exception as e:
             print(f"⚠️ inside_house_id migration: {e}")
 
-        # На случай, если default у старой колонки всё ещё 0, принудительно ставим -1
-        # в строках, где значение NULL.
-        try:
-            await self.conn.execute("UPDATE players SET inside_house_id=-1 WHERE inside_house_id IS NULL")
-            await self.conn.commit()
-        except Exception:
-            pass
-
-        # ═══ house_rentals ═══
         try:
             await self.conn.execute(
                 "CREATE TABLE IF NOT EXISTS house_rentals ("
