@@ -247,6 +247,7 @@ class Database:
             "role TEXT DEFAULT 'player'",
             "muted_until INTEGER DEFAULT 0",
             "mute_reason TEXT DEFAULT NULL",
+            # ═══ карта ═══
             "city_id INTEGER DEFAULT 0",
             "street_id INTEGER DEFAULT 0",
             "pos_x REAL DEFAULT 0",
@@ -254,7 +255,9 @@ class Database:
             "moving_until INTEGER DEFAULT 0",
             "moving_to_city INTEGER DEFAULT 0",
             "moving_to_street INTEGER DEFAULT 0",
+            # -1 = "не в доме", 0..N = валидный house_id
             "inside_house_id INTEGER DEFAULT -1",
+            # ═══ TG-уведомления ═══
             "tg_notify_enabled INTEGER DEFAULT 1",
         ]
         for m in migrations:
@@ -291,6 +294,7 @@ class Database:
             except Exception:
                 pass
 
+        # ═══ МИГРАЦИЯ inside_house_id: 0 → -1 ═══
         try:
             await self.conn.execute(
                 "UPDATE players SET inside_house_id=-1 WHERE inside_house_id=0 OR inside_house_id IS NULL"
@@ -300,6 +304,7 @@ class Database:
         except Exception as e:
             print(f"⚠️ inside_house_id migration: {e}")
 
+        # ═══ house_rentals ═══
         try:
             await self.conn.execute(
                 "CREATE TABLE IF NOT EXISTS house_rentals ("
@@ -384,16 +389,18 @@ class Database:
         except Exception as e:
             print(f"⚠️ admin role set: {e}")
 
+        # ═══ ИНИЦИАЛИЗАЦИЯ БОССОВ ═══
         try:
-            row = await self.fetchone("SELECT * FROM boss_state WHERE boss_id='pocyk'")
-            if not row:
-                import time as _t
-                now = int(_t.time())
-                await self.execute(
-                    "INSERT INTO boss_state (boss_id, current_hp, max_hp, ends_at, status) "
-                    "VALUES ('pocyk', 10000000, 10000000, ?, 'active')",
-                    (now + 7 * 86400,))
-                print("✅ Босс Опасный Поцык инициализирован")
+            for boss_id, max_hp in [('pocyk', 10_000_000), ('zelya', 30_000_000)]:
+                row = await self.fetchone("SELECT * FROM boss_state WHERE boss_id=?", (boss_id,))
+                if not row:
+                    import time as _t
+                    now = int(_t.time())
+                    await self.execute(
+                        "INSERT INTO boss_state (boss_id, current_hp, max_hp, ends_at, status) "
+                        "VALUES (?, ?, ?, ?, 'active')",
+                        (boss_id, max_hp, max_hp, now + 7 * 86400))
+                    print(f"✅ Босс {boss_id} инициализирован")
         except Exception as e:
             print(f"⚠️ boss init: {e}")
 

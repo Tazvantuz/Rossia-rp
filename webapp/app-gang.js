@@ -1,14 +1,12 @@
 // app-gang.js
 // Банды, гетто, кейсы, рефералы, магазин банды
 
-// ═══ FALLBACK на случай если бэкенд не пришлёт is_limited ═══
 const LIMITED_CASES_FALLBACK = {
-  "anime_girls": 15,
-  "basic":       50,
-  "rare":        50,
-  "legendary":   50,
-  "top1":        50,
-  "top2":        50,
+  "loh":         50,
+  "dvor":        50,
+  "brigadir":    50,
+  "smotryashiy": 50,
+  "waifu":       15,
 };
 
 async function loadCases() {
@@ -495,6 +493,7 @@ async function loadGang() {
     }).join("");
 
     const myRole = d.my_role;
+    // ═══ ИСПРАВЛЕНО: кликабельные ники в списке участников ═══
     const membersHtml = d.members.map(m => {
       const roleClass = `role-${m.role}`;
       const roleName = {leader:"Лидер",deputy:"Зам",member:"Боец"}[m.role];
@@ -502,7 +501,6 @@ async function loadGang() {
 
       let actionBtns = "";
 
-      // Для лидера: promote/demote у не-лидера
       if (myRole === "leader" && m.role !== "leader") {
         if (m.role === "member") {
           actionBtns += `<button class="btn btn-secondary" style="width:auto;padding:4px 8px;font-size:10px;margin:0 0 0 4px" onclick="setDeputy(${m.user_id}, 'promote')">Зам</button>`;
@@ -511,9 +509,6 @@ async function loadGang() {
         }
       }
 
-      // Кнопка «Кикнуть»
-      // Лидер может кикнуть любого кроме себя (и кроме другого лидера — но лидер один)
-      // Зам может кикнуть только member (не лидера, не зама)
       const canKick =
         (myRole === "leader" && m.role !== "leader") ||
         (myRole === "deputy" && m.role === "member");
@@ -524,7 +519,9 @@ async function loadGang() {
       }
 
       return `<div class="member-row">
-        <div style="flex:1;min-width:0"><b>${formatNickWithTag(m.nickname, m.gang_tag, m.gang_tag_color)}</b> · ур. ${m.level}</div>
+        <div style="flex:1;min-width:0;cursor:pointer;" onclick="viewPlayer(${m.user_id})">
+          <b>${formatNickWithTag(m.nickname, m.gang_tag, m.gang_tag_color)}</b> · ур. ${m.level}
+        </div>
         <span class="member-role ${roleClass}">${roleName}</span>
         ${actionBtns}
       </div>`;
@@ -559,7 +556,6 @@ async function loadGang() {
       ? `<button class="btn btn-secondary" onclick="showSetTag()" style="margin:8px 0">🏷 ${g.tag ? `Изменить тег [${escapeHtml(g.tag)}]` : 'Установить тег банды'}</button>`
       : '';
 
-    // Нижняя кнопка: лидер → удалить банду, остальные → покинуть
     let bottomBtn = "";
     if (myRole === "leader") {
       bottomBtn = `<button class="btn btn-secondary" style="margin-top:12px;background:rgba(231,76,60,.15);color:var(--danger);border:1px solid rgba(231,76,60,.4);font-weight:800;" onclick="disbandGang()">🗑 Удалить банду</button>`;

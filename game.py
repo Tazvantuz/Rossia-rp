@@ -3,12 +3,11 @@
 import time, random
 
 MAX_LEVEL = 100
-START_LOCATION = 0        # legacy
+START_LOCATION = 0
 START_CITY = 0
 START_STREET = 0
 START_BALANCE = 1000
 
-# ═══════════ ГОРОДА ═══════════
 CITIES = [
     {
         "id": 0,
@@ -60,7 +59,6 @@ CITIES = [
     },
 ]
 
-# ═══════════ ТИПЫ ДОМОВ (по городам) ═══════════
 HOUSE_TYPES = {
     0: [
         {"name": "Общага",    "emoji": "🏚", "price":  5000, "desc": "Койко-место, но своё"},
@@ -79,7 +77,6 @@ HOUSE_TYPES = {
     ],
 }
 
-# Раскладка домов на улице: индексы типов из HOUSE_TYPES[city_id]
 _STREET_HOUSE_LAYOUT = [0, 1, 2, 0]
 
 
@@ -111,11 +108,10 @@ def _generate_houses():
 
 HOUSES = _generate_houses()
 
-# ═══════════ КОНСТАНТЫ ПЕРЕМЕЩЕНИЯ / АРЕНДЫ ═══════════
-MOVE_DURATION_BETWEEN_CITIES = 30          # секунд
-MOVE_DURATION_BETWEEN_STREETS = 10         # секунд
-HOUSE_RENT_HOURS = 48                      # 2 дня
-PLAYER_ACTIVE_LAST_SEEN = 86400            # 24 часа
+MOVE_DURATION_BETWEEN_CITIES = 30
+MOVE_DURATION_BETWEEN_STREETS = 10
+HOUSE_RENT_HOURS = 48
+PLAYER_ACTIVE_LAST_SEEN = 86400
 STREET_VIEW_W = 600
 STREET_VIEW_H = 400
 CITY_VIEW_W = 600
@@ -137,8 +133,7 @@ def get_house(house_id):
     return next((h for h in HOUSES if h["id"] == house_id), None)
 
 
-# ═══════════ ЛОКАЦИИ (устарело, оставлено для совместимости) ═══════════
-LOCATIONS = CITIES  # устаревший алиас; структура совместима по id/name/emoji
+LOCATIONS = CITIES
 
 SLOTS = ["head_id", "body_id", "legs_id", "right_hand_id", "left_hand_id", "hair_id", "shoes_id"]
 SLOT_NAMES = {
@@ -428,6 +423,10 @@ ITEMS.update({
     "rh_pocyk": {"name": "Опасный Поцык", "emoji": "🧟", "slot": "right_hand", "price": 0, "rarity": "epic", "desc": "Коллекционный предмет с босса", "damage": 350, "is_case_only": True}
 })
 
+ITEMS.update({
+    "rh_zelya": {"name": "Зелябоба", "emoji": "🧟", "slot": "right_hand", "price": 0, "rarity": "legendary", "desc": "Коллекционный предмет с босса Зелябоба", "damage": 500, "is_case_only": True}
+})
+
 CREDIT_MAX = 15000
 CREDIT_TERMS = [
     {"hours": 1,  "pct": 5,  "label": "1 час"},
@@ -543,6 +542,38 @@ for iid, data in LEGACY_CASE_ITEMS.items():
     if iid not in ITEMS:
         ITEMS[iid] = data
 
+# ═══════════ НОВЫЕ КЕЙСОВЫЕ ПРЕДМЕТЫ ═══════════
+NEW_CASE_ITEMS = {
+    # ─── Case 1: Кейс Лоха (5 000₽) ───
+    "h_case_loh_kepka":     {"name": "Кепка 'Алкаш'",            "emoji": "🧢", "slot": "head",       "price": 500,   "rarity": "common",    "desc": "С рынка, но своя", "hp": 70},
+    "b_case_loh_kofta":     {"name": "Кофта от мамы",            "emoji": "🧶", "slot": "body",       "price": 800,   "rarity": "uncommon",  "desc": "Тёплая и колючая", "hp": 110},
+    "l_case_loh_treniki":   {"name": "Треники на резинке",       "emoji": "👖", "slot": "legs",       "price": 1200,  "rarity": "rare",      "desc": "Спортивные, но не очень", "hp": 175},
+    "rh_case_loh_shaurma":  {"name": "Шаурма-исполин",           "emoji": "🌯", "slot": "right_hand", "price": 2000,  "rarity": "epic",      "desc": "Со свининой и курицей", "damage": 120},
+    "lh_case_loh_kolbasa":  {"name": "Палка колбасы",            "emoji": "🥓", "slot": "left_hand",  "price": 3000,  "rarity": "legendary", "desc": "Докторская, варёная", "hp": 400, "damage": 100},
+
+    # ─── Case 2: Кейс Двора (50 000₽) ───
+    "h_case_dvor_bandana":  {"name": "Бандана 'Свой'",           "emoji": "🧣", "slot": "head",       "price": 5000,  "rarity": "common",    "desc": "Знак принадлежности", "hp": 200},
+    "b_case_dvor_olimp":    {"name": "Олимпийка '3 полоски'",    "emoji": "🏃", "slot": "body",       "price": 8000,  "rarity": "uncommon",  "desc": "С рынка, но выглядит норм", "hp": 300},
+    "l_case_dvor_semyorki": {"name": "Семёрки с рынка",          "emoji": "👖", "slot": "legs",       "price": 12000, "rarity": "rare",      "desc": "Классика дворов", "hp": 500},
+    "rh_case_dvor_balalaika":{"name":"Балалайка дворовая",       "emoji": "🪕", "slot": "right_hand", "price": 20000, "rarity": "epic",      "desc": "Три струны, всё по кайфу", "damage": 250},
+    "lh_case_dvor_avoska":  {"name": "Авоська с баблом",         "emoji": "🥡", "slot": "left_hand",  "price": 30000, "rarity": "legendary", "desc": "Сетка, а внутри капуста", "hp": 1200, "damage": 250},
+
+    # ─── Case 3: Кейс Бригадира (500 000₽) ───
+    "h_case_brig_kepka":    {"name": "Кепка Бригадира",          "emoji": "🧢", "slot": "head",       "price": 50000,  "rarity": "common",    "desc": "Восьмиклинка", "hp": 500},
+    "b_case_brig_kosuha":   {"name": "Косуха Бригадира",         "emoji": "🧥", "slot": "body",       "price": 80000,  "rarity": "uncommon",  "desc": "Кожа, заклёпки", "hp": 800},
+    "l_case_brig_klesh":    {"name": "Клёш Бригадира",           "emoji": "👖", "slot": "legs",       "price": 120000, "rarity": "rare",      "desc": "Широкие, с 90-х", "hp": 1300},
+    "rh_case_brig_osa":     {"name": "Пистолет 'Оса'",           "emoji": "🔫", "slot": "right_hand", "price": 200000, "rarity": "epic",      "desc": "Травматика", "damage": 600},
+    "lh_case_brig_chemodan":{"name": "Чемодан с баблом",         "emoji": "💼", "slot": "left_hand",  "price": 300000, "rarity": "legendary", "desc": "Дипломат, полный денег", "hp": 3000, "damage": 600},
+
+    # ─── Case 4: Кейс Смотрящего (1 500 000₽) ───
+    "h_case_smot_shapka":   {"name": "Шапка Смотрящего",         "emoji": "👑", "slot": "head",       "price": 200000,  "rarity": "common",    "desc": "Царская", "hp": 1200},
+    "b_case_smot_shuba":    {"name": "Шуба Смотрящего",          "emoji": "🧥", "slot": "body",       "price": 300000,  "rarity": "uncommon",  "desc": "Соболиная", "hp": 1900},
+    "l_case_smot_shtany":   {"name": "Золотые штаны",            "emoji": "👖", "slot": "legs",       "price": 500000,  "rarity": "rare",      "desc": "Как у Пети", "hp": 3100},
+    "rh_case_smot_skipetr": {"name": "Скипетр Смотрящего",       "emoji": "🪄", "slot": "right_hand", "price": 800000,  "rarity": "epic",      "desc": "Золотой, с камнями", "damage": 1500},
+    "lh_case_smot_derzhava":{"name": "Держава Смотрящего",       "emoji": "🌍", "slot": "left_hand",  "price": 1200000, "rarity": "legendary", "desc": "С крестом", "hp": 7000, "damage": 1500},
+}
+ITEMS.update(NEW_CASE_ITEMS)
+
 TYANKA_ITEMS = {
     "lh_tyanka": {"name": "Тянка в футболке", "emoji": "👱‍♀️", "slot": "left_hand", "price": 0, "rarity": "epic", "desc": "Стоит рядом и смотрит", "hp": 1200, "damage": 600, "is_case_only": True},
     "lh_tyanka2": {"name": "Тянка на коленях", "emoji": "👩‍🦰", "slot": "left_hand", "price": 0, "rarity": "rare", "desc": "Сидит рядом и держит", "hp": 800, "damage": 300, "is_case_only": True},
@@ -551,53 +582,55 @@ TYANKA_ITEMS = {
 }
 ITEMS.update(TYANKA_ITEMS)
 
+# ═══════════ НОВЫЕ ТЯНКИ (Вайфу-кейс) ═══════════
+NEW_TYANKA_ITEMS = {
+    "lh_babijon": {"name": "Бабиджон", "emoji": "👩", "slot": "left_hand", "price": 0, "rarity": "common", "desc": "Обычная баба-тянка", "hp": 200, "damage": 100, "is_case_only": True},
+    "rh_esdes":   {"name": "Эсдес",    "emoji": "👩‍🎤", "slot": "right_hand", "price": 0, "rarity": "uncommon", "desc": "Боевая ассасинка", "hp": 500, "damage": 200, "is_case_only": True},
+    "lh_rias":    {"name": "Риас",     "emoji": "👸", "slot": "left_hand", "price": 0, "rarity": "epic", "desc": "Демоническая госпожа", "hp": 1200, "damage": 600, "is_case_only": True},
+    "rh_albedo":  {"name": "Альбедо",  "emoji": "🧝", "slot": "right_hand", "price": 0, "rarity": "legendary", "desc": "Легендарный алхимик", "hp": 2500, "damage": 1200, "is_case_only": True},
+}
+ITEMS.update(NEW_TYANKA_ITEMS)
+
+# ═══════════ 5 НОВЫХ КЕЙСОВ ═══════════
 CASES = {
-    "basic": {"name": "Кейс новичка", "emoji": "📦", "price": 2000,
+    "loh": {"name": "Кейс Лоха", "emoji": "🧢", "price": 5000,
         "items": [
-            {"iid": "h_case_bandit", "chance": 35},
-            {"iid": "b_case_tracksuit", "chance": 28},
-            {"iid": "l_case_adidas", "chance": 20},
-            {"iid": "rh_case_knife", "chance": 12},
-            {"iid": "lh_case_lucky", "chance": 5},
+            {"iid": "h_case_loh_kepka", "chance": 35},
+            {"iid": "b_case_loh_kofta", "chance": 28},
+            {"iid": "l_case_loh_treniki", "chance": 20},
+            {"iid": "rh_case_loh_shaurma", "chance": 12},
+            {"iid": "lh_case_loh_kolbasa", "chance": 5},
         ]},
-    "rare": {"name": "Кейс гопника", "emoji": "🎁", "price": 12000,
+    "dvor": {"name": "Кейс Двора", "emoji": "🏃", "price": 50000,
         "items": [
-            {"iid": "h_case_rooster", "chance": 35},
-            {"iid": "b_case_armani_real", "chance": 28},
-            {"iid": "l_case_gold_shorts", "chance": 20},
-            {"iid": "rh_case_uzi_gold", "chance": 12},
-            {"iid": "lh_case_pepper", "chance": 5},
+            {"iid": "h_case_dvor_bandana", "chance": 35},
+            {"iid": "b_case_dvor_olimp", "chance": 28},
+            {"iid": "l_case_dvor_semyorki", "chance": 20},
+            {"iid": "rh_case_dvor_balalaika", "chance": 12},
+            {"iid": "lh_case_dvor_avoska", "chance": 5},
         ]},
-    "legendary": {"name": "Кейс олигарха", "emoji": "💎", "price": 60000,
+    "brigadir": {"name": "Кейс Бригадира", "emoji": "🧥", "price": 500000,
         "items": [
-            {"iid": "h_case_helmet_alpha", "chance": 30},
-            {"iid": "b_case_dragon_armor", "chance": 28},
-            {"iid": "l_case_dragon_pants", "chance": 22},
-            {"iid": "rh_case_dragon_sword", "chance": 14},
-            {"iid": "lh_case_brilliant", "chance": 6},
+            {"iid": "h_case_brig_kepka", "chance": 35},
+            {"iid": "b_case_brig_kosuha", "chance": 28},
+            {"iid": "l_case_brig_klesh", "chance": 20},
+            {"iid": "rh_case_brig_osa", "chance": 12},
+            {"iid": "lh_case_brig_chemodan", "chance": 5},
         ]},
-    "top1": {"name": "Топ-кейс Максимуса", "emoji": "👑", "price": 300000,
+    "smotryashiy": {"name": "Кейс Смотрящего", "emoji": "👑", "price": 1500000,
         "items": [
-            {"iid": "h_case_top1_head", "chance": 25},
-            {"iid": "b_case_top1_body", "chance": 25},
-            {"iid": "l_case_top1_legs", "chance": 22},
-            {"iid": "rh_case_top1_weapon", "chance": 18},
-            {"iid": "lh_case_top1_artifact", "chance": 10},
+            {"iid": "h_case_smot_shapka", "chance": 35},
+            {"iid": "b_case_smot_shuba", "chance": 28},
+            {"iid": "l_case_smot_shtany", "chance": 20},
+            {"iid": "rh_case_smot_skipetr", "chance": 12},
+            {"iid": "lh_case_smot_derzhava", "chance": 5},
         ]},
-    "top2": {"name": "Кейс Императора", "emoji": "🌍", "price": 800000,
+    "waifu": {"name": "Кейс с Вайфу", "emoji": "🌸", "price": 10000000,
         "items": [
-            {"iid": "h_case_top2_head", "chance": 20},
-            {"iid": "b_case_top2_body", "chance": 22},
-            {"iid": "l_case_top2_legs", "chance": 24},
-            {"iid": "rh_case_top2_weapon", "chance": 20},
-            {"iid": "lh_case_top2_artifact", "chance": 14},
-        ]},
-    "anime_girls": {"name": "Кейс с тянками", "emoji": "🌸", "price": 500000,
-        "items": [
-            {"iid": "lh_tyanka", "chance": 25},
-            {"iid": "lh_tyanka2", "chance": 25},
-            {"iid": "rh_miku", "chance": 25},
-            {"iid": "rh_tyanka3", "chance": 25},
+            {"iid": "lh_babijon", "chance": 25},
+            {"iid": "rh_esdes", "chance": 25},
+            {"iid": "lh_rias", "chance": 25},
+            {"iid": "rh_albedo", "chance": 25},
         ]},
 }
 
@@ -669,6 +702,8 @@ def _apply_balance():
     for iid, it in ITEMS.items():
         if iid.startswith(_CASE_PREFIXES):
             continue
+        if it.get("is_case_only"):
+            continue
         cat = _cat(it.get("slot"))
         rar = it.get("rarity")
         if not cat or rar not in ("common", "uncommon", "rare", "epic", "legendary"):
@@ -688,4 +723,4 @@ def _apply_balance():
 
 _apply_balance()
 
-print(f"✅ Загружено: {len(ITEMS)} предметов, {len(CITIES)} городов, {len(HOUSES)} домов")
+print(f"✅ Загружено: {len(ITEMS)} предметов, {len(CITIES)} городов, {len(HOUSES)} домов, {len(CASES)} кейсов")
